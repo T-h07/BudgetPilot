@@ -2,11 +2,13 @@ package com.budgetpilot.service.expenses;
 
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.PaymentMethod;
+import com.budgetpilot.model.enums.PlannerBucket;
 
 public class ExpenseFilter {
     private String searchText;
     private ExpenseCategory category;
     private PaymentMethod paymentMethod;
+    private PlannerBucket plannerBucket;
     private String tagText;
     private boolean onlyTagged;
 
@@ -42,6 +44,14 @@ public class ExpenseFilter {
 
     public void setPaymentMethod(PaymentMethod paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public PlannerBucket getPlannerBucket() {
+        return plannerBucket;
+    }
+
+    public void setPlannerBucket(PlannerBucket plannerBucket) {
+        this.plannerBucket = plannerBucket;
     }
 
     public String getTagText() {

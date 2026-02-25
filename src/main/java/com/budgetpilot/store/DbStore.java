@@ -24,6 +24,7 @@ import com.budgetpilot.model.enums.InvestmentStatus;
 import com.budgetpilot.model.enums.InvestmentTransactionType;
 import com.budgetpilot.model.enums.InvestmentType;
 import com.budgetpilot.model.enums.PaymentMethod;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.SavingsEntryType;
 import com.budgetpilot.model.enums.UserProfileType;
@@ -328,6 +329,14 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setSubcategory(rs.getString("subcategory"));
                 entry.setNote(rs.getString("note"));
                 entry.setPaymentMethod(DbUtils.parseEnum(rs.getString("payment_method"), PaymentMethod.class, PaymentMethod.CARD, "expense_entries.payment_method"));
+                PlannerBucket plannerBucket = DbUtils.parseEnum(
+                        rs.getString("planner_bucket"),
+                        PlannerBucket.class,
+                        PlannerBucket.inferFromCategory(entry.getCategory()),
+                        "expense_entries.planner_bucket"
+                );
+                entry.setPlannerBucket(plannerBucket);
+                entry.setRecurring(DbUtils.fromIntBoolean(rs.getInt("recurring")));
                 entry.setTag(rs.getString("tag"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "expense_entries.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "expense_entries.updated_at"));
@@ -708,23 +717,28 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertExpenseEntries() throws SQLException {
         String sql = """
                 INSERT INTO expense_entries (
-                    id, month, expense_date, amount, category, subcategory, note, payment_method, tag,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, month, expense_date, amount, category, planner_bucket, recurring,
+                    subcategory, note, payment_method, tag, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (ExpenseEntry entry : listAllExpenseEntries()) {
+                PlannerBucket plannerBucket = entry.getPlannerBucket() == null
+                        ? PlannerBucket.inferFromCategory(entry.getCategory())
+                        : entry.getPlannerBucket();
                 ps.setString(1, entry.getId());
                 ps.setString(2, entry.getMonth().toString());
                 ps.setString(3, entry.getExpenseDate().toString());
                 ps.setString(4, entry.getAmount().toPlainString());
                 ps.setString(5, entry.getCategory().name());
-                DbUtils.setNullableString(ps, 6, entry.getSubcategory());
-                DbUtils.setNullableString(ps, 7, entry.getNote());
-                ps.setString(8, entry.getPaymentMethod().name());
-                DbUtils.setNullableString(ps, 9, entry.getTag());
-                ps.setString(10, entry.getCreatedAt().toString());
-                ps.setString(11, entry.getUpdatedAt().toString());
+                ps.setString(6, plannerBucket.name());
+                ps.setInt(7, DbUtils.toIntBoolean(entry.isRecurring()));
+                DbUtils.setNullableString(ps, 8, entry.getSubcategory());
+                DbUtils.setNullableString(ps, 9, entry.getNote());
+                ps.setString(10, entry.getPaymentMethod().name());
+                DbUtils.setNullableString(ps, 11, entry.getTag());
+                ps.setString(12, entry.getCreatedAt().toString());
+                ps.setString(13, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();

@@ -13,6 +13,7 @@ import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.util.ValidationUtils;
 
 import java.time.YearMonth;
@@ -124,7 +125,7 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     @Override
     public synchronized void saveExpenseEntry(ExpenseEntry entry) {
         ValidationUtils.requireNonNull(entry, "entry");
-        ExpenseEntry copy = entry.copy();
+        ExpenseEntry copy = normalizeExpenseEntry(entry.copy());
         expenses.put(copy.getId(), copy);
     }
 
@@ -468,6 +469,13 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
                 .map(ExpenseEntry::copy)
                 .toList();
         return List.copyOf(results);
+    }
+
+    private ExpenseEntry normalizeExpenseEntry(ExpenseEntry entry) {
+        if (entry.getPlannerBucket() == null) {
+            entry.setPlannerBucket(PlannerBucket.inferFromCategory(entry.getCategory()));
+        }
+        return entry;
     }
 
     @Override

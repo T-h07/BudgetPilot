@@ -3,6 +3,7 @@ package com.budgetpilot.service.dashboard;
 import com.budgetpilot.model.ExpenseEntry;
 import com.budgetpilot.model.IncomeEntry;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.service.achievements.AchievementPageSummary;
 import com.budgetpilot.service.achievements.AchievementService;
 import com.budgetpilot.service.balance.MonthlyBalanceService;
@@ -91,6 +92,7 @@ public class DashboardMetricsService {
         BudgetSummary budgetSummary = plannerService.buildBudgetSummary(targetMonth, familyEnabled);
         ForecastSummary forecastSummary = forecastService.buildForecast(targetMonth, familyEnabled);
         ExpenseSummary expenseSummary = expenseService.getExpenseSummary(targetMonth);
+        BigDecimal unplannedSpend = expenseService.getTotalForBucket(targetMonth, PlannerBucket.UNPLANNED);
 
         boolean hasMonthlyPlan = budgetStore.getMonthlyPlan(targetMonth) != null;
         boolean hasIncomeData = !incomeEntries.isEmpty();
@@ -135,6 +137,7 @@ public class DashboardMetricsService {
                 achievementsEnabled,
                 budgetSummary,
                 forecastSummary,
+                unplannedSpend,
                 categorySpending,
                 familySummary,
                 habitPageSummary,
@@ -372,6 +375,7 @@ public class DashboardMetricsService {
             boolean achievementsEnabled,
             BudgetSummary budgetSummary,
             ForecastSummary forecastSummary,
+            BigDecimal unplannedSpend,
             List<CategorySpendPoint> categoryPoints,
             FamilySummary familySummary,
             HabitPageSummary habitPageSummary,
@@ -446,6 +450,25 @@ public class DashboardMetricsService {
                     top.getCategoryLabel() + " represents " + top.getPercentOfTotal().toPlainString() + "% of total spend.",
                     "expenses",
                     "Review category limits and weekly pace."
+            ));
+        }
+
+        if (unplannedSpend.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal totalSpent = expenseService.getTotalExpenses(month);
+            BigDecimal percent = totalSpent.compareTo(BigDecimal.ZERO) <= 0
+                    ? BigDecimal.ZERO
+                    : unplannedSpend.multiply(MoneyUtils.HUNDRED).divide(totalSpent, 2, RoundingMode.HALF_UP);
+            boolean significant = unplannedSpend.compareTo(new BigDecimal("50.00")) > 0
+                    || percent.compareTo(new BigDecimal("10.00")) > 0;
+            alerts.add(new DashboardAlert(
+                    "unplanned-spend",
+                    significant ? AlertLevel.WARNING : AlertLevel.INFO,
+                    "Unplanned spend",
+                    "Unplanned spend this month: " + unplannedSpend.stripTrailingZeros().toPlainString() + ".",
+                    "expenses",
+                    significant
+                            ? "Review one-time purchases and rebalance discretionary spending."
+                            : "Keep one-time spending controlled."
             ));
         }
 

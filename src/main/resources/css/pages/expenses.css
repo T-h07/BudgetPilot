@@ -14,6 +14,14 @@
     -fx-min-width: 180;
 }
 
+.expenses-form-options {
+    -fx-alignment: center-left;
+}
+
+.expenses-form-options .check-box {
+    -fx-padding: 0;
+}
+
 .expenses-form-card,
 .expenses-table-card {
     -fx-min-height: 470;
