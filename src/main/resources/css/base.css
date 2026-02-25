@@ -1,0 +1,59 @@
+.root {
+    -bp-bg: #0b1220;
+    -bp-surface: #131c2e;
+    -bp-surface-elevated: #182339;
+    -bp-border: #243451;
+    -bp-text-primary: #eef2ff;
+    -bp-text-secondary: #9fb0d3;
+    -bp-accent: #36a3ff;
+    -bp-accent-strong: #1e84de;
+    -bp-accent-soft: rgba(54, 163, 255, 0.16);
+    -bp-danger-soft: rgba(240, 97, 97, 0.2);
+    -bp-success-soft: rgba(86, 196, 130, 0.2);
+    -fx-background-color: -bp-bg;
+    -fx-font-family: "Segoe UI";
+    -fx-text-fill: -bp-text-primary;
+}
+
+.label {
+    -fx-text-fill: -bp-text-primary;
+}
+
+.button {
+    -fx-cursor: hand;
+    -fx-background-insets: 0;
+}
+
+.content-host {
+    -fx-background-color: transparent;
+}
+
+.page-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.page-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.page-root {
+    -fx-background-color: transparent;
+}
+
+.page-title {
+    -fx-font-size: 30px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.page-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.muted-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -bp-text-secondary;
+}
+

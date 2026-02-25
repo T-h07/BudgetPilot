@@ -1,0 +1,55 @@
+.page-income {
+    -fx-spacing: 16;
+}
+
+.income-summary-grid {
+    -fx-spacing: 12;
+}
+
+.income-form-card,
+.income-list-card {
+    -fx-min-height: 470;
+}
+
+.income-table {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.income-table .column-header-background {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10 10 0 0;
+}
+
+.income-table .column-header,
+.income-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.income-table .column-header .label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.income-table .table-row-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-border-color: transparent;
+}
+
+.income-table .table-row-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.2);
+}
+
+.income-table .table-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+}
+
+.income-table .placeholder .label {
+    -fx-text-fill: -bp-text-secondary;
+}
+

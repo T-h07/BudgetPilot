@@ -1,0 +1,44 @@
+.wizard-container {
+    -fx-spacing: 16;
+}
+
+.wizard-header {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 14 16;
+}
+
+.wizard-step-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.wizard-step-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.form-card {
+    -fx-padding: 16;
+}
+
+.wizard-container .list-view {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 10;
+}
+
+.wizard-container .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.wizard-container .list-view .list-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.24);
+}
+
