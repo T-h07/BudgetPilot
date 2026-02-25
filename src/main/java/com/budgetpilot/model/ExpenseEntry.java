@@ -2,6 +2,7 @@ package com.budgetpilot.model;
 
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.PaymentMethod;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -21,6 +22,8 @@ public class ExpenseEntry {
     private String subcategory;
     private String note;
     private PaymentMethod paymentMethod;
+    private PlannerBucket plannerBucket;
+    private boolean recurring;
     private String tag;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -35,6 +38,8 @@ public class ExpenseEntry {
         this.subcategory = "";
         this.note = "";
         this.paymentMethod = PaymentMethod.CARD;
+        this.plannerBucket = PlannerBucket.DISCRETIONARY;
+        this.recurring = false;
         this.tag = "";
         this.createdAt = now;
         this.updatedAt = now;
@@ -53,6 +58,7 @@ public class ExpenseEntry {
         setAmount(amount);
         setCategory(category);
         setPaymentMethod(paymentMethod);
+        setPlannerBucket(PlannerBucket.inferFromCategory(category));
     }
 
     public ExpenseEntry(ExpenseEntry other) {
@@ -65,6 +71,8 @@ public class ExpenseEntry {
         this.subcategory = other.subcategory;
         this.note = other.note;
         this.paymentMethod = other.paymentMethod;
+        this.plannerBucket = other.plannerBucket;
+        this.recurring = other.recurring;
         this.tag = other.tag;
         this.createdAt = other.createdAt;
         this.updatedAt = other.updatedAt;
@@ -150,6 +158,24 @@ public class ExpenseEntry {
         touch();
     }
 
+    public PlannerBucket getPlannerBucket() {
+        return plannerBucket;
+    }
+
+    public void setPlannerBucket(PlannerBucket plannerBucket) {
+        this.plannerBucket = ValidationUtils.requireNonNull(plannerBucket, "plannerBucket");
+        touch();
+    }
+
+    public boolean isRecurring() {
+        return recurring;
+    }
+
+    public void setRecurring(boolean recurring) {
+        this.recurring = recurring;
+        touch();
+    }
+
     public String getTag() {
         return tag;
     }
@@ -187,6 +213,7 @@ public class ExpenseEntry {
                 ", expenseDate=" + expenseDate +
                 ", amount=" + amount +
                 ", category=" + category +
+                ", plannerBucket=" + plannerBucket +
                 ", paymentMethod=" + paymentMethod +
                 '}';
     }

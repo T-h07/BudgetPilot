@@ -3,13 +3,17 @@ package com.budgetpilot.ui.pages;
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.service.planner.BudgetSummary;
+import com.budgetpilot.service.planner.PlanVsActualRow;
+import com.budgetpilot.service.planner.PlanVsActualStatus;
 import com.budgetpilot.service.planner.PlannerService;
 import com.budgetpilot.service.planner.WeekAllocation;
 import com.budgetpilot.service.planner.WeeklyBudgetBreakdown;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
+import com.budgetpilot.ui.components.StatusBadge;
 import com.budgetpilot.ui.components.SummaryStatCard;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.UiUtils;
@@ -21,6 +25,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -33,6 +38,7 @@ import javafx.scene.layout.VBox;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.List;
 
 public class PlannerPage extends VBox {
     private final AppContext appContext;
@@ -64,6 +70,10 @@ public class PlannerPage extends VBox {
     private final ObservableList<WeekAllocation> weekRows = FXCollections.observableArrayList();
     private final TableView<WeekAllocation> weeklyTable = new TableView<>(weekRows);
     private final TableColumn<WeekAllocation, String> familyColumn = new TableColumn<>("Family");
+    private final ObservableList<PlanVsActualRow> planVsActualRows = FXCollections.observableArrayList();
+    private final TableView<PlanVsActualRow> planVsActualTable = new TableView<>(planVsActualRows);
+    private final Label unplannedSpendValue = new Label();
+    private final Label unplannedSpendHint = new Label("Unplanned expenses are one-time costs outside your planned buckets.");
 
     private MonthlyPlan loadedPlan;
 
@@ -83,9 +93,16 @@ public class PlannerPage extends VBox {
         setupFormDefaults();
         setupBanner();
         setupWeeklyTable();
+        setupPlanVsActualTable();
 
         HBox summaryRow = buildSummaryRow();
         HBox mainRow = buildMainRow();
+        SectionCard planVsActualSection = new SectionCard(
+                "Plan vs Actual",
+                "Compare planned bucket limits with real spending from Expenses.",
+                buildPlanVsActualBody()
+        );
+        planVsActualSection.getStyleClass().add("planner-plan-actual-card");
         SectionCard weeklySection = new SectionCard(
                 "Weekly Breakdown",
                 "Equal split planning across calendar weeks for the selected month.",
@@ -93,7 +110,7 @@ public class PlannerPage extends VBox {
         );
         weeklySection.getStyleClass().add("planner-weekly-card");
 
-        getChildren().addAll(summaryRow, bannerLabel, mainRow, weeklySection);
+        getChildren().addAll(summaryRow, bannerLabel, mainRow, planVsActualSection, weeklySection);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -112,6 +129,8 @@ public class PlannerPage extends VBox {
         notesArea.setPrefRowCount(3);
         notesArea.getStyleClass().addAll("text-area", "form-textarea");
         familyBudgetLabel.getStyleClass().add("form-label");
+        unplannedSpendValue.getStyleClass().add("planner-unplanned-value");
+        unplannedSpendHint.getStyleClass().add("muted-text");
 
         statusRow.getChildren().add(statusLabel);
         statusLabel.getStyleClass().add("muted-text");
@@ -155,6 +174,72 @@ public class PlannerPage extends VBox {
                 discretionaryColumn,
                 familyColumn
         );
+    }
+
+    private void setupPlanVsActualTable() {
+        planVsActualTable.getStyleClass().add("planner-plan-actual-table");
+        planVsActualTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        planVsActualTable.setPlaceholder(new DataEmptyState(
+                "No actual bucket spending yet",
+                "Assign expense entries to planner buckets to compare planned vs actual."
+        ));
+
+        TableColumn<PlanVsActualRow, String> bucketColumn = new TableColumn<>("Bucket");
+        bucketColumn.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getBucket().getDisplayName()
+        ));
+
+        TableColumn<PlanVsActualRow, String> plannedColumn = planMoneyColumn("Planned", PlanVsActualRow::getPlanned);
+        TableColumn<PlanVsActualRow, String> actualColumn = planMoneyColumn("Actual", PlanVsActualRow::getActual);
+        TableColumn<PlanVsActualRow, String> remainingColumn = planMoneyColumn("Remaining", PlanVsActualRow::getRemaining);
+
+        TableColumn<PlanVsActualRow, String> usageColumn = new TableColumn<>("Usage %");
+        usageColumn.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getUsagePercent().stripTrailingZeros().toPlainString() + "%"
+        ));
+
+        TableColumn<PlanVsActualRow, PlanVsActualStatus> statusColumn = new TableColumn<>("Status");
+        statusColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getStatus()));
+        statusColumn.setCellFactory(col -> new TableCell<>() {
+            private final StatusBadge badge = new StatusBadge();
+
+            @Override
+            protected void updateItem(PlanVsActualStatus item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    return;
+                }
+                badge.setText(item.getLabel());
+                badge.setStatus(switch (item) {
+                    case OK -> "good";
+                    case WARN -> "warn";
+                    case OVER -> "danger";
+                });
+                setGraphic(badge);
+            }
+        });
+
+        planVsActualTable.getColumns().setAll(
+                bucketColumn,
+                plannedColumn,
+                actualColumn,
+                remainingColumn,
+                usageColumn,
+                statusColumn
+        );
+    }
+
+    private Node buildPlanVsActualBody() {
+        VBox unplannedBox = new VBox(4);
+        unplannedBox.getStyleClass().add("planner-unplanned-highlight");
+        Label unplannedTitle = new Label("Unplanned (One-time) Spend");
+        unplannedTitle.getStyleClass().add("form-label");
+        unplannedBox.getChildren().addAll(unplannedTitle, unplannedSpendValue, unplannedSpendHint);
+
+        VBox body = new VBox(10, planVsActualTable, unplannedBox);
+        planVsActualTable.setPrefHeight(260);
+        return body;
     }
 
     private HBox buildSummaryRow() {
@@ -290,6 +375,7 @@ public class PlannerPage extends VBox {
         BudgetSummary summary = plannerService.buildBudgetSummary(month, familyEnabled);
         updateSummaryCards(summary);
         updateStatus(summary);
+        updatePlanVsActual(month, familyEnabled);
 
         WeeklyBudgetBreakdown weeklyBreakdown = plannerService.buildWeeklyBreakdown(month, familyEnabled);
         weekRows.setAll(weeklyBreakdown.getAllocations());
@@ -347,6 +433,23 @@ public class PlannerPage extends VBox {
         } else {
             statusLabel.getStyleClass().add("planner-status-healthy");
         }
+    }
+
+    private void updatePlanVsActual(YearMonth month, boolean familyEnabled) {
+        List<PlanVsActualRow> rows = plannerService.getPlanVsActual(month);
+        if (!familyEnabled) {
+            rows = rows.stream()
+                    .filter(row -> row.getBucket() != PlannerBucket.FAMILY)
+                    .toList();
+        }
+        planVsActualRows.setAll(rows);
+
+        BigDecimal unplannedTotal = plannerService.getUnplannedTotal(month);
+        unplannedSpendValue.setText(MoneyUtils.format(unplannedTotal, resolveCurrencyCode()));
+        unplannedSpendValue.getStyleClass().removeAll("planner-unplanned-ok", "planner-unplanned-warn");
+        unplannedSpendValue.getStyleClass().add(
+                unplannedTotal.compareTo(BigDecimal.ZERO) > 0 ? "planner-unplanned-warn" : "planner-unplanned-ok"
+        );
     }
 
     private String resolveCurrencyCode() {
@@ -407,6 +510,17 @@ public class PlannerPage extends VBox {
             java.util.function.Function<WeekAllocation, BigDecimal> extractor
     ) {
         TableColumn<WeekAllocation, String> column = new TableColumn<>(title);
+        column.setCellValueFactory(data -> new SimpleStringProperty(
+                MoneyUtils.format(extractor.apply(data.getValue()), resolveCurrencyCode())
+        ));
+        return column;
+    }
+
+    private TableColumn<PlanVsActualRow, String> planMoneyColumn(
+            String title,
+            java.util.function.Function<PlanVsActualRow, BigDecimal> extractor
+    ) {
+        TableColumn<PlanVsActualRow, String> column = new TableColumn<>(title);
         column.setCellValueFactory(data -> new SimpleStringProperty(
                 MoneyUtils.format(extractor.apply(data.getValue()), resolveCurrencyCode())
         ));

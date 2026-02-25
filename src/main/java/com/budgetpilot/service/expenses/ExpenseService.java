@@ -3,6 +3,7 @@ package com.budgetpilot.service.expenses;
 import com.budgetpilot.model.ExpenseEntry;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -60,6 +61,29 @@ public class ExpenseService {
         return MoneyUtils.normalize(listForMonth(month).stream()
                 .map(ExpenseEntry::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
+    }
+
+    public BigDecimal getTotalForBucket(YearMonth month, PlannerBucket bucket) {
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        PlannerBucket targetBucket = ValidationUtils.requireNonNull(bucket, "bucket");
+        return MoneyUtils.normalize(listForMonth(targetMonth).stream()
+                .filter(entry -> resolvePlannerBucket(entry) == targetBucket)
+                .map(ExpenseEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+    }
+
+    public Map<PlannerBucket, BigDecimal> getTotalsByBucket(YearMonth month) {
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        Map<PlannerBucket, BigDecimal> totals = listForMonth(targetMonth).stream()
+                .collect(Collectors.groupingBy(
+                        this::resolvePlannerBucket,
+                        Collectors.reducing(BigDecimal.ZERO, ExpenseEntry::getAmount, BigDecimal::add)
+                ));
+        return totals.entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey,
+                        entry -> MoneyUtils.normalize(entry.getValue())
+                ));
     }
 
     public BigDecimal getAverageDailySpend(YearMonth month) {
@@ -152,6 +176,9 @@ public class ExpenseService {
         if (entry.getPaymentMethod() == null) {
             result.addError("Payment method is required.");
         }
+        if (entry.getPlannerBucket() == null) {
+            result.addError("Budget bucket is required.");
+        }
         return result;
     }
 
@@ -159,6 +186,9 @@ public class ExpenseService {
         ExpenseEntry copy = entry.copy();
         if (copy.getExpenseDate() != null) {
             copy.setMonth(YearMonth.from(copy.getExpenseDate()));
+        }
+        if (copy.getPlannerBucket() == null) {
+            copy.setPlannerBucket(PlannerBucket.inferFromCategory(copy.getCategory()));
         }
         copy.setTag(normalizeTag(copy.getTag()));
         return copy;
@@ -169,6 +199,9 @@ public class ExpenseService {
             return false;
         }
         if (filter.getPaymentMethod() != null && entry.getPaymentMethod() != filter.getPaymentMethod()) {
+            return false;
+        }
+        if (filter.getPlannerBucket() != null && resolvePlannerBucket(entry) != filter.getPlannerBucket()) {
             return false;
         }
         String entryTag = entry.getTag() == null ? "" : entry.getTag().trim();
@@ -189,7 +222,22 @@ public class ExpenseService {
                 || containsIgnoreCase(entry.getSubcategory(), search)
                 || containsIgnoreCase(entryTag, search)
                 || containsIgnoreCase(entry.getCategory().getLabel(), search)
+                || containsIgnoreCase(resolvePlannerBucket(entry).getDisplayName(), search)
                 || containsIgnoreCase(entry.getPaymentMethod().getLabel(), search);
+    }
+
+    public PlannerBucket inferDefaultBucket(ExpenseCategory category) {
+        return PlannerBucket.inferFromCategory(category);
+    }
+
+    private PlannerBucket resolvePlannerBucket(ExpenseEntry entry) {
+        if (entry == null) {
+            return PlannerBucket.DISCRETIONARY;
+        }
+        if (entry.getPlannerBucket() != null) {
+            return entry.getPlannerBucket();
+        }
+        return PlannerBucket.inferFromCategory(entry.getCategory());
     }
 
     private String normalizeTag(String rawTag) {
