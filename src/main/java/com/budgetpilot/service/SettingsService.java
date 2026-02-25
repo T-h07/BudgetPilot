@@ -5,6 +5,7 @@ import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.UserProfileType;
 import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.store.DbStore;
 import com.budgetpilot.store.DemoDataSeeder;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -77,7 +78,11 @@ public class SettingsService {
 
     public void seedDemoDataForSelectedMonth() {
         BudgetStore store = requiredStore();
-        DemoDataSeeder.seed(store, appContext.getSelectedMonth());
+        if (store instanceof DbStore dbStore) {
+            dbStore.runBulkUpdate(() -> DemoDataSeeder.seed(dbStore, appContext.getSelectedMonth()));
+        } else {
+            DemoDataSeeder.seed(store, appContext.getSelectedMonth());
+        }
         appContext.reloadCurrentUserFromStore();
     }
 

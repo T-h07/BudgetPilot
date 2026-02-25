@@ -10,3 +10,33 @@
     -fx-padding: 8 14;
 }
 
+.persistence-status-card {
+    -fx-padding: 10 12;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-font-weight: 700;
+}
+
+.persistence-status-ok {
+    -fx-background-color: rgba(86, 196, 130, 0.17);
+    -fx-border-color: rgba(86, 196, 130, 0.45);
+    -fx-border-width: 1;
+    -fx-text-fill: #d7ffea;
+}
+
+.persistence-status-fallback {
+    -fx-background-color: rgba(246, 185, 80, 0.2);
+    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-border-width: 1;
+    -fx-text-fill: #ffe8b6;
+}
+
+.settings-data-path {
+    -fx-font-size: 12px;
+    -fx-wrap-text: true;
+}
+
+.backup-actions-row {
+    -fx-padding: 8 0 0 0;
+}
+

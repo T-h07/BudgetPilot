@@ -54,6 +54,7 @@ public class OnboardingPage extends VBox {
 
     private final WizardStepHeader stepHeader = new WizardStepHeader();
     private final Label bannerLabel = new Label();
+    private final Label persistenceWarningLabel = new Label();
     private final VBox contentHost = new VBox(14);
     private final Button backButton = new Button("Back");
     private final Button nextButton = new Button("Next");
@@ -107,6 +108,26 @@ public class OnboardingPage extends VBox {
         bannerLabel.setVisible(false);
         bannerLabel.getStyleClass().add("error-banner");
 
+        persistenceWarningLabel.getStyleClass().add("banner-warning");
+        persistenceWarningLabel.setWrapText(true);
+        persistenceWarningLabel.textProperty().bind(
+                javafx.beans.binding.Bindings.createStringBinding(
+                        () -> appContext.isPersistenceAvailable()
+                                ? ""
+                                : appContext.getPersistenceStatus() == null
+                                ? ""
+                                : appContext.getPersistenceStatus().getMessage(),
+                        appContext.persistenceStatusProperty()
+                )
+        );
+        persistenceWarningLabel.visibleProperty().bind(
+                javafx.beans.binding.Bindings.createBooleanBinding(
+                        () -> !appContext.isPersistenceAvailable(),
+                        appContext.persistenceStatusProperty()
+                )
+        );
+        persistenceWarningLabel.managedProperty().bind(persistenceWarningLabel.visibleProperty());
+
         HBox navBar = new HBox(10, backButton, nextButton);
         navBar.setAlignment(Pos.CENTER_RIGHT);
         nextButton.getStyleClass().add("quick-add-button");
@@ -117,7 +138,7 @@ public class OnboardingPage extends VBox {
         });
         nextButton.setOnAction(event -> handleNext());
 
-        getChildren().addAll(stepHeader, bannerLabel, contentHost, navBar);
+        getChildren().addAll(stepHeader, persistenceWarningLabel, bannerLabel, contentHost, navBar);
         VBox.setVgrow(contentHost, Priority.ALWAYS);
 
         bindValidationListeners();

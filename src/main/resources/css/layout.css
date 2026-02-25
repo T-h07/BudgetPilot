@@ -31,6 +31,11 @@
     -fx-text-fill: -bp-text-primary;
 }
 
+.topbar-persistence-warning {
+    -fx-font-size: 11px;
+    -fx-padding: 4 8;
+}
+
 .month-pill {
     -fx-background-color: rgba(255, 255, 255, 0.07);
     -fx-border-color: rgba(255, 255, 255, 0.1);
