@@ -88,7 +88,10 @@ public class MainLayout extends BorderPane {
         if (currentPage == null) {
             return;
         }
-        if (currentPage == PageId.DASHBOARD || currentPage == PageId.INCOME || currentPage == PageId.PLANNER) {
+        if (currentPage == PageId.DASHBOARD
+                || currentPage == PageId.INCOME
+                || currentPage == PageId.PLANNER
+                || currentPage == PageId.EXPENSES) {
             navigateTo(currentPage);
         }
     }
