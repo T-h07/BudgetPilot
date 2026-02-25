@@ -6,6 +6,7 @@ import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.Investment;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
@@ -13,11 +14,15 @@ import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.FamilyExpenseType;
 import com.budgetpilot.model.enums.GoalType;
 import com.budgetpilot.model.enums.IncomeType;
+import com.budgetpilot.model.enums.InvestmentKind;
+import com.budgetpilot.model.enums.InvestmentStatus;
+import com.budgetpilot.model.enums.InvestmentType;
 import com.budgetpilot.model.enums.PaymentMethod;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.UserProfileType;
 import com.budgetpilot.service.FamilyService;
 import com.budgetpilot.service.GoalService;
+import com.budgetpilot.service.InvestmentService;
 import com.budgetpilot.service.SavingsService;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -47,6 +52,7 @@ public final class DemoDataSeeder {
         SavingsService savingsService = new SavingsService(store);
         GoalService goalService = new GoalService(store);
         FamilyService familyService = new FamilyService(store);
+        InvestmentService investmentService = new InvestmentService(store);
 
         MonthlyPlan plan = new MonthlyPlan(seedMonth);
         plan.setFixedCostsBudget(new BigDecimal("1450"));
@@ -155,6 +161,40 @@ public final class DemoDataSeeder {
         coffeeRule.setLinkedCategory(ExpenseCategory.FOOD);
         coffeeRule.setNotes("Cap impulse coffee spending and shift to planned purchases.");
         store.saveHabitRule(coffeeRule);
+
+        Investment course = new Investment("Java Mastery Course", InvestmentType.COURSE, InvestmentKind.PERSONAL_DEVELOPMENT, InvestmentStatus.ACTIVE, dateAt(seedMonth, 2), 3);
+        course.setTargetAmount(new BigDecimal("1200"));
+        course.setExpectedReturnDate(seedMonth.plusMonths(6).atDay(15));
+        course.setExpectedProfitAmount(new BigDecimal("2200"));
+        course.setNotes("Skill investment for long-term income growth.");
+        store.saveInvestment(course);
+
+        Investment business = new Investment("Micro Business Expansion", InvestmentType.BUSINESS, InvestmentKind.MONEY, InvestmentStatus.ACTIVE, dateAt(seedMonth, 5), 2);
+        business.setTargetAmount(new BigDecimal("4500"));
+        business.setExpectedReturnDate(seedMonth.plusMonths(8).atDay(10));
+        business.setExpectedProfitPercent(new BigDecimal("35"));
+        business.setNotes("Expand local side business operations.");
+        store.saveInvestment(business);
+
+        Investment stocks = new Investment("Index ETF Position", InvestmentType.STOCKS, InvestmentKind.MONEY, InvestmentStatus.ACTIVE, dateAt(seedMonth, 8), 4);
+        stocks.setTargetAmount(new BigDecimal("3000"));
+        stocks.setExpectedReturnDate(seedMonth.plusMonths(12).atDay(1));
+        stocks.setExpectedProfitPercent(new BigDecimal("12"));
+        stocks.setNotes("Long-term index investing position.");
+        store.saveInvestment(stocks);
+
+        investmentService.addContribution(course.getId(), new BigDecimal("450"), dateAt(seedMonth, 3), "Initial enrollment payment");
+        investmentService.addContribution(course.getId(), new BigDecimal("220"), dateAt(seedMonth, 16), "Advanced module payment");
+        investmentService.addReturn(course.getId(), new BigDecimal("120"), dateAt(seedMonth, 25), "Freelance uplift from new skills");
+
+        investmentService.addContribution(business.getId(), new BigDecimal("900"), dateAt(seedMonth, 6), "Inventory expansion");
+        investmentService.addContribution(business.getId(), new BigDecimal("650"), dateAt(seedMonth, 18), "Marketing push");
+        investmentService.addFee(business.getId(), new BigDecimal("55"), dateAt(seedMonth, 21), "Operational fee");
+        investmentService.addReturn(business.getId(), new BigDecimal("280"), dateAt(seedMonth, 27), "Business monthly return");
+
+        investmentService.addContribution(stocks.getId(), new BigDecimal("700"), dateAt(seedMonth, 10), "ETF buy order");
+        investmentService.addContribution(stocks.getId(), new BigDecimal("420"), dateAt(seedMonth, 22), "Second buy order");
+        investmentService.addReturn(stocks.getId(), new BigDecimal("85"), dateAt(seedMonth, 28), "Dividend and value uplift");
     }
 
     private static ExpenseEntry expense(
