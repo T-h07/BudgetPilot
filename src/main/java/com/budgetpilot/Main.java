@@ -1,6 +1,7 @@
 package com.budgetpilot;
 
 import com.budgetpilot.core.AppContext;
+import com.budgetpilot.core.PageId;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.store.DemoDataSeeder;
 import com.budgetpilot.store.InMemoryStore;
@@ -16,16 +17,21 @@ import java.time.YearMonth;
 public class Main extends Application {
     private static final double DEFAULT_WIDTH = 1280;
     private static final double DEFAULT_HEIGHT = 800;
+    private static final boolean DEV_MODE_SEED_DEMO = false;
 
     @Override
     public void start(Stage stage) {
         YearMonth selectedMonth = MonthUtils.currentMonth();
         BudgetStore store = new InMemoryStore();
-        DemoDataSeeder.seed(store, selectedMonth);
+        if (DEV_MODE_SEED_DEMO) {
+            DemoDataSeeder.seed(store, selectedMonth);
+        }
 
         AppContext appContext = new AppContext(store, selectedMonth);
-        appContext.setCurrentUser(store.getUserProfile());
-        MainLayout mainLayout = new MainLayout(appContext);
+        appContext.reloadCurrentUserFromStore();
+        PageId startupPage = appContext.onboardingCompleted() ? PageId.DASHBOARD : PageId.ONBOARDING;
+
+        MainLayout mainLayout = new MainLayout(appContext, startupPage);
 
         Scene scene = new Scene(mainLayout, DEFAULT_WIDTH, DEFAULT_HEIGHT);
         URL stylesheet = Main.class.getResource("/css/app.css");

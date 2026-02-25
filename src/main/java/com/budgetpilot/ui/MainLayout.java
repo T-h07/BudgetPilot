@@ -3,6 +3,7 @@ package com.budgetpilot.ui;
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.AppRouter;
 import com.budgetpilot.core.PageId;
+import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.ui.pages.AchievementsPage;
 import com.budgetpilot.ui.pages.DashboardPage;
 import com.budgetpilot.ui.pages.ExpensesPage;
@@ -24,27 +25,37 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 public class MainLayout extends BorderPane {
+    private final AppContext appContext;
     private final AppRouter router = new AppRouter();
     private final Sidebar sidebar;
     private final TopBar topBar;
     private final StackPane contentHost = new StackPane();
 
-    public MainLayout(AppContext appContext) {
-        Objects.requireNonNull(appContext, "appContext must not be null");
+    public MainLayout(AppContext appContext, PageId startupPage) {
+        this.appContext = Objects.requireNonNull(appContext, "appContext must not be null");
 
         getStyleClass().add("app-shell");
         contentHost.getStyleClass().add("content-host");
 
-        sidebar = new Sidebar(this::navigateTo);
+        sidebar = new Sidebar(appContext, this::navigateTo);
         topBar = new TopBar(appContext);
 
+        setCenter(contentHost);
         setLeft(sidebar);
         setTop(topBar);
-        setCenter(contentHost);
+
+        appContext.setNavigator(this::navigateTo);
 
         registerPages(appContext);
         bindRouter();
-        navigateTo(PageId.DASHBOARD);
+        bindContext();
+
+        PageId initialPage = startupPage == null ? defaultStartupPage() : startupPage;
+        navigateTo(initialPage);
+    }
+
+    public MainLayout(AppContext appContext) {
+        this(appContext, null);
     }
 
     private void bindRouter() {
@@ -58,8 +69,23 @@ public class MainLayout extends BorderPane {
             if (newPage != null) {
                 sidebar.setActivePage(newPage);
                 topBar.setActivePage(newPage);
+                refreshChrome();
             }
         });
+    }
+
+    private void bindContext() {
+        appContext.addChangeListener(() -> {
+            sidebar.refreshNavigation();
+            ensureCurrentPageAllowed();
+            refreshChrome();
+        });
+    }
+
+    private void refreshChrome() {
+        boolean onboardingMode = !appContext.onboardingCompleted() || router.getCurrentPageId() == PageId.ONBOARDING;
+        setLeft(onboardingMode ? null : sidebar);
+        setTop(onboardingMode ? null : topBar);
     }
 
     private void registerPages(AppContext appContext) {
@@ -81,7 +107,43 @@ public class MainLayout extends BorderPane {
         router.register(pageId, () -> UiUtils.createPageScroll(pageFactory.get()));
     }
 
-    private void navigateTo(PageId pageId) {
-        router.navigate(pageId);
+    public void navigateTo(PageId pageId) {
+        PageId target = pageId == null ? defaultStartupPage() : pageId;
+        if (!isPageVisible(target)) {
+            target = defaultStartupPage();
+        }
+        router.navigate(target);
+    }
+
+    private void ensureCurrentPageAllowed() {
+        PageId currentPage = router.getCurrentPageId();
+        if (currentPage == null) {
+            return;
+        }
+        if (!isPageVisible(currentPage)) {
+            navigateTo(defaultStartupPage());
+        }
+    }
+
+    private boolean isPageVisible(PageId pageId) {
+        if (!appContext.onboardingCompleted()) {
+            return pageId == PageId.ONBOARDING;
+        }
+
+        UserProfile profile = appContext.getCurrentUser();
+        if (profile == null) {
+            return pageId == PageId.ONBOARDING;
+        }
+
+        return switch (pageId) {
+            case FAMILY -> profile.isFamilyModuleEnabled();
+            case INVESTMENTS -> profile.isInvestmentsModuleEnabled();
+            case ACHIEVEMENTS -> profile.isAchievementsModuleEnabled();
+            default -> true;
+        };
+    }
+
+    private PageId defaultStartupPage() {
+        return appContext.onboardingCompleted() ? PageId.DASHBOARD : PageId.ONBOARDING;
     }
 }
