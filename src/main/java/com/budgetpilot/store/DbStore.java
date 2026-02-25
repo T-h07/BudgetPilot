@@ -239,6 +239,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 profile.setFirstName(rs.getString("first_name"));
                 profile.setLastName(rs.getString("last_name"));
                 profile.setEmail(rs.getString("email"));
+                profile.setPasswordHash(rs.getString("password_hash"));
+                profile.setActive(DbUtils.fromIntBoolean(rs.getInt("active")));
                 Object ageObject = rs.getObject("age");
                 profile.setAge(ageObject == null ? null : rs.getInt("age"));
                 profile.setProfileType(DbUtils.parseEnum(rs.getString("profile_type"), UserProfileType.class, UserProfileType.PERSONAL_USE, "user_profile.profile_type"));
@@ -635,8 +637,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 INSERT INTO user_profile (
                     singleton_key, id, first_name, last_name, email, age, profile_type, currency_code,
                     family_module_enabled, investments_module_enabled, achievements_module_enabled,
-                    created_at, updated_at
-                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    password_hash, active, created_at, updated_at
+                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, profile.getId());
@@ -653,8 +655,10 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
             ps.setInt(8, DbUtils.toIntBoolean(profile.isFamilyModuleEnabled()));
             ps.setInt(9, DbUtils.toIntBoolean(profile.isInvestmentsModuleEnabled()));
             ps.setInt(10, DbUtils.toIntBoolean(profile.isAchievementsModuleEnabled()));
-            ps.setString(11, profile.getCreatedAt().toString());
-            ps.setString(12, profile.getUpdatedAt().toString());
+            ps.setString(11, profile.getPasswordHash());
+            ps.setInt(12, DbUtils.toIntBoolean(profile.isActive()));
+            ps.setString(13, profile.getCreatedAt().toString());
+            ps.setString(14, profile.getUpdatedAt().toString());
             ps.executeUpdate();
         }
     }

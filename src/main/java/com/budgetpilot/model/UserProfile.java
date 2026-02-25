@@ -12,6 +12,8 @@ public class UserProfile {
     private String firstName;
     private String lastName;
     private String email;
+    private String passwordHash;
+    private boolean active;
     private Integer age;
     private UserProfileType profileType;
     private String currencyCode;
@@ -27,6 +29,8 @@ public class UserProfile {
         this.firstName = "Budget";
         this.lastName = "User";
         this.email = "user@budgetpilot.local";
+        this.passwordHash = "";
+        this.active = true;
         this.age = 25;
         this.profileType = UserProfileType.PERSONAL_USE;
         this.currencyCode = "EUR";
@@ -51,6 +55,8 @@ public class UserProfile {
         this.firstName = other.firstName;
         this.lastName = other.lastName;
         this.email = other.email;
+        this.passwordHash = other.passwordHash;
+        this.active = other.active;
         this.age = other.age;
         this.profileType = other.profileType;
         this.currencyCode = other.currencyCode;
@@ -101,7 +107,25 @@ public class UserProfile {
     }
 
     public void setEmail(String email) {
-        this.email = ValidationUtils.requireNonBlank(email, "email");
+        this.email = ValidationUtils.requireValidEmail(email, "email").toLowerCase(Locale.ROOT);
+        touch();
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash == null ? "" : passwordHash.trim();
+        touch();
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
         touch();
     }
 
@@ -189,6 +213,7 @@ public class UserProfile {
                 "id='" + id + '\'' +
                 ", displayName='" + getDisplayName() + '\'' +
                 ", email='" + email + '\'' +
+                ", active=" + active +
                 ", profileType=" + profileType +
                 ", currencyCode='" + currencyCode + '\'' +
                 '}';

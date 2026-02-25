@@ -141,7 +141,14 @@ public class SettingsPage extends VBox {
         resetButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         resetButton.setOnAction(event -> populateFromContext());
 
-        HBox actions = new HBox(10, saveButton, resetButton);
+        Button signOutButton = new Button("Sign Out");
+        signOutButton.getStyleClass().addAll("secondary-button", "btn-secondary");
+        signOutButton.setOnAction(event -> {
+            appContext.signOut();
+            appContext.navigate(PageId.LOGIN);
+        });
+
+        HBox actions = new HBox(10, saveButton, resetButton, signOutButton);
         return new VBox(12, form, actions);
     }
 

@@ -12,6 +12,7 @@ import com.budgetpilot.ui.pages.GoalsPage;
 import com.budgetpilot.ui.pages.HabitsPage;
 import com.budgetpilot.ui.pages.IncomePage;
 import com.budgetpilot.ui.pages.InvestmentsPage;
+import com.budgetpilot.ui.pages.LoginPage;
 import com.budgetpilot.ui.pages.OnboardingPage;
 import com.budgetpilot.ui.pages.PlannerPage;
 import com.budgetpilot.ui.pages.SavingsPage;
@@ -103,9 +104,13 @@ public class MainLayout extends BorderPane {
     }
 
     private void refreshChrome() {
-        boolean onboardingMode = !appContext.onboardingCompleted() || router.getCurrentPageId() == PageId.ONBOARDING;
-        setLeft(onboardingMode ? null : sidebar);
-        setTop(onboardingMode ? null : topBar);
+        PageId current = router.getCurrentPageId();
+        boolean authFlowMode = current == PageId.ONBOARDING
+                || current == PageId.LOGIN
+                || !appContext.onboardingCompleted()
+                || !appContext.isAuthenticated();
+        setLeft(authFlowMode ? null : sidebar);
+        setTop(authFlowMode ? null : topBar);
     }
 
     private void registerPages(AppContext appContext) {
@@ -121,6 +126,7 @@ public class MainLayout extends BorderPane {
         registerPage(PageId.HABITS, () -> new HabitsPage(appContext));
         registerPage(PageId.SETTINGS, () -> new SettingsPage(appContext));
         registerPage(PageId.ONBOARDING, () -> new OnboardingPage(appContext));
+        registerPage(PageId.LOGIN, () -> new LoginPage(appContext));
     }
 
     private void registerPage(PageId pageId, Supplier<Node> pageFactory) {
@@ -149,13 +155,17 @@ public class MainLayout extends BorderPane {
         if (!appContext.onboardingCompleted()) {
             return pageId == PageId.ONBOARDING;
         }
+        if (!appContext.isAuthenticated()) {
+            return pageId == PageId.LOGIN;
+        }
 
         UserProfile profile = appContext.getCurrentUser();
         if (profile == null) {
-            return pageId == PageId.ONBOARDING;
+            return pageId == PageId.LOGIN;
         }
 
         return switch (pageId) {
+            case LOGIN, ONBOARDING -> false;
             case FAMILY -> profile.isFamilyModuleEnabled();
             case INVESTMENTS -> profile.isInvestmentsModuleEnabled();
             case ACHIEVEMENTS -> profile.isAchievementsModuleEnabled();
@@ -164,6 +174,9 @@ public class MainLayout extends BorderPane {
     }
 
     private PageId defaultStartupPage() {
-        return appContext.onboardingCompleted() ? PageId.DASHBOARD : PageId.ONBOARDING;
+        if (!appContext.onboardingCompleted()) {
+            return PageId.ONBOARDING;
+        }
+        return appContext.isAuthenticated() ? PageId.DASHBOARD : PageId.LOGIN;
     }
 }

@@ -23,6 +23,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.FlowPane;
@@ -68,6 +69,8 @@ public class OnboardingPage extends VBox {
     private final TextField emailField = textField("Email");
     private final TextField ageField = textField("Age (optional)");
     private final ComboBox<String> currencyCombo = new ComboBox<>();
+    private final PasswordField passwordField = passwordField("Password (min 8 characters)");
+    private final PasswordField confirmPasswordField = passwordField("Confirm password");
 
     // Profile type step controls
     private final ToggleGroup profileTypeGroup = new ToggleGroup();
@@ -239,6 +242,8 @@ public class OnboardingPage extends VBox {
         for (TextField field : profileFields) {
             field.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
         }
+        passwordField.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
+        confirmPasswordField.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
         currencyCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateNavigationState());
 
         customHabitField.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
@@ -293,7 +298,8 @@ public class OnboardingPage extends VBox {
             collectProfileData();
             collectHabitData();
             collectPlanData();
-            onboardingService.completeOnboarding(appContext, onboardingData);
+            var createdProfile = onboardingService.completeOnboarding(appContext, onboardingData);
+            appContext.signIn(createdProfile.getId());
             appContext.navigate(PageId.DASHBOARD);
         } catch (IllegalArgumentException ex) {
             showError(ex.getMessage());
@@ -307,6 +313,7 @@ public class OnboardingPage extends VBox {
         onboardingData.setAgeText(ageField.getText());
         onboardingData.setCurrencyCode(currencyCombo.getValue());
         onboardingData.setProfileType(selectedProfileType());
+        onboardingData.setPassword(passwordField.getText());
     }
 
     private void collectHabitData() {
@@ -371,6 +378,8 @@ public class OnboardingPage extends VBox {
         addFormRow(grid, 2, "Email", emailField);
         addFormRow(grid, 3, "Age", ageField);
         addFormRow(grid, 4, "Currency", currencyCombo);
+        addFormRow(grid, 5, "Password", passwordField);
+        addFormRow(grid, 6, "Confirm Password", confirmPasswordField);
 
         VBox box = createFormCard();
         box.getChildren().add(grid);
@@ -495,6 +504,14 @@ public class OnboardingPage extends VBox {
         ValidationUtils.requireValidEmail(emailField.getText(), "email");
         ValidationUtils.parseOptionalNonNegativeInteger(ageField.getText(), "age");
         ValidationUtils.requireNonBlank(currencyCombo.getValue(), "currency");
+        ValidationUtils.requireNonBlank(passwordField.getText(), "password");
+        ValidationUtils.requireNonBlank(confirmPasswordField.getText(), "confirm password");
+        if (passwordField.getText().length() < 8) {
+            throw new IllegalArgumentException("password must be at least 8 characters");
+        }
+        if (!passwordField.getText().equals(confirmPasswordField.getText())) {
+            throw new IllegalArgumentException("password confirmation does not match");
+        }
         return true;
     }
 
@@ -512,7 +529,7 @@ public class OnboardingPage extends VBox {
 
     private String stepValidationMessage() {
         return switch (stepIndex) {
-            case 1 -> "Please complete your profile with a valid email.";
+            case 1 -> "Please complete your profile and set a valid password.";
             case 2 -> "Please choose a profile type.";
             case 4 -> "Please add at least one income entry.";
             case 5 -> "Please provide valid non-negative budget values and percentages between 0 and 100.";
@@ -568,6 +585,13 @@ public class OnboardingPage extends VBox {
 
     private TextField textField(String prompt) {
         TextField field = new TextField();
+        field.setPromptText(prompt);
+        field.getStyleClass().addAll("text-input", "form-input");
+        return field;
+    }
+
+    private PasswordField passwordField(String prompt) {
+        PasswordField field = new PasswordField();
         field.setPromptText(prompt);
         field.getStyleClass().addAll("text-input", "form-input");
         return field;

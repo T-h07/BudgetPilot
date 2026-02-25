@@ -18,6 +18,10 @@ public class AppContext {
             new SimpleObjectProperty<>(this, "selectedMonth", MonthUtils.currentMonth());
     private final ObjectProperty<UserProfile> currentUser =
             new SimpleObjectProperty<>(this, "currentUser");
+    private final ObjectProperty<Boolean> authenticated =
+            new SimpleObjectProperty<>(this, "authenticated", false);
+    private final ObjectProperty<String> authenticatedUserId =
+            new SimpleObjectProperty<>(this, "authenticatedUserId", null);
     private final ObjectProperty<PersistenceStatus> persistenceStatus =
             new SimpleObjectProperty<>(this, "persistenceStatus", new PersistenceStatus(false, "Persistence unavailable", null, null));
 
@@ -66,6 +70,15 @@ public class AppContext {
 
     public void setCurrentUser(UserProfile currentUser) {
         this.currentUser.set(currentUser);
+        if (currentUser == null) {
+            authenticated.set(false);
+            authenticatedUserId.set(null);
+        } else if (Boolean.TRUE.equals(authenticated.get())
+                && authenticatedUserId.get() != null
+                && !authenticatedUserId.get().equals(currentUser.getId())) {
+            authenticated.set(false);
+            authenticatedUserId.set(null);
+        }
         notifyContextChanged();
     }
 
@@ -74,15 +87,57 @@ public class AppContext {
     }
 
     public boolean onboardingCompleted() {
-        return getCurrentUser() != null;
+        UserProfile profile = getCurrentUser();
+        return profile != null && profile.getPasswordHash() != null && !profile.getPasswordHash().isBlank();
     }
 
     public void reloadCurrentUserFromStore() {
+        UserProfile loaded;
         if (store == null) {
-            currentUser.set(null);
+            loaded = null;
         } else {
-            currentUser.set(store.getUserProfile());
+            loaded = store.getUserProfile();
         }
+        currentUser.set(loaded);
+        if (loaded == null) {
+            authenticated.set(false);
+            authenticatedUserId.set(null);
+        } else if (Boolean.TRUE.equals(authenticated.get())) {
+            String sessionUser = authenticatedUserId.get();
+            if (sessionUser == null || !sessionUser.equals(loaded.getId())) {
+                authenticated.set(false);
+                authenticatedUserId.set(null);
+            }
+        }
+        notifyContextChanged();
+    }
+
+    public boolean isAuthenticated() {
+        return Boolean.TRUE.equals(authenticated.get());
+    }
+
+    public ObjectProperty<Boolean> authenticatedProperty() {
+        return authenticated;
+    }
+
+    public String getAuthenticatedUserId() {
+        return authenticatedUserId.get();
+    }
+
+    public ObjectProperty<String> authenticatedUserIdProperty() {
+        return authenticatedUserId;
+    }
+
+    public void signIn(String userId) {
+        String normalizedUserId = ValidationUtils.requireNonBlank(userId, "userId");
+        authenticated.set(true);
+        authenticatedUserId.set(normalizedUserId);
+        notifyContextChanged();
+    }
+
+    public void signOut() {
+        authenticated.set(false);
+        authenticatedUserId.set(null);
         notifyContextChanged();
     }
 

@@ -8,6 +8,7 @@ import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.UserProfileType;
+import com.budgetpilot.security.PasswordHasher;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.ValidationUtils;
 
@@ -34,6 +35,8 @@ public class OnboardingService {
         HABIT_LIMITS.put("#other", new BigDecimal("80"));
     }
 
+    private final PasswordHasher passwordHasher = new PasswordHasher();
+
     public UserProfile completeOnboarding(AppContext context, OnboardingData data) {
         ValidationUtils.requireNonNull(context, "context");
         ValidationUtils.requireNonNull(data, "data");
@@ -41,7 +44,12 @@ public class OnboardingService {
 
         validateData(data);
 
-        UserProfile profile = new UserProfile();
+        UserProfile existing = store.getUserProfile();
+        if (existing != null && existing.getPasswordHash() != null && !existing.getPasswordHash().isBlank()) {
+            throw new IllegalArgumentException("An account already exists. Please sign in.");
+        }
+
+        UserProfile profile = existing == null ? new UserProfile() : existing.copy();
         profile.setFirstName(data.getFirstName());
         profile.setLastName(data.getLastName());
         profile.setEmail(ValidationUtils.requireValidEmail(data.getEmail(), "email"));
@@ -51,6 +59,8 @@ public class OnboardingService {
         profile.setFamilyModuleEnabled(data.getProfileType() == UserProfileType.MAIN_FAMILY_SUPPORTER);
         profile.setInvestmentsModuleEnabled(true);
         profile.setAchievementsModuleEnabled(true);
+        profile.setPasswordHash(passwordHasher.hash(data.getPassword().toCharArray()));
+        profile.setActive(true);
         store.saveUserProfile(profile);
 
         saveHabitTemplates(store, data.getSelectedHabitTags());
@@ -67,6 +77,10 @@ public class OnboardingService {
         ValidationUtils.requireValidEmail(data.getEmail(), "email");
         ValidationUtils.parseOptionalNonNegativeInteger(data.getAgeText(), "age");
         ValidationUtils.requireNonNull(data.getProfileType(), "profileType");
+        ValidationUtils.requireNonBlank(data.getPassword(), "password");
+        if (data.getPassword().length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters.");
+        }
         ValidationUtils.requireNonNull(data.getPlanInput(), "planInput");
 
         if (data.getIncomeInputs().isEmpty()) {
@@ -176,6 +190,7 @@ public class OnboardingService {
         private String ageText = "";
         private String currencyCode = "EUR";
         private UserProfileType profileType = UserProfileType.PERSONAL_USE;
+        private String password = "";
         private final Set<String> selectedHabitTags = new LinkedHashSet<>();
         private final List<IncomeInput> incomeInputs = new ArrayList<>();
         private PlanInput planInput = new PlanInput();
@@ -226,6 +241,14 @@ public class OnboardingService {
 
         public void setProfileType(UserProfileType profileType) {
             this.profileType = profileType;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password == null ? "" : password;
         }
 
         public Set<String> getSelectedHabitTags() {

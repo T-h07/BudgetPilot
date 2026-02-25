@@ -13,9 +13,11 @@ import com.budgetpilot.ui.MainLayout;
 import com.budgetpilot.util.AppPaths;
 import com.budgetpilot.util.MonthUtils;
 import javafx.application.Application;
+import javafx.scene.image.Image;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.YearMonth;
@@ -114,7 +116,12 @@ public class Main extends Application {
             });
         }
 
-        PageId startupPage = appContext.onboardingCompleted() ? PageId.DASHBOARD : PageId.ONBOARDING;
+        PageId startupPage;
+        if (!appContext.onboardingCompleted()) {
+            startupPage = PageId.ONBOARDING;
+        } else {
+            startupPage = PageId.LOGIN;
+        }
 
         MainLayout mainLayout = new MainLayout(appContext, startupPage);
 
@@ -126,6 +133,7 @@ public class Main extends Application {
                 "/css/forms.css",
                 "/css/date-picker.css",
                 "/css/pages/dashboard.css",
+                "/css/pages/login.css",
                 "/css/pages/onboarding.css",
                 "/css/pages/settings.css",
                 "/css/pages/income.css",
@@ -147,6 +155,7 @@ public class Main extends Application {
         }
 
         stage.setTitle("BudgetPilot");
+        applyAppIcon(stage);
         stage.setScene(scene);
         stage.setMinWidth(1100);
         stage.setMinHeight(720);
@@ -162,5 +171,26 @@ public class Main extends Application {
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    private void applyAppIcon(Stage stage) {
+        if (stage == null) {
+            return;
+        }
+        for (String iconPath : List.of("/images/BudgetPilot.ico", "/images/budgetpilot-logo.png")) {
+            try (InputStream stream = Main.class.getResourceAsStream(iconPath)) {
+                if (stream == null) {
+                    continue;
+                }
+                Image image = new Image(stream);
+                if (image.isError()) {
+                    continue;
+                }
+                stage.getIcons().add(image);
+                return;
+            } catch (Exception ignored) {
+                // Keep startup resilient; missing/invalid icons should not block app launch.
+            }
+        }
     }
 }
