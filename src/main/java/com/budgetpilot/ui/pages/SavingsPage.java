@@ -6,12 +6,16 @@ import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.SavingsEntryType;
+import com.budgetpilot.service.balance.MonthlyBalanceService;
+import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
+import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
 import com.budgetpilot.service.planner.BudgetSummary;
 import com.budgetpilot.service.planner.PlannerService;
 import com.budgetpilot.service.savings.SavingsBucketSummary;
 import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.service.savings.SavingsSummary;
 import com.budgetpilot.ui.components.DataEmptyState;
+import com.budgetpilot.ui.components.MetricRow;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.SummaryStatCard;
@@ -26,6 +30,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -54,6 +59,7 @@ public class SavingsPage extends VBox {
     private final AppContext appContext;
     private final SavingsService savingsService;
     private final PlannerService plannerService;
+    private final MonthlyBalanceService monthlyBalanceService;
     private final Runnable contextListener = this::refreshAll;
 
     private final Label bannerLabel = new Label();
@@ -63,6 +69,8 @@ public class SavingsPage extends VBox {
     private final SummaryStatCard monthlyWithdrawalCard = new SummaryStatCard();
     private final SummaryStatCard activeBucketsCard = new SummaryStatCard();
     private final SummaryStatCard plannedVsActualCard = new SummaryStatCard();
+    private final VBox cashFlowMetricsBox = new VBox(6);
+    private final Label cashFlowWarningLabel = new Label();
 
     private final TextField bucketNameField = textField("Bucket name");
     private final MoneyField bucketTargetField = new MoneyField("Target Amount", "Target amount (optional)");
@@ -96,6 +104,7 @@ public class SavingsPage extends VBox {
         this.appContext = ValidationUtils.requireNonNull(appContext, "appContext");
         this.savingsService = new SavingsService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
         this.plannerService = new PlannerService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.monthlyBalanceService = new MonthlyBalanceService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -113,9 +122,15 @@ public class SavingsPage extends VBox {
         setupActions();
 
         HBox summaryRow = buildSummaryRow();
+        SectionCard cashFlowCard = new SectionCard(
+                "Month Cash Flow",
+                "Income, expenses, and active allocations for the selected month.",
+                buildCashFlowBody()
+        );
+        cashFlowCard.getStyleClass().add("cash-flow-card");
         HBox mainRow = buildMainRow();
 
-        getChildren().addAll(summaryRow, bannerLabel, mainRow);
+        getChildren().addAll(summaryRow, cashFlowCard, bannerLabel, mainRow);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -282,6 +297,13 @@ public class SavingsPage extends VBox {
         return row;
     }
 
+    private Node buildCashFlowBody() {
+        cashFlowMetricsBox.getStyleClass().add("cash-flow-metrics");
+        cashFlowWarningLabel.getStyleClass().add("cash-flow-warning");
+        cashFlowWarningLabel.setWrapText(true);
+        return new VBox(8, cashFlowMetricsBox, cashFlowWarningLabel);
+    }
+
     private Node buildBucketManagerBody() {
         VBox section = new VBox(12, buildBucketForm(), new Label("Buckets"), bucketListBox);
         section.setFillWidth(true);
@@ -394,6 +416,18 @@ public class SavingsPage extends VBox {
             BigDecimal amount = type == SavingsEntryType.ADJUSTMENT
                     ? parseSignedAmount(transactionAmountField.getText(), "Adjustment amount")
                     : transactionAmountField.parseRequiredPositive();
+
+            if (type == SavingsEntryType.CONTRIBUTION) {
+                MonthlyBalanceSnapshot projected = monthlyBalanceService.buildProjectedSnapshot(
+                        appContext.getSelectedMonth(),
+                        amount,
+                        BigDecimal.ZERO
+                );
+                if (projected.getWarningLevel() != MonthlyBalanceWarningLevel.OK
+                        && !confirmLowBalance(projected, amount, "savings contribution")) {
+                    return;
+                }
+            }
 
             switch (type) {
                 case CONTRIBUTION -> savingsService.addContribution(selectedBucketId, amount, entryDate, transactionNoteField.getText());
@@ -522,6 +556,33 @@ public class SavingsPage extends VBox {
                     "Plan " + MoneyUtils.format(planned, currencyCode) + " | Delta " + deltaText
             );
         }
+
+        refreshCashFlowCard(month, currencyCode);
+    }
+
+    private void refreshCashFlowCard(YearMonth month, String currencyCode) {
+        MonthlyBalanceSnapshot snapshot = monthlyBalanceService.buildSnapshot(month);
+        cashFlowMetricsBox.getChildren().setAll(
+                new MetricRow("Planned Income", MoneyUtils.format(snapshot.getPlannedIncome(), currencyCode)),
+                new MetricRow("Spent So Far", MoneyUtils.format(snapshot.getTotalExpenses(), currencyCode)),
+                new MetricRow("Allocated to Savings (Net)", MoneyUtils.format(snapshot.getNetSavingsAllocationsThisMonth(), currencyCode)),
+                new MetricRow("Allocated to Goals (Net)", MoneyUtils.format(snapshot.getNetGoalAllocationsThisMonth(), currencyCode)),
+                new MetricRow("Available After Allocations", MoneyUtils.format(snapshot.getAvailableAfterAllocations(), currencyCode))
+        );
+
+        cashFlowWarningLabel.getStyleClass().removeAll(
+                "cash-flow-warning-ok",
+                "cash-flow-warning-low",
+                "cash-flow-warning-negative"
+        );
+        if (snapshot.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE) {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-negative");
+        } else if (snapshot.getWarningLevel() == MonthlyBalanceWarningLevel.LOW) {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-low");
+        } else {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-ok");
+        }
+        cashFlowWarningLabel.setText(snapshot.getWarningMessage());
     }
 
     private void refreshBucketList() {
@@ -705,6 +766,27 @@ public class SavingsPage extends VBox {
         alert.setContentText(message);
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;
+    }
+
+    private boolean confirmLowBalance(MonthlyBalanceSnapshot projected, BigDecimal amount, String actionLabel) {
+        String currencyCode = resolveCurrencyCode();
+        String header = projected.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE
+                ? "Negative available balance"
+                : "Low available balance";
+        String message = "This " + actionLabel + " of " + MoneyUtils.format(amount, currencyCode)
+                + " will reduce your available monthly balance to "
+                + MoneyUtils.format(projected.getAvailableAfterAllocations(), currencyCode) + ".\n\n"
+                + "You are allocating more money than your month currently supports (income - expenses).";
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Low available balance");
+        alert.setHeaderText(header);
+        alert.setContentText(message);
+        ButtonType proceed = new ButtonType("Proceed anyway");
+        ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(proceed, cancel);
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == proceed;
     }
 
     private void addFormRow(GridPane grid, int rowIndex, String labelText, Node field) {

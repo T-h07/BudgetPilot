@@ -16,6 +16,7 @@ import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.FamilyExpenseType;
 import com.budgetpilot.model.enums.GoalContributionType;
+import com.budgetpilot.model.enums.GoalFundingSource;
 import com.budgetpilot.model.enums.GoalType;
 import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.InvestmentKind;
@@ -368,6 +369,7 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setEntryDate(DbUtils.parseLocalDate(rs.getString("entry_date"), LocalDate.now(), "savings_entries.entry_date"));
                 entry.setAmount(DbUtils.parseBigDecimal(rs.getString("amount"), "savings_entries.amount", BigDecimal.ONE));
                 entry.setEntryType(DbUtils.parseEnum(rs.getString("entry_type"), SavingsEntryType.class, SavingsEntryType.CONTRIBUTION, "savings_entries.entry_type"));
+                entry.setRelatedGoalId(rs.getString("related_goal_id"));
                 entry.setNote(rs.getString("note"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "savings_entries.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "savings_entries.updated_at"));
@@ -412,6 +414,13 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setContributionDate(DbUtils.parseLocalDate(rs.getString("contribution_date"), LocalDate.now(), "goal_contributions.contribution_date"));
                 entry.setAmount(DbUtils.parseBigDecimal(rs.getString("amount"), "goal_contributions.amount", BigDecimal.ONE));
                 entry.setType(DbUtils.parseEnum(rs.getString("type"), GoalContributionType.class, GoalContributionType.CONTRIBUTION, "goal_contributions.type"));
+                entry.setSourceType(DbUtils.parseEnum(
+                        rs.getString("source_type"),
+                        GoalFundingSource.class,
+                        GoalFundingSource.FREE_MONEY,
+                        "goal_contributions.source_type"
+                ));
+                entry.setSourceRefId(rs.getString("source_ref_id"));
                 entry.setNote(rs.getString("note"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "goal_contributions.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "goal_contributions.updated_at"));
@@ -747,8 +756,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertSavingsEntries() throws SQLException {
         String sql = """
                 INSERT INTO savings_entries (
-                    id, bucket_id, month, entry_date, amount, entry_type, note, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, bucket_id, month, entry_date, amount, entry_type, related_goal_id, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (SavingsEntry entry : listAllSavingsEntries()) {
@@ -758,9 +767,10 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(4, entry.getEntryDate().toString());
                 ps.setString(5, entry.getAmount().toPlainString());
                 ps.setString(6, entry.getEntryType().name());
-                DbUtils.setNullableString(ps, 7, entry.getNote());
-                ps.setString(8, entry.getCreatedAt().toString());
-                ps.setString(9, entry.getUpdatedAt().toString());
+                DbUtils.setNullableString(ps, 7, entry.getRelatedGoalId());
+                DbUtils.setNullableString(ps, 8, entry.getNote());
+                ps.setString(9, entry.getCreatedAt().toString());
+                ps.setString(10, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -796,8 +806,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertGoalContributions() throws SQLException {
         String sql = """
                 INSERT INTO goal_contributions (
-                    id, goal_id, month, contribution_date, amount, type, note, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, goal_id, month, contribution_date, amount, type, source_type, source_ref_id, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (GoalContribution entry : listAllGoalContributions()) {
@@ -807,9 +817,11 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(4, entry.getContributionDate().toString());
                 ps.setString(5, entry.getAmount().toPlainString());
                 ps.setString(6, entry.getType().name());
-                DbUtils.setNullableString(ps, 7, entry.getNote());
-                ps.setString(8, entry.getCreatedAt().toString());
-                ps.setString(9, entry.getUpdatedAt().toString());
+                ps.setString(7, entry.getSourceType().name());
+                DbUtils.setNullableString(ps, 8, entry.getSourceRefId());
+                DbUtils.setNullableString(ps, 9, entry.getNote());
+                ps.setString(10, entry.getCreatedAt().toString());
+                ps.setString(11, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();

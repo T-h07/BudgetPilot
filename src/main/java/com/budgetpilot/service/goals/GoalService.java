@@ -3,6 +3,8 @@ package com.budgetpilot.service.goals;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.enums.GoalContributionType;
+import com.budgetpilot.model.enums.GoalFundingSource;
+import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -18,9 +20,11 @@ import java.util.stream.Collectors;
 
 public class GoalService {
     private final BudgetStore budgetStore;
+    private final SavingsService savingsService;
 
     public GoalService(BudgetStore budgetStore) {
         this.budgetStore = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
+        this.savingsService = new SavingsService(this.budgetStore);
     }
 
     public List<Goal> listGoals() {
@@ -57,18 +61,82 @@ public class GoalService {
     }
 
     public void contribute(String goalId, BigDecimal amount, LocalDate date, String note) {
+        contributeWithFunding(goalId, amount, date, note, GoalFundingSource.FREE_MONEY, null);
+    }
+
+    public void contributeWithFunding(
+            String goalId,
+            BigDecimal amount,
+            LocalDate date,
+            String note,
+            GoalFundingSource sourceType,
+            String sourceRefId
+    ) {
+        String targetGoalId = ValidationUtils.requireNonBlank(goalId, "goalId");
+        LocalDate contributionDate = ValidationUtils.requireNonNull(date, "date");
         BigDecimal normalized = requirePositiveAmount(amount, "Contribution amount");
-        recordContribution(goalId, normalized, date, GoalContributionType.CONTRIBUTION, note);
+        GoalFundingSource fundingSource = sourceType == null ? GoalFundingSource.FREE_MONEY : sourceType;
+
+        if (fundingSource == GoalFundingSource.SAVINGS_BUCKET) {
+            String bucketId = ValidationUtils.requireNonBlank(sourceRefId, "sourceRefId");
+            savingsService.transferToGoal(bucketId, targetGoalId, normalized, contributionDate, note);
+            recordContribution(
+                    targetGoalId,
+                    normalized,
+                    contributionDate,
+                    GoalContributionType.CONTRIBUTION,
+                    note,
+                    GoalFundingSource.SAVINGS_BUCKET,
+                    bucketId
+            );
+            return;
+        }
+
+        recordContribution(
+                targetGoalId,
+                normalized,
+                contributionDate,
+                GoalContributionType.CONTRIBUTION,
+                note,
+                fundingSource,
+                sourceRefId
+        );
+    }
+
+    public void contributeFromSavingsBucket(
+            String goalId,
+            String bucketId,
+            BigDecimal amount,
+            LocalDate date,
+            String note
+    ) {
+        contributeWithFunding(goalId, amount, date, note, GoalFundingSource.SAVINGS_BUCKET, bucketId);
     }
 
     public void withdraw(String goalId, BigDecimal amount, LocalDate date, String note) {
         BigDecimal normalized = requirePositiveAmount(amount, "Withdrawal amount").negate();
-        recordContribution(goalId, normalized, date, GoalContributionType.WITHDRAWAL, note);
+        recordContribution(
+                goalId,
+                normalized,
+                date,
+                GoalContributionType.WITHDRAWAL,
+                note,
+                GoalFundingSource.FREE_MONEY,
+                null
+        );
     }
 
     public void adjust(String goalId, BigDecimal amount, LocalDate date, String note) {
         BigDecimal normalized = normalizeNonZero(amount, "Adjustment amount");
-        recordContribution(goalId, normalized, date, GoalContributionType.ADJUSTMENT, note);
+        recordContribution(
+                goalId,
+                normalized,
+                date,
+                GoalContributionType.ADJUSTMENT,
+                note,
+                GoalFundingSource.MANUAL,
+                null
+        );
     }
 
     public List<GoalContribution> listContributions(String goalId) {
@@ -234,6 +302,14 @@ public class GoalService {
         return (int) listGoals().stream().filter(Goal::isActive).count();
     }
 
+    public BigDecimal getMonthlyNetAllocationsTotal(YearMonth month) {
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        List<GoalContribution> entries = budgetStore.listAllGoalContributions(targetMonth);
+        BigDecimal contributions = sumByType(entries, GoalContributionType.CONTRIBUTION);
+        BigDecimal withdrawals = sumByType(entries, GoalContributionType.WITHDRAWAL).abs();
+        return MoneyUtils.normalize(contributions.subtract(withdrawals));
+    }
+
     public GoalValidationResult validateGoal(Goal goal) {
         GoalValidationResult result = new GoalValidationResult();
         if (goal == null) {
@@ -263,11 +339,14 @@ public class GoalService {
             BigDecimal signedAmount,
             LocalDate date,
             GoalContributionType contributionType,
-            String note
+            String note,
+            GoalFundingSource sourceType,
+            String sourceRefId
     ) {
         String targetGoalId = ValidationUtils.requireNonBlank(goalId, "goalId");
         LocalDate contributionDate = ValidationUtils.requireNonNull(date, "date");
         BigDecimal normalizedAmount = normalizeNonZero(signedAmount, "amount");
+        GoalFundingSource fundingSource = sourceType == null ? GoalFundingSource.FREE_MONEY : sourceType;
 
         Goal goal = getGoalOrThrow(targetGoalId);
         BigDecimal updatedAmount = MoneyUtils.normalize(goal.getCurrentAmount().add(normalizedAmount));
@@ -281,6 +360,8 @@ public class GoalService {
         contribution.setContributionDate(contributionDate);
         contribution.setAmount(normalizedAmount);
         contribution.setType(ValidationUtils.requireNonNull(contributionType, "contributionType"));
+        contribution.setSourceType(fundingSource);
+        contribution.setSourceRefId(sourceRefId);
         contribution.setNote(note);
 
         budgetStore.saveGoalContribution(contribution);

@@ -5,6 +5,8 @@ import com.budgetpilot.model.IncomeEntry;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.service.achievements.AchievementPageSummary;
 import com.budgetpilot.service.achievements.AchievementService;
+import com.budgetpilot.service.balance.MonthlyBalanceService;
+import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
 import com.budgetpilot.service.planner.BudgetSummary;
 import com.budgetpilot.service.expenses.ExpenseCategorySummary;
 import com.budgetpilot.service.expenses.ExpenseService;
@@ -51,6 +53,7 @@ public class DashboardMetricsService {
     private final HabitService habitService;
     private final InvestmentService investmentService;
     private final AchievementService achievementService;
+    private final MonthlyBalanceService monthlyBalanceService;
 
     public DashboardMetricsService(BudgetStore budgetStore) {
         this.budgetStore = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
@@ -64,6 +67,7 @@ public class DashboardMetricsService {
         this.habitService = new HabitService(budgetStore);
         this.investmentService = new InvestmentService(budgetStore);
         this.achievementService = new AchievementService(budgetStore);
+        this.monthlyBalanceService = new MonthlyBalanceService(budgetStore);
     }
 
     public DashboardSnapshot buildSnapshot(YearMonth month) {
@@ -82,6 +86,7 @@ public class DashboardMetricsService {
         HabitPageSummary habitPageSummary = habitService.getHabitPageSummary(targetMonth);
         InvestmentPageSummary investmentSummary = investmentService.getInvestmentPageSummary(targetMonth);
         AchievementPageSummary achievementSummary = achievementService.getAchievementPageSummary(targetMonth);
+        MonthlyBalanceSnapshot monthlyBalance = monthlyBalanceService.buildSnapshot(targetMonth);
 
         BudgetSummary budgetSummary = plannerService.buildBudgetSummary(targetMonth, familyEnabled);
         ForecastSummary forecastSummary = forecastService.buildForecast(targetMonth, familyEnabled);
@@ -144,7 +149,8 @@ public class DashboardMetricsService {
                 expenseSummary,
                 goalsCurrentTotal,
                 goalsTargetTotal,
-                healthScore
+                healthScore,
+                monthlyBalance
         );
 
         String primaryStatusMessage = alerts.isEmpty()
@@ -205,14 +211,15 @@ public class DashboardMetricsService {
             ExpenseSummary expenseSummary,
             BigDecimal goalsCurrentTotal,
             BigDecimal goalsTargetTotal,
-            BudgetHealthScore healthScore
+            BudgetHealthScore healthScore,
+            MonthlyBalanceSnapshot monthlyBalance
     ) {
         List<DashboardKpi> kpis = new ArrayList<>();
         kpis.add(new DashboardKpi(
                 "money_remaining",
                 "Money Remaining",
-                MoneyUtils.format(forecastSummary.getProjectedRemainingAfterPlan(), currencyCode),
-                "Projected after plan allocations"
+                MoneyUtils.format(monthlyBalance.getAvailableAfterAllocations(), currencyCode),
+                "After savings/goals allocations"
         ));
         kpis.add(new DashboardKpi(
                 "total_spent",

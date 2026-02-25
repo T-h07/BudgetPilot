@@ -18,6 +18,7 @@ public class SavingsEntry {
     private LocalDate entryDate;
     private BigDecimal amount;
     private SavingsEntryType entryType;
+    private String relatedGoalId;
     private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -30,6 +31,7 @@ public class SavingsEntry {
         this.entryDate = LocalDate.now();
         this.amount = new BigDecimal("1.00");
         this.entryType = SavingsEntryType.CONTRIBUTION;
+        this.relatedGoalId = "";
         this.note = "";
         this.createdAt = now;
         this.updatedAt = now;
@@ -58,6 +60,7 @@ public class SavingsEntry {
         this.entryDate = other.entryDate;
         this.amount = other.amount;
         this.entryType = other.entryType;
+        this.relatedGoalId = other.relatedGoalId == null ? "" : other.relatedGoalId;
         this.note = other.note;
         this.createdAt = other.createdAt;
         this.updatedAt = other.updatedAt;
@@ -125,6 +128,15 @@ public class SavingsEntry {
         touch();
     }
 
+    public String getRelatedGoalId() {
+        return relatedGoalId;
+    }
+
+    public void setRelatedGoalId(String relatedGoalId) {
+        this.relatedGoalId = relatedGoalId == null ? "" : relatedGoalId.trim();
+        touch();
+    }
+
     public String getNote() {
         return note;
     }
@@ -163,6 +175,7 @@ public class SavingsEntry {
                 ", entryDate=" + entryDate +
                 ", amount=" + amount +
                 ", entryType=" + entryType +
+                ", relatedGoalId='" + relatedGoalId + '\'' +
                 '}';
     }
 }
