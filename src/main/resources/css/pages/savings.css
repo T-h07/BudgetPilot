@@ -1,0 +1,85 @@
+.page-savings {
+    -fx-spacing: 16;
+}
+
+.savings-summary-grid {
+    -fx-spacing: 12;
+}
+
+.savings-buckets-card,
+.savings-details-card {
+    -fx-min-height: 620;
+}
+
+.savings-bucket-list {
+    -fx-spacing: 10;
+}
+
+.bucket-card {
+    -fx-padding: 12;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 10;
+}
+
+.bucket-card-selected {
+    -fx-background-color: rgba(54, 163, 255, 0.16);
+    -fx-border-color: rgba(54, 163, 255, 0.45);
+}
+
+.bucket-progress-bar {
+    -fx-accent: -bp-accent;
+}
+
+.bucket-progress-bar > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.bucket-progress-bar > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+}
+
+.savings-transaction-table {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.savings-transaction-table .column-header-background {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10 10 0 0;
+}
+
+.savings-transaction-table .column-header,
+.savings-transaction-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.savings-transaction-table .column-header .label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.savings-transaction-table .table-row-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-border-color: transparent;
+}
+
+.savings-transaction-table .table-row-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.2);
+}
+
+.savings-transaction-table .table-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+}
+
+.savings-transaction-table .placeholder .label {
+    -fx-text-fill: -bp-text-secondary;
+}

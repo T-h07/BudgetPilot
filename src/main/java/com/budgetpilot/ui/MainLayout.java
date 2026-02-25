@@ -91,7 +91,9 @@ public class MainLayout extends BorderPane {
         if (currentPage == PageId.DASHBOARD
                 || currentPage == PageId.INCOME
                 || currentPage == PageId.PLANNER
-                || currentPage == PageId.EXPENSES) {
+                || currentPage == PageId.EXPENSES
+                || currentPage == PageId.SAVINGS
+                || currentPage == PageId.GOALS) {
             navigateTo(currentPage);
         }
     }

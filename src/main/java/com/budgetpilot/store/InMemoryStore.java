@@ -2,10 +2,12 @@ package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
+import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
 import com.budgetpilot.model.MonthlyPlan;
+import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.util.ValidationUtils;
@@ -26,12 +28,22 @@ public class InMemoryStore implements BudgetStore {
             Comparator.comparing(ExpenseEntry::getExpenseDate, Comparator.nullsLast(Comparator.reverseOrder()))
                     .thenComparing(ExpenseEntry::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
 
+    private static final Comparator<SavingsEntry> SAVINGS_ENTRY_SORT =
+            Comparator.comparing(SavingsEntry::getEntryDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(SavingsEntry::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
+
+    private static final Comparator<GoalContribution> GOAL_CONTRIBUTION_SORT =
+            Comparator.comparing(GoalContribution::getContributionDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(GoalContribution::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
+
     private UserProfile userProfile;
     private final Map<YearMonth, MonthlyPlan> monthlyPlans = new LinkedHashMap<>();
     private final Map<String, IncomeEntry> incomes = new LinkedHashMap<>();
     private final Map<String, ExpenseEntry> expenses = new LinkedHashMap<>();
     private final Map<String, SavingsBucket> savingsBuckets = new LinkedHashMap<>();
+    private final Map<String, SavingsEntry> savingsEntries = new LinkedHashMap<>();
     private final Map<String, Goal> goals = new LinkedHashMap<>();
+    private final Map<String, GoalContribution> goalContributions = new LinkedHashMap<>();
     private final Map<String, FamilyMember> familyMembers = new LinkedHashMap<>();
     private final Map<String, HabitRule> habitRules = new LinkedHashMap<>();
 
@@ -128,6 +140,53 @@ public class InMemoryStore implements BudgetStore {
     }
 
     @Override
+    public synchronized List<SavingsEntry> listSavingsEntries(String bucketId) {
+        String normalizedBucketId = ValidationUtils.requireNonBlank(bucketId, "bucketId");
+        List<SavingsEntry> results = savingsEntries.values().stream()
+                .filter(entry -> normalizedBucketId.equals(entry.getBucketId()))
+                .sorted(SAVINGS_ENTRY_SORT)
+                .map(SavingsEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<SavingsEntry> listSavingsEntries(String bucketId, YearMonth month) {
+        String normalizedBucketId = ValidationUtils.requireNonBlank(bucketId, "bucketId");
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<SavingsEntry> results = savingsEntries.values().stream()
+                .filter(entry -> normalizedBucketId.equals(entry.getBucketId()))
+                .filter(entry -> normalizedMonth.equals(entry.getMonth()))
+                .sorted(SAVINGS_ENTRY_SORT)
+                .map(SavingsEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<SavingsEntry> listAllSavingsEntries(YearMonth month) {
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<SavingsEntry> results = savingsEntries.values().stream()
+                .filter(entry -> normalizedMonth.equals(entry.getMonth()))
+                .sorted(SAVINGS_ENTRY_SORT)
+                .map(SavingsEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveSavingsEntry(SavingsEntry entry) {
+        ValidationUtils.requireNonNull(entry, "entry");
+        SavingsEntry copy = entry.copy();
+        savingsEntries.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteSavingsEntry(String id) {
+        savingsEntries.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
     public synchronized List<Goal> listGoals() {
         List<Goal> results = new ArrayList<>();
         for (Goal goal : goals.values()) {
@@ -146,6 +205,53 @@ public class InMemoryStore implements BudgetStore {
     @Override
     public synchronized void deleteGoal(String id) {
         goals.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
+    public synchronized List<GoalContribution> listGoalContributions(String goalId) {
+        String normalizedGoalId = ValidationUtils.requireNonBlank(goalId, "goalId");
+        List<GoalContribution> results = goalContributions.values().stream()
+                .filter(entry -> normalizedGoalId.equals(entry.getGoalId()))
+                .sorted(GOAL_CONTRIBUTION_SORT)
+                .map(GoalContribution::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<GoalContribution> listGoalContributions(String goalId, YearMonth month) {
+        String normalizedGoalId = ValidationUtils.requireNonBlank(goalId, "goalId");
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<GoalContribution> results = goalContributions.values().stream()
+                .filter(entry -> normalizedGoalId.equals(entry.getGoalId()))
+                .filter(entry -> normalizedMonth.equals(entry.getMonth()))
+                .sorted(GOAL_CONTRIBUTION_SORT)
+                .map(GoalContribution::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<GoalContribution> listAllGoalContributions(YearMonth month) {
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<GoalContribution> results = goalContributions.values().stream()
+                .filter(entry -> normalizedMonth.equals(entry.getMonth()))
+                .sorted(GOAL_CONTRIBUTION_SORT)
+                .map(GoalContribution::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveGoalContribution(GoalContribution entry) {
+        ValidationUtils.requireNonNull(entry, "entry");
+        GoalContribution copy = entry.copy();
+        goalContributions.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteGoalContribution(String id) {
+        goalContributions.remove(ValidationUtils.requireNonBlank(id, "id"));
     }
 
     @Override
@@ -197,7 +303,9 @@ public class InMemoryStore implements BudgetStore {
         incomes.clear();
         expenses.clear();
         savingsBuckets.clear();
+        savingsEntries.clear();
         goals.clear();
+        goalContributions.clear();
         familyMembers.clear();
         habitRules.clear();
     }
