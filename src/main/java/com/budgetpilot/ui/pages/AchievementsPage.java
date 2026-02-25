@@ -89,7 +89,7 @@ public class AchievementsPage extends VBox {
 
     private void setupFilters() {
         searchField.setPromptText("Search achievements...");
-        searchField.getStyleClass().add("text-input");
+        searchField.getStyleClass().addAll("text-input", "form-input");
 
         configureCategoryFilter();
         configureStatusFilter();
@@ -334,7 +334,7 @@ public class AchievementsPage extends VBox {
         categoryFilter.getItems().setAll((AchievementCategory) null);
         categoryFilter.getItems().addAll(AchievementCategory.values());
         categoryFilter.getSelectionModel().selectFirst();
-        categoryFilter.getStyleClass().add("combo-box");
+        categoryFilter.getStyleClass().addAll("combo-box", "form-combo");
         categoryFilter.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(AchievementCategory item, boolean empty) {
@@ -355,7 +355,7 @@ public class AchievementsPage extends VBox {
         statusFilter.getItems().setAll((AchievementStatus) null);
         statusFilter.getItems().addAll(AchievementStatus.values());
         statusFilter.getSelectionModel().selectFirst();
-        statusFilter.getStyleClass().add("combo-box");
+        statusFilter.getStyleClass().addAll("combo-box", "form-combo");
         statusFilter.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(AchievementStatus item, boolean empty) {

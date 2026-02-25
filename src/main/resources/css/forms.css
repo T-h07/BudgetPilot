@@ -9,75 +9,224 @@
     -fx-text-fill: #ffb4b4;
 }
 
+.text-field,
 .text-input,
-.text-area,
+.form-input,
 .combo-box,
-.date-picker {
+.form-combo,
+.date-picker,
+.form-datepicker {
     -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-control-inner-background: rgba(255, 255, 255, 0.06);
     -fx-border-color: rgba(255, 255, 255, 0.14);
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
     -fx-text-fill: -bp-text-primary;
-}
-
-.text-input,
-.date-picker,
-.combo-box {
+    -fx-prompt-text-fill: rgba(159, 176, 211, 0.78);
     -fx-padding: 8 10;
+    -fx-min-height: 38;
 }
 
-.text-input,
-.text-area .content {
-    -fx-prompt-text-fill: rgba(159, 176, 211, 0.75);
-}
-
+.text-field:focused,
 .text-input:focused,
-.text-area:focused,
+.form-input:focused,
 .combo-box:focused,
-.date-picker:focused {
-    -fx-border-color: rgba(54, 163, 255, 0.55);
+.form-combo:focused,
+.date-picker:focused,
+.form-datepicker:focused {
+    -fx-border-color: rgba(54, 163, 255, 0.58);
+    -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.18), 8, 0.2, 0, 2);
 }
 
-.money-input {
-    -fx-font-weight: 700;
-}
-
-.combo-box .list-cell {
+.combo-box > .list-cell,
+.form-combo > .list-cell {
     -fx-text-fill: -bp-text-primary;
     -fx-background-color: transparent;
+}
+
+.combo-box > .arrow-button,
+.form-combo > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
 .combo-box-popup .list-view {
     -fx-background-color: #152038;
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-control-inner-background: #152038;
+    -fx-background-insets: 0;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.38), 12, 0.2, 0, 4);
 }
 
 .combo-box-popup .list-cell {
-    -fx-background-color: transparent;
+    -fx-background-color: #152038;
     -fx-text-fill: -bp-text-primary;
 }
 
 .combo-box-popup .list-cell:hover,
 .combo-box-popup .list-cell:filled:selected {
-    -fx-background-color: rgba(54, 163, 255, 0.24);
+    -fx-background-color: rgba(54, 163, 255, 0.26);
 }
 
-.text-area {
+.combo-box-popup > .list-view .list-cell:empty {
+    -fx-background-color: #152038;
+}
+
+.text-area,
+.form-textarea,
+.onboarding-notes-area {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-control-inner-background: rgba(255, 255, 255, 0.06);
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-text-fill: -bp-text-primary;
+    -fx-prompt-text-fill: rgba(159, 176, 211, 0.78);
     -fx-padding: 0;
 }
 
-.text-area .content {
+.text-area:focused,
+.form-textarea:focused,
+.onboarding-notes-area:focused {
+    -fx-border-color: rgba(54, 163, 255, 0.58);
+    -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.18), 8, 0.2, 0, 2);
+}
+
+.text-area .scroll-pane,
+.text-area .scroll-pane .viewport,
+.form-textarea .scroll-pane,
+.form-textarea .scroll-pane .viewport,
+.onboarding-notes-area .scroll-pane,
+.onboarding-notes-area .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.text-area .content,
+.form-textarea .content,
+.onboarding-notes-area .content,
+.text-area .scroll-pane .content,
+.form-textarea .scroll-pane .content,
+.onboarding-notes-area .scroll-pane .content {
     -fx-background-color: rgba(255, 255, 255, 0.06);
-    -fx-background-radius: 8;
-    -fx-text-fill: -bp-text-primary;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10;
+    -fx-padding: 8 10;
+}
+
+.text-area .text,
+.form-textarea .text,
+.onboarding-notes-area .text {
+    -fx-fill: -bp-text-primary;
 }
 
 .check-box {
     -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.check-box .box {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+
+.check-box:hover .box {
+    -fx-border-color: rgba(54, 163, 255, 0.48);
 }
 
 .check-box:selected {
     -fx-text-fill: -bp-text-primary;
 }
 
+.check-box:selected .box {
+    -fx-background-color: rgba(54, 163, 255, 0.3);
+    -fx-border-color: rgba(54, 163, 255, 0.65);
+}
+
+.check-box:selected .mark {
+    -fx-background-color: #f5f8ff;
+}
+
+.page-root .button {
+    -fx-background-color: rgba(255, 255, 255, 0.07);
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-text-fill: -bp-text-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 14;
+}
+
+.page-root .button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+}
+
+.page-root .button:pressed {
+    -fx-opacity: 0.92;
+}
+
+.page-root .button:disabled {
+    -fx-opacity: 0.55;
+}
+
+.btn-primary,
+.quick-add-button {
+    -fx-background-color: linear-gradient(to bottom, -bp-accent, -bp-accent-strong);
+    -fx-border-color: transparent;
+    -fx-text-fill: white;
+}
+
+.btn-primary:hover,
+.quick-add-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #4bb0ff, -bp-accent);
+}
+
+.btn-secondary,
+.secondary-button {
+    -fx-background-color: rgba(255, 255, 255, 0.07);
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-text-fill: -bp-text-primary;
+}
+
+.btn-danger,
+.danger-button {
+    -fx-background-color: rgba(240, 97, 97, 0.18);
+    -fx-border-color: rgba(240, 97, 97, 0.48);
+    -fx-text-fill: #ffd7d7;
+}
+
+.btn-danger:hover,
+.danger-button:hover {
+    -fx-background-color: rgba(240, 97, 97, 0.26);
+}
+
+.btn-ghost {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.btn-ghost:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-text-fill: -bp-text-primary;
+}
+
+.btn-small {
+    -fx-font-size: 11px;
+    -fx-padding: 6 10;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.money-input {
+    -fx-font-weight: 700;
+}

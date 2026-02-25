@@ -8,6 +8,7 @@ import com.budgetpilot.service.OnboardingService;
 import com.budgetpilot.ui.components.ChipToggle;
 import com.budgetpilot.ui.components.WizardStepHeader;
 import com.budgetpilot.util.ValidationUtils;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -66,7 +67,7 @@ public class OnboardingPage extends VBox {
     private final TextField lastNameField = textField("Last name");
     private final TextField emailField = textField("Email");
     private final TextField ageField = textField("Age (optional)");
-    private final TextField currencyField = textField("Currency (e.g. EUR)");
+    private final ComboBox<String> currencyCombo = new ComboBox<>();
 
     // Profile type step controls
     private final ToggleGroup profileTypeGroup = new ToggleGroup();
@@ -74,7 +75,8 @@ public class OnboardingPage extends VBox {
 
     // Habit step controls
     private final Map<String, ChipToggle> habitChipMap = new LinkedHashMap<>();
-    private final TextField customHabitField = textField("Custom tag (optional, e.g. #books)");
+    private final FlowPane habitChipsPane = new FlowPane(8, 10);
+    private final TextField customHabitField = textField("Press Enter to add custom tag (e.g. #books)");
 
     // Income step controls
     private final TextField incomeSourceField = textField("Income source");
@@ -130,12 +132,10 @@ public class OnboardingPage extends VBox {
 
         HBox navBar = new HBox(10, backButton, nextButton);
         navBar.setAlignment(Pos.CENTER_RIGHT);
-        nextButton.getStyleClass().add("quick-add-button");
+        nextButton.getStyleClass().addAll("quick-add-button", "btn-primary");
+        backButton.getStyleClass().addAll("secondary-button", "btn-secondary");
 
-        backButton.setOnAction(event -> {
-            stepIndex = Math.max(0, stepIndex - 1);
-            renderStep();
-        });
+        backButton.setOnAction(event -> handleBackOrExit());
         nextButton.setOnAction(event -> handleNext());
 
         getChildren().addAll(stepHeader, persistenceWarningLabel, bannerLabel, contentHost, navBar);
@@ -146,11 +146,16 @@ public class OnboardingPage extends VBox {
     }
 
     private void initializeDefaults() {
-        currencyField.setText("EUR");
+        currencyCombo.getItems().setAll("EUR", "USD", "GBP", "CHF", "CAD", "AUD", "JPY");
+        currencyCombo.getSelectionModel().select("EUR");
+        currencyCombo.getStyleClass().addAll("combo-box", "onboarding-combo");
+
         incomeTypeCombo.getItems().setAll(IncomeType.values());
         incomeTypeCombo.getSelectionModel().select(IncomeType.SALARY);
+        incomeTypeCombo.getStyleClass().addAll("combo-box", "onboarding-combo");
         receivedIncomeCheck.setSelected(true);
         incomeListView.setPrefHeight(160);
+        incomeListView.getStyleClass().add("onboarding-income-list");
 
         RadioButton studentOption = profileTypeOption(
                 UserProfileType.STUDENT,
@@ -167,13 +172,24 @@ public class OnboardingPage extends VBox {
         personalOption.setSelected(true);
 
         planNotesArea.setPromptText("Optional notes about your first month plan");
-        planNotesArea.getStyleClass().add("text-input");
+        planNotesArea.getStyleClass().addAll("text-input", "onboarding-notes-area");
         planNotesArea.setPrefRowCount(3);
 
         for (String tag : DEFAULT_HABIT_TAGS) {
-            ChipToggle chip = new ChipToggle(tag);
-            habitChipMap.put(tag, chip);
+            addHabitChip(tag);
         }
+
+        ChipToggle otherChip = habitChipMap.get("#other");
+        if (otherChip != null) {
+            customHabitField.setDisable(!otherChip.isSelected());
+            otherChip.selectedProperty().addListener((obs, oldValue, isSelected) -> {
+                customHabitField.setDisable(!isSelected);
+                if (isSelected) {
+                    customHabitField.requestFocus();
+                }
+            });
+        }
+        customHabitField.setOnAction(event -> addCustomHabitChipFromField());
 
         setupStarterPlanDefaults();
     }
@@ -219,14 +235,12 @@ public class OnboardingPage extends VBox {
     }
 
     private void bindValidationListeners() {
-        List<TextField> profileFields = List.of(firstNameField, lastNameField, emailField, ageField, currencyField);
+        List<TextField> profileFields = List.of(firstNameField, lastNameField, emailField, ageField);
         for (TextField field : profileFields) {
             field.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
         }
+        currencyCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateNavigationState());
 
-        for (ChipToggle chip : habitChipMap.values()) {
-            chip.selectedProperty().addListener((obs, wasSelected, isSelected) -> updateNavigationState());
-        }
         customHabitField.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
 
         incomeSourceField.textProperty().addListener((obs, oldText, newText) -> updateNavigationState());
@@ -264,6 +278,16 @@ public class OnboardingPage extends VBox {
         renderStep();
     }
 
+    private void handleBackOrExit() {
+        clearBanner();
+        if (stepIndex == 0) {
+            Platform.exit();
+            return;
+        }
+        stepIndex = Math.max(0, stepIndex - 1);
+        renderStep();
+    }
+
     private void finishOnboarding() {
         try {
             collectProfileData();
@@ -281,21 +305,17 @@ public class OnboardingPage extends VBox {
         onboardingData.setLastName(lastNameField.getText());
         onboardingData.setEmail(emailField.getText());
         onboardingData.setAgeText(ageField.getText());
-        onboardingData.setCurrencyCode(currencyField.getText());
+        onboardingData.setCurrencyCode(currencyCombo.getValue());
         onboardingData.setProfileType(selectedProfileType());
     }
 
     private void collectHabitData() {
+        addCustomHabitChipFromField();
         onboardingData.getSelectedHabitTags().clear();
         for (Map.Entry<String, ChipToggle> entry : habitChipMap.entrySet()) {
             if (entry.getValue().isSelected()) {
                 onboardingData.getSelectedHabitTags().add(entry.getKey());
             }
-        }
-
-        String customTag = customHabitField.getText() == null ? "" : customHabitField.getText().trim();
-        if (!customTag.isBlank()) {
-            onboardingData.getSelectedHabitTags().add(customTag.startsWith("#") ? customTag.toLowerCase() : "#" + customTag.toLowerCase());
         }
     }
 
@@ -316,7 +336,8 @@ public class OnboardingPage extends VBox {
     private void renderStep() {
         contentHost.getChildren().setAll(stepContentFor(stepIndex));
         stepHeader.update(stepIndex + 1, 6, stepTitle(stepIndex), stepSubtitle(stepIndex));
-        backButton.setDisable(stepIndex == 0);
+        backButton.setText(stepIndex == 0 ? "Exit Setup" : "Back");
+        backButton.setDisable(false);
         nextButton.setText(stepIndex == 5 ? "Finish Setup" : (stepIndex == 0 ? "Get Started" : "Next"));
         updateNavigationState();
     }
@@ -338,15 +359,8 @@ public class OnboardingPage extends VBox {
         intro.getStyleClass().add("wizard-step-subtitle");
         intro.setWrapText(true);
 
-        Button startButton = new Button("Get Started");
-        startButton.getStyleClass().add("quick-add-button");
-        startButton.setOnAction(event -> {
-            stepIndex = 1;
-            renderStep();
-        });
-
         VBox box = createFormCard();
-        box.getChildren().addAll(intro, new Separator(), startButton);
+        box.getChildren().addAll(intro, new Separator());
         return box;
     }
 
@@ -356,7 +370,7 @@ public class OnboardingPage extends VBox {
         addFormRow(grid, 1, "Last Name", lastNameField);
         addFormRow(grid, 2, "Email", emailField);
         addFormRow(grid, 3, "Age", ageField);
-        addFormRow(grid, 4, "Currency", currencyField);
+        addFormRow(grid, 4, "Currency", currencyCombo);
 
         VBox box = createFormCard();
         box.getChildren().add(grid);
@@ -370,13 +384,10 @@ public class OnboardingPage extends VBox {
     }
 
     private Node buildHabitStep() {
-        FlowPane chips = new FlowPane(8, 10);
-        habitChipMap.values().forEach(chips.getChildren()::add);
-
         VBox box = createFormCard();
         box.getChildren().addAll(
                 new Label("Select tags you want BudgetPilot to monitor from day one."),
-                chips,
+                habitChipsPane,
                 customHabitField
         );
         return box;
@@ -392,10 +403,11 @@ public class OnboardingPage extends VBox {
         options.setAlignment(Pos.CENTER_LEFT);
 
         Button addIncomeButton = new Button("Add Income");
-        addIncomeButton.getStyleClass().add("quick-add-button");
+        addIncomeButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addIncomeButton.setOnAction(event -> handleAddIncome());
 
         Button removeIncomeButton = new Button("Remove Selected");
+        removeIncomeButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         removeIncomeButton.setOnAction(event -> {
             int selectedIndex = incomeListView.getSelectionModel().getSelectedIndex();
             if (selectedIndex >= 0 && selectedIndex < onboardingData.getIncomeInputs().size()) {
@@ -482,7 +494,7 @@ public class OnboardingPage extends VBox {
         ValidationUtils.requireNonBlank(lastNameField.getText(), "last name");
         ValidationUtils.requireValidEmail(emailField.getText(), "email");
         ValidationUtils.parseOptionalNonNegativeInteger(ageField.getText(), "age");
-        ValidationUtils.requireNonBlank(currencyField.getText(), "currency");
+        ValidationUtils.requireNonBlank(currencyCombo.getValue(), "currency");
         return true;
     }
 
@@ -557,13 +569,13 @@ public class OnboardingPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 
     private BigDecimal parseMoney(String raw, String fieldName) {
         try {
-            BigDecimal value = new BigDecimal(raw == null || raw.isBlank() ? "0" : raw.trim());
+            BigDecimal value = new BigDecimal((raw == null || raw.isBlank() ? "0" : raw.trim()).replace(',', '.'));
             return ValidationUtils.requireNonNegative(value, fieldName);
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(fieldName + " must be a valid number");
@@ -572,7 +584,7 @@ public class OnboardingPage extends VBox {
 
     private BigDecimal parsePercent(String raw, String fieldName) {
         try {
-            BigDecimal value = new BigDecimal(raw == null || raw.isBlank() ? "0" : raw.trim());
+            BigDecimal value = new BigDecimal((raw == null || raw.isBlank() ? "0" : raw.trim()).replace(',', '.'));
             return ValidationUtils.requirePercent(value, fieldName);
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(fieldName + " must be a valid percentage");
@@ -581,7 +593,7 @@ public class OnboardingPage extends VBox {
 
     private BigDecimal parsePositiveAmount(String raw, String fieldName) {
         try {
-            BigDecimal value = new BigDecimal(raw == null || raw.isBlank() ? "0" : raw.trim());
+            BigDecimal value = new BigDecimal((raw == null || raw.isBlank() ? "0" : raw.trim()).replace(',', '.'));
             if (value.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException(fieldName + " must be greater than 0");
             }
@@ -589,6 +601,49 @@ public class OnboardingPage extends VBox {
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException(fieldName + " must be a valid number");
         }
+    }
+
+    private void addHabitChip(String tagText) {
+        String normalizedTag = normalizeHabitTag(tagText);
+        if (habitChipMap.containsKey(normalizedTag)) {
+            return;
+        }
+        ChipToggle chip = new ChipToggle(normalizedTag);
+        chip.selectedProperty().addListener((obs, wasSelected, isSelected) -> updateNavigationState());
+        habitChipMap.put(normalizedTag, chip);
+        habitChipsPane.getChildren().add(chip);
+    }
+
+    private void addCustomHabitChipFromField() {
+        String rawValue = customHabitField.getText();
+        if (rawValue == null || rawValue.isBlank()) {
+            return;
+        }
+
+        String normalizedTag = normalizeHabitTag(rawValue);
+        ChipToggle otherChip = habitChipMap.get("#other");
+        if (otherChip != null && !otherChip.isSelected()) {
+            otherChip.setSelected(true);
+        }
+
+        ChipToggle existingChip = habitChipMap.get(normalizedTag);
+        if (existingChip == null) {
+            addHabitChip(normalizedTag);
+            existingChip = habitChipMap.get(normalizedTag);
+        }
+        if (existingChip != null) {
+            existingChip.setSelected(true);
+        }
+        customHabitField.clear();
+        updateNavigationState();
+    }
+
+    private String normalizeHabitTag(String rawTag) {
+        String normalized = rawTag == null ? "" : rawTag.trim().toLowerCase();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("Habit tag cannot be blank");
+        }
+        return normalized.startsWith("#") ? normalized : "#" + normalized;
     }
 
     private String stepTitle(int step) {

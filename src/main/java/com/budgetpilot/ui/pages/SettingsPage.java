@@ -123,7 +123,7 @@ public class SettingsPage extends VBox {
 
     private Node buildProfileSectionBody() {
         profileTypeCombo.getItems().setAll(UserProfileType.values());
-        profileTypeCombo.getStyleClass().add("combo-box");
+        profileTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         GridPane form = createFormGrid();
         addFormRow(form, 0, "First Name", firstNameField);
@@ -134,7 +134,7 @@ public class SettingsPage extends VBox {
         addFormRow(form, 5, "Profile Type", profileTypeCombo);
 
         Button saveButton = new Button("Save Profile");
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> saveProfile());
 
         Button resetButton = new Button("Reset");
@@ -146,7 +146,7 @@ public class SettingsPage extends VBox {
 
     private Node buildModuleSectionBody() {
         Button saveModulesButton = new Button("Save Module Preferences");
-        saveModulesButton.getStyleClass().add("quick-add-button");
+        saveModulesButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveModulesButton.setOnAction(event -> saveModules());
 
         return new VBox(
@@ -178,7 +178,7 @@ public class SettingsPage extends VBox {
         currentButton.setOnAction(event -> settingsService.jumpToCurrentMonth());
 
         Button newMonthButton = new Button("Start New Month");
-        newMonthButton.getStyleClass().add("quick-add-button");
+        newMonthButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         newMonthButton.setOnAction(event -> {
             settingsService.startNewMonth();
             showSuccess("Moved to a new month and ensured a monthly plan exists.");
@@ -192,7 +192,7 @@ public class SettingsPage extends VBox {
 
     private Node buildDeveloperSectionBody() {
         Button clearAllButton = new Button("Clear All Data");
-        clearAllButton.getStyleClass().add("danger-button");
+        clearAllButton.getStyleClass().addAll("danger-button", "btn-danger");
         clearAllButton.setOnAction(event -> {
             if (confirm("Clear all BudgetPilot data? This action cannot be undone.")) {
                 settingsService.clearAllData();
@@ -209,7 +209,7 @@ public class SettingsPage extends VBox {
         });
 
         Button freshOnboardingButton = new Button("Reset to Fresh Onboarding");
-        freshOnboardingButton.getStyleClass().add("danger-button");
+        freshOnboardingButton.getStyleClass().addAll("danger-button", "btn-danger");
         freshOnboardingButton.setOnAction(event -> {
             if (confirm("Reset app to fresh onboarding state? This clears all current data.")) {
                 settingsService.resetToFreshOnboarding();
@@ -227,7 +227,7 @@ public class SettingsPage extends VBox {
         backupsPathLabel.getStyleClass().addAll("muted-text", "settings-data-path");
 
         Button exportBackupButton = new Button("Export Backup");
-        exportBackupButton.getStyleClass().add("quick-add-button");
+        exportBackupButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         exportBackupButton.setOnAction(event -> {
             clearBanner();
             try {
@@ -434,7 +434,7 @@ public class SettingsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

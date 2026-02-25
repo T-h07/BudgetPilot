@@ -136,14 +136,14 @@ public class ExpensesPage extends VBox {
     private void setupFormDefaults() {
         categoryCombo.getItems().setAll(ExpenseCategory.values());
         categoryCombo.getSelectionModel().select(ExpenseCategory.OTHER);
-        categoryCombo.getStyleClass().add("combo-box");
+        categoryCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         paymentMethodCombo.getItems().setAll(PaymentMethod.values());
         paymentMethodCombo.getSelectionModel().select(PaymentMethod.CARD);
-        paymentMethodCombo.getStyleClass().add("combo-box");
+        paymentMethodCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         noteArea.setPromptText("Note or merchant");
-        noteArea.getStyleClass().add("text-input");
+        noteArea.getStyleClass().addAll("text-input", "form-input");
         noteArea.setPrefRowCount(3);
     }
 
@@ -166,7 +166,7 @@ public class ExpensesPage extends VBox {
     }
 
     private void setupActions() {
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSaveExpense());
 
         clearButton.setOnAction(event -> clearForm());
@@ -235,7 +235,7 @@ public class ExpensesPage extends VBox {
 
             {
                 actions.setAlignment(Pos.CENTER_LEFT);
-                deleteBtn.getStyleClass().add("danger-button");
+                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger");
 
                 editBtn.setOnAction(event -> {
                     ExpenseEntry entry = getTableView().getItems().get(getIndex());
@@ -617,7 +617,7 @@ public class ExpensesPage extends VBox {
             String allText,
             java.util.function.Function<T, String> itemLabelProvider
     ) {
-        comboBox.getStyleClass().add("combo-box");
+        comboBox.getStyleClass().addAll("combo-box", "form-combo");
         comboBox.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(T item, boolean empty) {
@@ -675,7 +675,7 @@ public class ExpensesPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

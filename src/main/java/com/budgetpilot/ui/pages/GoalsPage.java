@@ -143,20 +143,20 @@ public class GoalsPage extends VBox {
     private void setupGoalForm() {
         goalTypeCombo.getItems().setAll(GoalType.values());
         goalTypeCombo.getSelectionModel().select(GoalType.CUSTOM);
-        goalTypeCombo.getStyleClass().add("combo-box");
+        goalTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         priorityCombo.getItems().setAll(1, 2, 3, 4, 5);
         priorityCombo.getSelectionModel().select(Integer.valueOf(3));
-        priorityCombo.getStyleClass().add("combo-box");
+        priorityCombo.getStyleClass().addAll("combo-box", "form-combo");
 
-        goalTargetDatePicker.getStyleClass().add("date-picker");
+        goalTargetDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         goalTargetDatePicker.setPromptText("Optional");
 
         goalActiveCheck.setSelected(true);
 
         goalNotesArea.setPromptText("Optional notes");
         goalNotesArea.setPrefRowCount(3);
-        goalNotesArea.getStyleClass().add("text-input");
+        goalNotesArea.getStyleClass().addAll("text-input", "form-input");
 
         goalsListBox.getStyleClass().add("goals-list");
     }
@@ -167,12 +167,12 @@ public class GoalsPage extends VBox {
         selectedGoalMetaLabel.getStyleClass().add("muted-text");
         selectedGoalProgress.getStyleClass().add("goal-progress-bar");
 
-        contributionDatePicker.getStyleClass().add("date-picker");
+        contributionDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         contributionDatePicker.setValue(defaultDateForSelectedMonth());
 
         contributionTypeCombo.getItems().setAll(GoalContributionType.values());
         contributionTypeCombo.getSelectionModel().select(GoalContributionType.CONTRIBUTION);
-        contributionTypeCombo.getStyleClass().add("combo-box");
+        contributionTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
     }
 
     private void setupContributionTable() {
@@ -220,7 +220,7 @@ public class GoalsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().add("danger-button");
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
                 deleteButton.setOnAction(event -> onDeleteContribution(getTableView().getItems().get(getIndex())));
             }
 
@@ -235,12 +235,12 @@ public class GoalsPage extends VBox {
     }
 
     private void setupActions() {
-        saveGoalButton.getStyleClass().add("quick-add-button");
+        saveGoalButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveGoalButton.setOnAction(event -> onSaveGoal());
 
         clearGoalButton.setOnAction(event -> clearGoalForm());
 
-        addContributionButton.getStyleClass().add("quick-add-button");
+        addContributionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addContributionButton.setOnAction(event -> onAddContribution());
 
         clearContributionButton.setOnAction(event -> clearContributionForm());
@@ -591,7 +591,7 @@ public class GoalsPage extends VBox {
         editButton.setOnAction(event -> loadGoalForEdit(goal));
 
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
         deleteButton.setOnAction(event -> onDeleteGoal(goal));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -785,7 +785,7 @@ public class GoalsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

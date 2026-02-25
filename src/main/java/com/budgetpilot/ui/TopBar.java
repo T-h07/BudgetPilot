@@ -69,7 +69,7 @@ public class TopBar extends HBox {
         );
 
         Button quickAddButton = new Button("Quick Add");
-        quickAddButton.getStyleClass().add("quick-add-button");
+        quickAddButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         quickAddButton.setFocusTraversable(false);
 
         Label profileInitials = new Label();
