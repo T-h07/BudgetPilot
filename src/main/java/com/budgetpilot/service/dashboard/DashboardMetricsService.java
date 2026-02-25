@@ -9,8 +9,12 @@ import com.budgetpilot.service.ExpenseService;
 import com.budgetpilot.service.ExpenseSummary;
 import com.budgetpilot.service.ForecastService;
 import com.budgetpilot.service.ForecastSummary;
+import com.budgetpilot.service.FamilyService;
+import com.budgetpilot.service.FamilySummary;
 import com.budgetpilot.service.GoalService;
 import com.budgetpilot.service.GoalSummary;
+import com.budgetpilot.service.HabitPageSummary;
+import com.budgetpilot.service.HabitService;
 import com.budgetpilot.service.IncomeService;
 import com.budgetpilot.service.PlannerService;
 import com.budgetpilot.service.SavingsService;
@@ -39,6 +43,8 @@ public class DashboardMetricsService {
     private final ForecastService forecastService;
     private final GoalService goalService;
     private final SavingsService savingsService;
+    private final FamilyService familyService;
+    private final HabitService habitService;
 
     public DashboardMetricsService(BudgetStore budgetStore) {
         this.budgetStore = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
@@ -48,6 +54,8 @@ public class DashboardMetricsService {
         this.forecastService = new ForecastService(budgetStore);
         this.goalService = new GoalService(budgetStore);
         this.savingsService = new SavingsService(budgetStore);
+        this.familyService = new FamilyService(budgetStore);
+        this.habitService = new HabitService(budgetStore);
     }
 
     public DashboardSnapshot buildSnapshot(YearMonth month) {
@@ -60,6 +68,8 @@ public class DashboardMetricsService {
         List<ExpenseEntry> expenseEntries = expenseService.listForMonth(targetMonth);
         GoalSummary goalsSummary = goalService.getGoalsSummary(targetMonth);
         SavingsSummary savingsSummary = savingsService.getSavingsSummary(targetMonth);
+        FamilySummary familySummary = familyService.getFamilySummary(targetMonth);
+        HabitPageSummary habitPageSummary = habitService.getHabitPageSummary(targetMonth);
 
         BudgetSummary budgetSummary = plannerService.buildBudgetSummary(targetMonth, familyEnabled);
         ForecastSummary forecastSummary = forecastService.buildForecast(targetMonth, familyEnabled);
@@ -103,9 +113,12 @@ public class DashboardMetricsService {
                 hasMonthlyPlan,
                 hasIncomeData,
                 hasExpenseData,
+                familyEnabled,
                 budgetSummary,
                 forecastSummary,
-                categorySpending
+                categorySpending,
+                familySummary,
+                habitPageSummary
         );
 
         List<DashboardKpi> kpis = buildKpis(
@@ -153,7 +166,13 @@ public class DashboardMetricsService {
                 kpis,
                 goalsCurrentTotal,
                 goalsTargetTotal,
-                savingsCurrentTotal
+                savingsCurrentTotal,
+                familyEnabled ? familySummary.getTotalFamilyCosts() : BigDecimal.ZERO.setScale(2),
+                familyEnabled ? familySummary.getPlannedFamilyBudget() : BigDecimal.ZERO.setScale(2),
+                familyEnabled ? familySummary.getActiveMembersCount() : 0,
+                habitPageSummary.getWarningCount(),
+                habitPageSummary.getExceededCount(),
+                habitPageSummary.getHabitTrackedSpend()
         );
     }
 
@@ -319,9 +338,12 @@ public class DashboardMetricsService {
             boolean hasMonthlyPlan,
             boolean hasIncomeData,
             boolean hasExpenseData,
+            boolean familyEnabled,
             BudgetSummary budgetSummary,
             ForecastSummary forecastSummary,
-            List<CategorySpendPoint> categoryPoints
+            List<CategorySpendPoint> categoryPoints,
+            FamilySummary familySummary,
+            HabitPageSummary habitPageSummary
     ) {
         List<DashboardAlert> alerts = new ArrayList<>();
 
@@ -391,6 +413,66 @@ public class DashboardMetricsService {
                     top.getCategoryLabel() + " represents " + top.getPercentOfTotal().toPlainString() + "% of total spend.",
                     "expenses",
                     "Review category limits and weekly pace."
+            ));
+        }
+
+        if (familyEnabled
+                && familySummary.getPlannedFamilyBudget().compareTo(BigDecimal.ZERO) > 0
+                && familySummary.getFamilyBudgetVariance().compareTo(BigDecimal.ZERO) > 0) {
+            alerts.add(new DashboardAlert(
+                    "family-budget-overrun",
+                    AlertLevel.WARNING,
+                    "Family budget overrun",
+                    "Family costs are over planned budget by "
+                            + familySummary.getFamilyBudgetVariance().stripTrailingZeros().toPlainString() + ".",
+                    "family",
+                    "Review support and medical allocations in Family page."
+            ));
+        }
+
+        if (familyEnabled
+                && familySummary.getTotalFamilyCosts().compareTo(BigDecimal.ZERO) > 0
+                && familySummary.getTotalMedicalCosts().multiply(MoneyUtils.HUNDRED)
+                .divide(familySummary.getTotalFamilyCosts(), 2, RoundingMode.HALF_UP)
+                .compareTo(new BigDecimal("50.00")) > 0) {
+            alerts.add(new DashboardAlert(
+                    "family-medical-high",
+                    AlertLevel.WARNING,
+                    "Family medical costs are high",
+                    "Medical spend accounts for more than half of family costs this month.",
+                    "family",
+                    "Check medical spending trends and reserve planning."
+            ));
+        }
+
+        if (habitPageSummary.getExceededCount() > 0) {
+            alerts.add(new DashboardAlert(
+                    "habit-exceeded",
+                    AlertLevel.DANGER,
+                    "Habit limits exceeded",
+                    habitPageSummary.getExceededCount() + " habit rules exceeded their monthly limits.",
+                    "habits",
+                    "Open Habits page and adjust spending behavior."
+            ));
+        }
+
+        if (habitPageSummary.getWarningCount() > 0) {
+            alerts.add(new DashboardAlert(
+                    "habit-warning",
+                    AlertLevel.WARNING,
+                    "Habit warnings active",
+                    habitPageSummary.getWarningCount() + " habit rules are near their monthly limits.",
+                    "habits",
+                    "Take corrective actions before limits are exceeded."
+            ));
+        } else if (habitPageSummary.getActiveRulesCount() > 0) {
+            alerts.add(new DashboardAlert(
+                    "habit-on-track",
+                    AlertLevel.INFO,
+                    "Habits on track",
+                    "All active habit rules are currently on track.",
+                    "habits",
+                    "Maintain current spending discipline."
             ));
         }
 
