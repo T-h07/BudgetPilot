@@ -4,7 +4,7 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.UserProfileType;
-import com.budgetpilot.service.OnboardingService;
+import com.budgetpilot.service.onboarding.OnboardingService;
 import com.budgetpilot.ui.components.ChipToggle;
 import com.budgetpilot.ui.components.WizardStepHeader;
 import com.budgetpilot.util.ValidationUtils;
