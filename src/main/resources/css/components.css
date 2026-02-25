@@ -147,3 +147,39 @@
     -fx-text-fill: #ffd7d7;
 }
 
+.status-badge {
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+    -fx-padding: 4 9;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+}
+
+.badge-info {
+    -fx-text-fill: #d7ebff;
+    -fx-background-color: rgba(87, 163, 250, 0.18);
+    -fx-border-color: rgba(87, 163, 250, 0.4);
+    -fx-border-width: 1;
+}
+
+.badge-warn {
+    -fx-text-fill: #ffe8b6;
+    -fx-background-color: rgba(246, 185, 80, 0.2);
+    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-border-width: 1;
+}
+
+.badge-danger {
+    -fx-text-fill: #ffd3d3;
+    -fx-background-color: rgba(239, 102, 102, 0.2);
+    -fx-border-color: rgba(239, 102, 102, 0.45);
+    -fx-border-width: 1;
+}
+
+.badge-good {
+    -fx-text-fill: #d7ffe7;
+    -fx-background-color: rgba(87, 198, 120, 0.2);
+    -fx-border-color: rgba(87, 198, 120, 0.45);
+    -fx-border-width: 1;
+}
+
