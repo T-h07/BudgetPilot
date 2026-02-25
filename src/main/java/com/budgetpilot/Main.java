@@ -31,14 +31,24 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        Path databasePath = AppPaths.getDatabasePath();
-        Path backupsPath = AppPaths.getBackupsDir();
+        Path databasePath = null;
+        Path backupsPath = null;
+        try {
+            databasePath = AppPaths.getDatabasePath();
+            backupsPath = AppPaths.getBackupsDir();
+        } catch (RuntimeException ex) {
+            System.err.println("Failed to resolve app data paths. Persistence will run in fallback mode.");
+            ex.printStackTrace(System.err);
+        }
 
         YearMonth selectedMonth = MonthUtils.currentMonth();
         BudgetStore store;
         PersistenceStatus persistenceStatus;
 
         try {
+            if (databasePath == null) {
+                throw new IllegalStateException("Database path is unavailable.");
+            }
             DbStore dbStore = new DbStore(DbManager.open(databasePath));
             store = dbStore;
             closeableStore = dbStore;

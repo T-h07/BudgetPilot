@@ -137,7 +137,7 @@ public class SavingsPage extends VBox {
         bucketActiveCheck.setSelected(true);
         bucketNotesArea.setPromptText("Optional notes");
         bucketNotesArea.setPrefRowCount(3);
-        bucketNotesArea.getStyleClass().addAll("text-input", "form-input");
+        bucketNotesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         bucketListBox.getStyleClass().add("savings-bucket-list");
     }
@@ -182,7 +182,12 @@ public class SavingsPage extends VBox {
                     getStyleClass().removeAll("status-good", "status-danger");
                     return;
                 }
-                SavingsEntry entry = getTableView().getItems().get(getIndex());
+                int rowIndex = getIndex();
+                if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                    getStyleClass().removeAll("status-good", "status-danger");
+                    return;
+                }
+                SavingsEntry entry = getTableView().getItems().get(rowIndex);
                 getStyleClass().removeAll("status-good", "status-danger");
                 if (entry.getAmount().compareTo(BigDecimal.ZERO) >= 0) {
                     getStyleClass().add("status-good");
@@ -200,8 +205,14 @@ public class SavingsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
-                deleteButton.setOnAction(event -> onDeleteTransaction(getTableView().getItems().get(getIndex())));
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteTransaction(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -218,11 +229,13 @@ public class SavingsPage extends VBox {
         saveBucketButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveBucketButton.setOnAction(event -> onSaveBucket());
 
+        clearBucketButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearBucketButton.setOnAction(event -> clearBucketForm());
 
         addTransactionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addTransactionButton.setOnAction(event -> onAddTransaction());
 
+        clearTransactionButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearTransactionButton.setOnAction(event -> clearTransactionForm());
     }
 
@@ -551,16 +564,18 @@ public class SavingsPage extends VBox {
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedBucketId = bucket.getId();
             refreshAll();
         });
 
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadBucketForEdit(bucket));
 
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteBucket(bucket));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);

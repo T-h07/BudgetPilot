@@ -125,7 +125,7 @@ public class HabitsPage extends VBox {
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().addAll("text-input", "form-input");
+        notesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         ruleListBox.getStyleClass().add("habit-rule-list");
         evaluationListBox.getStyleClass().add("habit-evaluation-list");
@@ -135,6 +135,7 @@ public class HabitsPage extends VBox {
     private void setupActions() {
         saveRuleButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveRuleButton.setOnAction(event -> onSaveRule());
+        clearRuleButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearRuleButton.setOnAction(event -> clearRuleForm());
     }
 
@@ -359,14 +360,16 @@ public class HabitsPage extends VBox {
         spendLabel.getStyleClass().add(statusStyleClass(status));
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedRuleId = rule.getId();
             refreshAll();
         });
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadRuleForEdit(rule));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteRule(rule));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);

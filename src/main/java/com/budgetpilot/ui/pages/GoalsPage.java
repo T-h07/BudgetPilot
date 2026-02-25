@@ -156,7 +156,7 @@ public class GoalsPage extends VBox {
 
         goalNotesArea.setPromptText("Optional notes");
         goalNotesArea.setPrefRowCount(3);
-        goalNotesArea.getStyleClass().addAll("text-input", "form-input");
+        goalNotesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         goalsListBox.getStyleClass().add("goals-list");
     }
@@ -202,7 +202,12 @@ public class GoalsPage extends VBox {
                     getStyleClass().removeAll("status-good", "status-danger");
                     return;
                 }
-                GoalContribution entry = getTableView().getItems().get(getIndex());
+                int rowIndex = getIndex();
+                if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                    getStyleClass().removeAll("status-good", "status-danger");
+                    return;
+                }
+                GoalContribution entry = getTableView().getItems().get(rowIndex);
                 getStyleClass().removeAll("status-good", "status-danger");
                 if (entry.getAmount().compareTo(BigDecimal.ZERO) >= 0) {
                     getStyleClass().add("status-good");
@@ -220,8 +225,14 @@ public class GoalsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
-                deleteButton.setOnAction(event -> onDeleteContribution(getTableView().getItems().get(getIndex())));
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteContribution(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -238,11 +249,13 @@ public class GoalsPage extends VBox {
         saveGoalButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveGoalButton.setOnAction(event -> onSaveGoal());
 
+        clearGoalButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearGoalButton.setOnAction(event -> clearGoalForm());
 
         addContributionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addContributionButton.setOnAction(event -> onAddContribution());
 
+        clearContributionButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearContributionButton.setOnAction(event -> clearContributionForm());
     }
 
@@ -582,16 +595,18 @@ public class GoalsPage extends VBox {
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedGoalId = goal.getId();
             refreshAll();
         });
 
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadGoalForEdit(goal));
 
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteGoal(goal));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);

@@ -90,6 +90,7 @@ public class AchievementsPage extends VBox {
     private void setupFilters() {
         searchField.setPromptText("Search achievements...");
         searchField.getStyleClass().addAll("text-input", "form-input");
+        clearFiltersButton.getStyleClass().addAll("secondary-button", "btn-secondary");
 
         configureCategoryFilter();
         configureStatusFilter();

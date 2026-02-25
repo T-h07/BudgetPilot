@@ -134,6 +134,7 @@ public class ExpensesPage extends VBox {
     }
 
     private void setupFormDefaults() {
+        datePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         categoryCombo.getItems().setAll(ExpenseCategory.values());
         categoryCombo.getSelectionModel().select(ExpenseCategory.OTHER);
         categoryCombo.getStyleClass().addAll("combo-box", "form-combo");
@@ -143,7 +144,7 @@ public class ExpensesPage extends VBox {
         paymentMethodCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         noteArea.setPromptText("Note or merchant");
-        noteArea.getStyleClass().addAll("text-input", "form-input");
+        noteArea.getStyleClass().addAll("text-area", "form-textarea");
         noteArea.setPrefRowCount(3);
     }
 
@@ -169,7 +170,9 @@ public class ExpensesPage extends VBox {
         saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSaveExpense());
 
+        clearButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearButton.setOnAction(event -> clearForm());
+        clearFiltersButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearFiltersButton.setOnAction(event -> clearFilters());
     }
 
@@ -235,15 +238,24 @@ public class ExpensesPage extends VBox {
 
             {
                 actions.setAlignment(Pos.CENTER_LEFT);
-                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger");
+                editBtn.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
 
                 editBtn.setOnAction(event -> {
-                    ExpenseEntry entry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    ExpenseEntry entry = getTableView().getItems().get(rowIndex);
                     loadForEdit(entry);
                 });
 
                 deleteBtn.setOnAction(event -> {
-                    ExpenseEntry entry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    ExpenseEntry entry = getTableView().getItems().get(rowIndex);
                     if (confirmDelete(entry)) {
                         expenseService.deleteExpense(entry.getId());
                         if (editingEntry != null && editingEntry.getId().equals(entry.getId())) {

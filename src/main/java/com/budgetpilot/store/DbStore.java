@@ -559,6 +559,12 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
 
     private void clearTables() throws SQLException {
         try (Statement statement = connection.createStatement()) {
+            // Child tables first keeps cleanup resilient even if foreign key constraints change.
+            statement.executeUpdate("DELETE FROM savings_entries");
+            statement.executeUpdate("DELETE FROM goal_contributions");
+            statement.executeUpdate("DELETE FROM family_expense_entries");
+            statement.executeUpdate("DELETE FROM investment_transactions");
+
             statement.executeUpdate("DELETE FROM user_profile");
             statement.executeUpdate("DELETE FROM monthly_plans");
             statement.executeUpdate("DELETE FROM income_entries");

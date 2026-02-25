@@ -80,6 +80,7 @@
 .form-textarea,
 .onboarding-notes-area {
     -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-insets: 0;
     -fx-control-inner-background: rgba(255, 255, 255, 0.06);
     -fx-border-color: rgba(255, 255, 255, 0.14);
     -fx-border-width: 1;
@@ -87,6 +88,8 @@
     -fx-background-radius: 10;
     -fx-text-fill: -bp-text-primary;
     -fx-prompt-text-fill: rgba(159, 176, 211, 0.78);
+    -fx-highlight-fill: rgba(54, 163, 255, 0.38);
+    -fx-highlight-text-fill: #f5f9ff;
     -fx-padding: 0;
 }
 
@@ -112,7 +115,7 @@
 .text-area .scroll-pane .content,
 .form-textarea .scroll-pane .content,
 .onboarding-notes-area .scroll-pane .content {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -fx-control-inner-background;
     -fx-background-insets: 0;
     -fx-background-radius: 10;
     -fx-padding: 8 10;
@@ -197,6 +200,17 @@
     -fx-text-fill: -bp-text-primary;
 }
 
+.btn-secondary:hover,
+.secondary-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.24);
+}
+
+.btn-secondary:pressed,
+.secondary-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.14);
+}
+
 .btn-danger,
 .danger-button {
     -fx-background-color: rgba(240, 97, 97, 0.18);
@@ -207,6 +221,11 @@
 .btn-danger:hover,
 .danger-button:hover {
     -fx-background-color: rgba(240, 97, 97, 0.26);
+}
+
+.btn-danger:pressed,
+.danger-button:pressed {
+    -fx-background-color: rgba(240, 97, 97, 0.3);
 }
 
 .btn-ghost {
