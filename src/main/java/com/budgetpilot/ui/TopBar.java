@@ -13,7 +13,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 public class TopBar extends HBox {
@@ -54,7 +53,7 @@ public class TopBar extends HBox {
         profileInitials.getStyleClass().add("profile-initials");
         profileInitials.textProperty().bind(
                 Bindings.createStringBinding(
-                        () -> toInitials(appContext.getCurrentUserDisplayName()),
+                        appContext::getCurrentUserInitials,
                         appContext.currentUserProperty()
                 )
         );
@@ -70,26 +69,5 @@ public class TopBar extends HBox {
         if (pageId != null) {
             pageTitleLabel.setText(pageId.getDisplayLabel());
         }
-    }
-
-    private String toInitials(String fullName) {
-        if (fullName == null || fullName.isBlank()) {
-            return "US";
-        }
-
-        String[] parts = Arrays.stream(fullName.trim().split("\\s+"))
-                .filter(part -> !part.isBlank())
-                .toArray(String[]::new);
-
-        if (parts.length == 0) {
-            return "US";
-        }
-        if (parts.length == 1) {
-            String part = parts[0];
-            return part.length() >= 2
-                    ? part.substring(0, 2).toUpperCase()
-                    : part.toUpperCase();
-        }
-        return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
 }
