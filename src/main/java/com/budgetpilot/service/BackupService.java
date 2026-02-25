@@ -5,12 +5,14 @@ import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.store.DbStore;
 import com.budgetpilot.store.FullDataStore;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.budgetpilot.util.ValidationUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -28,6 +30,7 @@ public class BackupService {
         this.appContext = ValidationUtils.requireNonNull(appContext, "appContext");
         this.mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
@@ -51,6 +54,9 @@ public class BackupService {
 
     public void importBackup(Path backupFile) {
         ValidationUtils.requireNonNull(backupFile, "backupFile");
+        if (!Files.isRegularFile(backupFile)) {
+            throw new IllegalArgumentException("Backup file does not exist: " + backupFile);
+        }
         FullDataStore store = requireFullDataStore();
 
         BackupSnapshot snapshot;
@@ -59,8 +65,15 @@ public class BackupService {
         } catch (IOException ex) {
             throw new IllegalArgumentException("Unable to read backup file", ex);
         }
+        if (snapshot == null) {
+            throw new IllegalArgumentException("Backup file is empty or invalid.");
+        }
 
-        applySnapshot(store, snapshot);
+        try {
+            applySnapshot(store, snapshot);
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("Failed to import backup data.", ex);
+        }
         appContext.reloadCurrentUserFromStore();
 
         String selectedMonthValue = store.getAppSetting("selected_month");
@@ -70,7 +83,6 @@ public class BackupService {
             } catch (Exception ignored) {
             }
         }
-        appContext.notifyContextChanged();
     }
 
     private BackupSnapshot createSnapshot(FullDataStore store) {

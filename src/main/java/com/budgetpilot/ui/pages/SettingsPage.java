@@ -138,6 +138,7 @@ public class SettingsPage extends VBox {
         saveButton.setOnAction(event -> saveProfile());
 
         Button resetButton = new Button("Reset");
+        resetButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         resetButton.setOnAction(event -> populateFromContext());
 
         HBox actions = new HBox(10, saveButton, resetButton);
@@ -169,12 +170,15 @@ public class SettingsPage extends VBox {
         );
 
         Button prevButton = new Button("Previous Month");
+        prevButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         prevButton.setOnAction(event -> settingsService.shiftSelectedMonth(-1));
 
         Button nextButton = new Button("Next Month");
+        nextButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         nextButton.setOnAction(event -> settingsService.shiftSelectedMonth(1));
 
         Button currentButton = new Button("Current Month");
+        currentButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         currentButton.setOnAction(event -> settingsService.jumpToCurrentMonth());
 
         Button newMonthButton = new Button("Start New Month");
@@ -202,6 +206,7 @@ public class SettingsPage extends VBox {
         });
 
         Button seedDemoButton = new Button("Seed Demo Data (Selected Month)");
+        seedDemoButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         seedDemoButton.setOnAction(event -> {
             settingsService.seedDemoDataForSelectedMonth();
             populateFromContext();
@@ -239,6 +244,7 @@ public class SettingsPage extends VBox {
         });
 
         Button importBackupButton = new Button("Import Backup");
+        importBackupButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         importBackupButton.setOnAction(event -> {
             clearBanner();
             if (!confirm("Import backup and replace current data?")) {
@@ -263,6 +269,7 @@ public class SettingsPage extends VBox {
         });
 
         Button openDataFolderButton = new Button("Open Data Folder");
+        openDataFolderButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         openDataFolderButton.setOnAction(event -> {
             clearBanner();
             PersistenceStatus status = appContext.getPersistenceStatus();

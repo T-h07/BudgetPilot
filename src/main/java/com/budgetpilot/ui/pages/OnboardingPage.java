@@ -148,11 +148,11 @@ public class OnboardingPage extends VBox {
     private void initializeDefaults() {
         currencyCombo.getItems().setAll("EUR", "USD", "GBP", "CHF", "CAD", "AUD", "JPY");
         currencyCombo.getSelectionModel().select("EUR");
-        currencyCombo.getStyleClass().addAll("combo-box", "onboarding-combo");
+        currencyCombo.getStyleClass().addAll("combo-box", "form-combo", "onboarding-combo");
 
         incomeTypeCombo.getItems().setAll(IncomeType.values());
         incomeTypeCombo.getSelectionModel().select(IncomeType.SALARY);
-        incomeTypeCombo.getStyleClass().addAll("combo-box", "onboarding-combo");
+        incomeTypeCombo.getStyleClass().addAll("combo-box", "form-combo", "onboarding-combo");
         receivedIncomeCheck.setSelected(true);
         incomeListView.setPrefHeight(160);
         incomeListView.getStyleClass().add("onboarding-income-list");
@@ -172,7 +172,7 @@ public class OnboardingPage extends VBox {
         personalOption.setSelected(true);
 
         planNotesArea.setPromptText("Optional notes about your first month plan");
-        planNotesArea.getStyleClass().addAll("text-input", "onboarding-notes-area");
+        planNotesArea.getStyleClass().addAll("text-area", "form-textarea", "onboarding-notes-area");
         planNotesArea.setPrefRowCount(3);
 
         for (String tag : DEFAULT_HABIT_TAGS) {

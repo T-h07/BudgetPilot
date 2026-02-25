@@ -170,7 +170,7 @@ public class InvestmentsPage extends VBox {
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().addAll("text-input", "form-input");
+        notesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         investmentsListBox.getStyleClass().add("investment-list");
     }
@@ -216,7 +216,12 @@ public class InvestmentsPage extends VBox {
                     getStyleClass().removeAll("status-good", "status-danger");
                     return;
                 }
-                InvestmentTransaction tx = getTableView().getItems().get(getIndex());
+                int rowIndex = getIndex();
+                if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                    getStyleClass().removeAll("status-good", "status-danger");
+                    return;
+                }
+                InvestmentTransaction tx = getTableView().getItems().get(rowIndex);
                 getStyleClass().removeAll("status-good", "status-danger");
                 if (isPositiveTransaction(tx)) {
                     getStyleClass().add("status-good");
@@ -234,8 +239,14 @@ public class InvestmentsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
-                deleteButton.setOnAction(event -> onDeleteTransaction(getTableView().getItems().get(getIndex())));
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteTransaction(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -251,10 +262,12 @@ public class InvestmentsPage extends VBox {
     private void setupActions() {
         saveInvestmentButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveInvestmentButton.setOnAction(event -> onSaveInvestment());
+        clearInvestmentButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearInvestmentButton.setOnAction(event -> clearInvestmentForm());
 
         addTransactionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addTransactionButton.setOnAction(event -> onAddTransaction());
+        clearTransactionButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearTransactionButton.setOnAction(event -> clearTransactionForm());
     }
 
@@ -584,14 +597,16 @@ public class InvestmentsPage extends VBox {
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedInvestmentId = investment.getId();
             refreshAll();
         });
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadInvestmentForEdit(investment));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteInvestment(investment));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);

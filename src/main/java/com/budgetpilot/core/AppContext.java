@@ -39,7 +39,11 @@ public class AppContext {
     }
 
     public void setSelectedMonth(YearMonth selectedMonth) {
-        this.selectedMonth.set(ValidationUtils.requireNonNull(selectedMonth, "selectedMonth"));
+        YearMonth validatedMonth = ValidationUtils.requireNonNull(selectedMonth, "selectedMonth");
+        if (validatedMonth.equals(this.selectedMonth.get())) {
+            return;
+        }
+        this.selectedMonth.set(validatedMonth);
         notifyContextChanged();
     }
 
@@ -93,7 +97,7 @@ public class AppContext {
     }
 
     public void addChangeListener(Runnable listener) {
-        if (listener != null) {
+        if (listener != null && !listeners.contains(listener)) {
             listeners.add(listener);
         }
     }
@@ -104,7 +108,11 @@ public class AppContext {
 
     public void notifyContextChanged() {
         for (Runnable listener : listeners) {
-            listener.run();
+            try {
+                listener.run();
+            } catch (RuntimeException ex) {
+                System.err.println("AppContext listener failed: " + ex.getMessage());
+            }
         }
     }
 

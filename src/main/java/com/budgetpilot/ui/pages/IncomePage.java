@@ -111,10 +111,11 @@ public class IncomePage extends VBox {
         typeCombo.getItems().setAll(IncomeType.values());
         typeCombo.getSelectionModel().select(IncomeType.SALARY);
         typeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        datePicker.getStyleClass().addAll("date-picker", "form-datepicker");
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().addAll("text-input", "form-input");
+        notesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         receivedCheck.setSelected(true);
     }
@@ -122,6 +123,7 @@ public class IncomePage extends VBox {
     private void setupActions() {
         saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSave());
+        clearButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearButton.setOnAction(event -> clearForm());
     }
 
@@ -163,13 +165,22 @@ public class IncomePage extends VBox {
 
             {
                 actionBox.setAlignment(Pos.CENTER_LEFT);
+                editBtn.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
                 editBtn.setOnAction(event -> {
-                    IncomeEntry rowEntry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    IncomeEntry rowEntry = getTableView().getItems().get(rowIndex);
                     loadForEdit(rowEntry);
                 });
-                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger");
+                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
                 deleteBtn.setOnAction(event -> {
-                    IncomeEntry rowEntry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    IncomeEntry rowEntry = getTableView().getItems().get(rowIndex);
                     incomeService.deleteIncome(rowEntry.getId());
                     if (editingEntry != null && editingEntry.getId().equals(rowEntry.getId())) {
                         clearForm();

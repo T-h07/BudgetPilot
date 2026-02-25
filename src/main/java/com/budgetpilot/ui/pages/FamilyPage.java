@@ -146,7 +146,7 @@ public class FamilyPage extends VBox {
         memberActiveCheck.setSelected(true);
         memberNotesArea.setPromptText("Optional notes");
         memberNotesArea.setPrefRowCount(3);
-        memberNotesArea.getStyleClass().addAll("text-input", "form-input");
+        memberNotesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         memberListBox.getStyleClass().add("family-member-list");
     }
@@ -195,10 +195,23 @@ public class FamilyPage extends VBox {
             private final HBox actions = new HBox(6, editButton, deleteButton);
 
             {
-                deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
+                editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
                 actions.setAlignment(Pos.CENTER_LEFT);
-                editButton.setOnAction(event -> loadExpenseForEdit(getTableView().getItems().get(getIndex())));
-                deleteButton.setOnAction(event -> onDeleteExpense(getTableView().getItems().get(getIndex())));
+                editButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    loadExpenseForEdit(getTableView().getItems().get(rowIndex));
+                });
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteExpense(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -214,10 +227,12 @@ public class FamilyPage extends VBox {
     private void setupActions() {
         saveMemberButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveMemberButton.setOnAction(event -> onSaveMember());
+        clearMemberButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearMemberButton.setOnAction(event -> clearMemberForm());
 
         saveExpenseButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveExpenseButton.setOnAction(event -> onSaveExpense());
+        clearExpenseButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearExpenseButton.setOnAction(event -> clearExpenseForm());
     }
 
@@ -530,14 +545,16 @@ public class FamilyPage extends VBox {
         Label spentLabel = UiUtils.createMutedLabel("Spent this month: " + MoneyUtils.format(spent, resolveCurrencyCode()));
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedMemberId = member.getId();
             refreshAll();
         });
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadMemberForEdit(member));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteMember(member));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
