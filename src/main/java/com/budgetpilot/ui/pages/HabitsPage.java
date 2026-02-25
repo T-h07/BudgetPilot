@@ -125,7 +125,7 @@ public class HabitsPage extends VBox {
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().add("text-input");
+        notesArea.getStyleClass().addAll("text-input", "form-input");
 
         ruleListBox.getStyleClass().add("habit-rule-list");
         evaluationListBox.getStyleClass().add("habit-evaluation-list");
@@ -133,7 +133,7 @@ public class HabitsPage extends VBox {
     }
 
     private void setupActions() {
-        saveRuleButton.getStyleClass().add("quick-add-button");
+        saveRuleButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveRuleButton.setOnAction(event -> onSaveRule());
         clearRuleButton.setOnAction(event -> clearRuleForm());
     }
@@ -366,7 +366,7 @@ public class HabitsPage extends VBox {
         Button editButton = new Button("Edit");
         editButton.setOnAction(event -> loadRuleForEdit(rule));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
         deleteButton.setOnAction(event -> onDeleteRule(rule));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -542,7 +542,7 @@ public class HabitsPage extends VBox {
     }
 
     private void configureCategoryCombo(ComboBox<ExpenseCategory> comboBox) {
-        comboBox.getStyleClass().add("combo-box");
+        comboBox.getStyleClass().addAll("combo-box", "form-combo");
         comboBox.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(ExpenseCategory item, boolean empty) {
@@ -616,7 +616,7 @@ public class HabitsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

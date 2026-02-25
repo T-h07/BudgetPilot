@@ -52,6 +52,22 @@
     -fx-opacity: 0.9;
 }
 
+.secondary-button {
+    -fx-background-color: rgba(255, 255, 255, 0.07);
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-text-fill: -bp-text-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 14;
+}
+
+.secondary-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+}
+
 .danger-button {
     -fx-background-color: rgba(240, 97, 97, 0.18);
     -fx-border-color: rgba(240, 97, 97, 0.45);

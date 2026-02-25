@@ -137,7 +137,7 @@ public class SavingsPage extends VBox {
         bucketActiveCheck.setSelected(true);
         bucketNotesArea.setPromptText("Optional notes");
         bucketNotesArea.setPrefRowCount(3);
-        bucketNotesArea.getStyleClass().add("text-input");
+        bucketNotesArea.getStyleClass().addAll("text-input", "form-input");
 
         bucketListBox.getStyleClass().add("savings-bucket-list");
     }
@@ -145,9 +145,9 @@ public class SavingsPage extends VBox {
     private void setupTransactionForm() {
         transactionTypeCombo.getItems().setAll(SavingsEntryType.values());
         transactionTypeCombo.getSelectionModel().select(SavingsEntryType.CONTRIBUTION);
-        transactionTypeCombo.getStyleClass().add("combo-box");
+        transactionTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
         transactionDatePicker.setValue(defaultDateForSelectedMonth());
-        transactionDatePicker.getStyleClass().add("date-picker");
+        transactionDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
 
         selectedBucketTitleLabel.getStyleClass().add("card-title");
         selectedBucketBalanceLabel.getStyleClass().add("kpi-value");
@@ -200,7 +200,7 @@ public class SavingsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().add("danger-button");
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
                 deleteButton.setOnAction(event -> onDeleteTransaction(getTableView().getItems().get(getIndex())));
             }
 
@@ -215,12 +215,12 @@ public class SavingsPage extends VBox {
     }
 
     private void setupActions() {
-        saveBucketButton.getStyleClass().add("quick-add-button");
+        saveBucketButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveBucketButton.setOnAction(event -> onSaveBucket());
 
         clearBucketButton.setOnAction(event -> clearBucketForm());
 
-        addTransactionButton.getStyleClass().add("quick-add-button");
+        addTransactionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addTransactionButton.setOnAction(event -> onAddTransaction());
 
         clearTransactionButton.setOnAction(event -> clearTransactionForm());
@@ -560,7 +560,7 @@ public class SavingsPage extends VBox {
         editButton.setOnAction(event -> loadBucketForEdit(bucket));
 
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger");
         deleteButton.setOnAction(event -> onDeleteBucket(bucket));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -754,7 +754,7 @@ public class SavingsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

@@ -114,6 +114,7 @@ public class Main extends Application {
                 "/css/layout.css",
                 "/css/components.css",
                 "/css/forms.css",
+                "/css/date-picker.css",
                 "/css/pages/dashboard.css",
                 "/css/pages/onboarding.css",
                 "/css/pages/settings.css",

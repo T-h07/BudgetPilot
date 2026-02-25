@@ -110,17 +110,17 @@ public class IncomePage extends VBox {
     private void setupFormDefaults() {
         typeCombo.getItems().setAll(IncomeType.values());
         typeCombo.getSelectionModel().select(IncomeType.SALARY);
-        typeCombo.getStyleClass().add("combo-box");
+        typeCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().add("text-input");
+        notesArea.getStyleClass().addAll("text-input", "form-input");
 
         receivedCheck.setSelected(true);
     }
 
     private void setupActions() {
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSave());
         clearButton.setOnAction(event -> clearForm());
     }
@@ -167,7 +167,7 @@ public class IncomePage extends VBox {
                     IncomeEntry rowEntry = getTableView().getItems().get(getIndex());
                     loadForEdit(rowEntry);
                 });
-                deleteBtn.getStyleClass().add("danger-button");
+                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger");
                 deleteBtn.setOnAction(event -> {
                     IncomeEntry rowEntry = getTableView().getItems().get(getIndex());
                     incomeService.deleteIncome(rowEntry.getId());
@@ -370,7 +370,7 @@ public class IncomePage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

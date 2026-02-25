@@ -110,7 +110,7 @@ public class PlannerPage extends VBox {
         goalsPercentField.setText("10");
         notesArea.setPromptText("Optional planner notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().add("text-input");
+        notesArea.getStyleClass().addAll("text-input", "form-input");
         familyBudgetLabel.getStyleClass().add("form-label");
 
         statusRow.getChildren().add(statusLabel);
@@ -217,7 +217,7 @@ public class PlannerPage extends VBox {
         grid.add(notesArea, 1, 8);
 
         Button saveButton = new Button("Save Plan");
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSavePlan());
 
         Button resetButton = new Button("Reset");
@@ -397,7 +397,7 @@ public class PlannerPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 
