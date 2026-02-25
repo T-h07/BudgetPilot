@@ -1,7 +1,11 @@
 package com.budgetpilot;
 
 import com.budgetpilot.core.AppContext;
+import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.store.DemoDataSeeder;
+import com.budgetpilot.store.InMemoryStore;
 import com.budgetpilot.ui.MainLayout;
+import com.budgetpilot.util.MonthUtils;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -15,7 +19,12 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        AppContext appContext = new AppContext("Taulanth H", YearMonth.now());
+        YearMonth selectedMonth = MonthUtils.currentMonth();
+        BudgetStore store = new InMemoryStore();
+        DemoDataSeeder.seed(store, selectedMonth);
+
+        AppContext appContext = new AppContext(store, selectedMonth);
+        appContext.setCurrentUser(store.getUserProfile());
         MainLayout mainLayout = new MainLayout(appContext);
 
         Scene scene = new Scene(mainLayout, DEFAULT_WIDTH, DEFAULT_HEIGHT);
