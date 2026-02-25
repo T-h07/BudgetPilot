@@ -1,6 +1,7 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
@@ -9,11 +10,13 @@ import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
+import com.budgetpilot.model.enums.FamilyExpenseType;
 import com.budgetpilot.model.enums.GoalType;
 import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.PaymentMethod;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.UserProfileType;
+import com.budgetpilot.service.FamilyService;
 import com.budgetpilot.service.GoalService;
 import com.budgetpilot.service.SavingsService;
 import com.budgetpilot.util.MonthUtils;
@@ -43,6 +46,7 @@ public final class DemoDataSeeder {
 
         SavingsService savingsService = new SavingsService(store);
         GoalService goalService = new GoalService(store);
+        FamilyService familyService = new FamilyService(store);
 
         MonthlyPlan plan = new MonthlyPlan(seedMonth);
         plan.setFixedCostsBudget(new BigDecimal("1450"));
@@ -80,9 +84,11 @@ public final class DemoDataSeeder {
         store.saveExpenseEntry(expense(seedMonth, 6, "18.20", ExpenseCategory.FOOD, "Coffee & snacks", "#snacks", PaymentMethod.CASH));
         store.saveExpenseEntry(expense(seedMonth, 9, "31.99", ExpenseCategory.SUBSCRIPTIONS, "Streaming", "#subscriptions", PaymentMethod.CARD));
         store.saveExpenseEntry(expense(seedMonth, 11, "64.00", ExpenseCategory.HEALTH, "Pharmacy", "#health", PaymentMethod.CARD));
+        store.saveExpenseEntry(expense(seedMonth, 14, "26.40", ExpenseCategory.FOOD, "Coffee runs", "#coffee", PaymentMethod.CARD));
         store.saveExpenseEntry(expense(seedMonth, 15, "120.00", ExpenseCategory.FAMILY, "Parent support", "#family", PaymentMethod.BANK_TRANSFER));
         store.saveExpenseEntry(expense(seedMonth, 18, "88.00", ExpenseCategory.CLOTHES, "Jacket", "#clothes", PaymentMethod.CARD));
         store.saveExpenseEntry(expense(seedMonth, 22, "46.50", ExpenseCategory.ENTERTAINMENT, "Cinema + dinner", "#weekend", PaymentMethod.CARD));
+        store.saveExpenseEntry(expense(seedMonth, 24, "59.90", ExpenseCategory.CLOTHES, "Shoes", "#clothes", PaymentMethod.CARD));
 
         SavingsBucket emergency = new SavingsBucket("Emergency Fund", BigDecimal.ZERO, new BigDecimal("5000"));
         emergency.setNotes("Priority reserve");
@@ -128,6 +134,13 @@ public final class DemoDataSeeder {
         brother.setMonthlyMedicalBudget(new BigDecimal("15"));
         store.saveFamilyMember(brother);
 
+        familyService.saveFamilyExpense(familyExpense(mother.getId(), seedMonth, 7, "40.00", FamilyExpenseType.ALLOWANCE, "Weekly allowance transfer"));
+        familyService.saveFamilyExpense(familyExpense(mother.getId(), seedMonth, 12, "68.00", FamilyExpenseType.MEDICAL, "Medical checkup"));
+        familyService.saveFamilyExpense(familyExpense(mother.getId(), seedMonth, 17, "120.00", FamilyExpenseType.SUPPORT, "Monthly support contribution"));
+        familyService.saveFamilyExpense(familyExpense(brother.getId(), seedMonth, 10, "22.00", FamilyExpenseType.ALLOWANCE, "School pocket money"));
+        familyService.saveFamilyExpense(familyExpense(brother.getId(), seedMonth, 19, "35.00", FamilyExpenseType.SCHOOL, "Course materials"));
+        familyService.saveFamilyExpense(familyExpense(brother.getId(), seedMonth, 26, "54.00", FamilyExpenseType.EXTRA, "Emergency school trip"));
+
         HabitRule snacksRule = new HabitRule("#snacks", "Snack Control", new BigDecimal("90"), new BigDecimal("70"));
         snacksRule.setLinkedCategory(ExpenseCategory.FOOD);
         snacksRule.setNotes("Warn when snack spending gets too high.");
@@ -137,6 +150,11 @@ public final class DemoDataSeeder {
         clothesRule.setLinkedCategory(ExpenseCategory.CLOTHES);
         clothesRule.setNotes("Keep non-essential wardrobe spend contained.");
         store.saveHabitRule(clothesRule);
+
+        HabitRule coffeeRule = new HabitRule("#coffee", "Coffee Discipline", new BigDecimal("45"), new BigDecimal("70"));
+        coffeeRule.setLinkedCategory(ExpenseCategory.FOOD);
+        coffeeRule.setNotes("Cap impulse coffee spending and shift to planned purchases.");
+        store.saveHabitRule(coffeeRule);
     }
 
     private static ExpenseEntry expense(
@@ -158,5 +176,23 @@ public final class DemoDataSeeder {
     private static LocalDate dateAt(YearMonth month, int day) {
         int safeDay = Math.max(1, Math.min(day, month.lengthOfMonth()));
         return month.atDay(safeDay);
+    }
+
+    private static FamilyExpenseEntry familyExpense(
+            String memberId,
+            YearMonth month,
+            int day,
+            String amount,
+            FamilyExpenseType type,
+            String note
+    ) {
+        FamilyExpenseEntry entry = new FamilyExpenseEntry();
+        entry.setFamilyMemberId(memberId);
+        entry.setMonth(month);
+        entry.setExpenseDate(dateAt(month, day));
+        entry.setAmount(new BigDecimal(amount));
+        entry.setExpenseType(type);
+        entry.setNote(note);
+        return entry;
     }
 }

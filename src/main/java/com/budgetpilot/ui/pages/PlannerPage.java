@@ -266,6 +266,7 @@ public class PlannerPage extends VBox {
             plan.setNotes(notesArea.getText());
 
             plannerService.saveMonthlyPlan(plan, isFamilyModuleEnabled());
+            appContext.notifyContextChanged();
             showSuccess("Monthly plan saved.");
             refreshAll();
         } catch (IllegalArgumentException ex) {

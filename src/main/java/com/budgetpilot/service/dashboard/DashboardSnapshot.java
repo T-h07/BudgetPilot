@@ -42,6 +42,12 @@ public class DashboardSnapshot {
     private final BigDecimal goalsCurrentTotal;
     private final BigDecimal goalsTargetTotal;
     private final BigDecimal savingsCurrentTotal;
+    private final BigDecimal familyCostsActual;
+    private final BigDecimal familyBudgetPlanned;
+    private final int activeFamilyMembersCount;
+    private final int habitWarningCount;
+    private final int habitExceededCount;
+    private final BigDecimal habitTrackedSpend;
 
     public DashboardSnapshot(
             YearMonth month,
@@ -74,7 +80,13 @@ public class DashboardSnapshot {
             List<DashboardKpi> kpis,
             BigDecimal goalsCurrentTotal,
             BigDecimal goalsTargetTotal,
-            BigDecimal savingsCurrentTotal
+            BigDecimal savingsCurrentTotal,
+            BigDecimal familyCostsActual,
+            BigDecimal familyBudgetPlanned,
+            int activeFamilyMembersCount,
+            int habitWarningCount,
+            int habitExceededCount,
+            BigDecimal habitTrackedSpend
     ) {
         this.month = Objects.requireNonNull(month, "month");
         this.monthDisplayText = Objects.requireNonNull(monthDisplayText, "monthDisplayText");
@@ -107,6 +119,12 @@ public class DashboardSnapshot {
         this.goalsCurrentTotal = Objects.requireNonNull(goalsCurrentTotal, "goalsCurrentTotal");
         this.goalsTargetTotal = Objects.requireNonNull(goalsTargetTotal, "goalsTargetTotal");
         this.savingsCurrentTotal = Objects.requireNonNull(savingsCurrentTotal, "savingsCurrentTotal");
+        this.familyCostsActual = Objects.requireNonNull(familyCostsActual, "familyCostsActual");
+        this.familyBudgetPlanned = Objects.requireNonNull(familyBudgetPlanned, "familyBudgetPlanned");
+        this.activeFamilyMembersCount = activeFamilyMembersCount;
+        this.habitWarningCount = habitWarningCount;
+        this.habitExceededCount = habitExceededCount;
+        this.habitTrackedSpend = Objects.requireNonNull(habitTrackedSpend, "habitTrackedSpend");
     }
 
     public YearMonth getMonth() {
@@ -231,5 +249,29 @@ public class DashboardSnapshot {
 
     public BigDecimal getSavingsCurrentTotal() {
         return savingsCurrentTotal;
+    }
+
+    public BigDecimal getFamilyCostsActual() {
+        return familyCostsActual;
+    }
+
+    public BigDecimal getFamilyBudgetPlanned() {
+        return familyBudgetPlanned;
+    }
+
+    public int getActiveFamilyMembersCount() {
+        return activeFamilyMembersCount;
+    }
+
+    public int getHabitWarningCount() {
+        return habitWarningCount;
+    }
+
+    public int getHabitExceededCount() {
+        return habitExceededCount;
+    }
+
+    public BigDecimal getHabitTrackedSpend() {
+        return habitTrackedSpend;
     }
 }
