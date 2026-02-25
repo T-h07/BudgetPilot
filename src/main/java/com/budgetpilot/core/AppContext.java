@@ -8,6 +8,9 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
 import java.time.YearMonth;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 public class AppContext {
     private final ObjectProperty<YearMonth> selectedMonth =
@@ -15,7 +18,9 @@ public class AppContext {
     private final ObjectProperty<UserProfile> currentUser =
             new SimpleObjectProperty<>(this, "currentUser");
 
+    private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private BudgetStore store;
+    private Consumer<PageId> navigator;
 
     public AppContext() {
         this(null, MonthUtils.currentMonth());
@@ -32,6 +37,7 @@ public class AppContext {
 
     public void setSelectedMonth(YearMonth selectedMonth) {
         this.selectedMonth.set(ValidationUtils.requireNonNull(selectedMonth, "selectedMonth"));
+        notifyContextChanged();
     }
 
     public ObjectProperty<YearMonth> selectedMonthProperty() {
@@ -44,9 +50,7 @@ public class AppContext {
 
     public void setStore(BudgetStore store) {
         this.store = store;
-        if (store != null) {
-            this.currentUser.set(store.getUserProfile());
-        }
+        reloadCurrentUserFromStore();
     }
 
     public UserProfile getCurrentUser() {
@@ -55,10 +59,50 @@ public class AppContext {
 
     public void setCurrentUser(UserProfile currentUser) {
         this.currentUser.set(currentUser);
+        notifyContextChanged();
     }
 
     public ObjectProperty<UserProfile> currentUserProperty() {
         return currentUser;
+    }
+
+    public boolean onboardingCompleted() {
+        return getCurrentUser() != null;
+    }
+
+    public void reloadCurrentUserFromStore() {
+        if (store == null) {
+            currentUser.set(null);
+        } else {
+            currentUser.set(store.getUserProfile());
+        }
+        notifyContextChanged();
+    }
+
+    public void setNavigator(Consumer<PageId> navigator) {
+        this.navigator = navigator;
+    }
+
+    public void navigate(PageId pageId) {
+        if (navigator != null && pageId != null) {
+            navigator.accept(pageId);
+        }
+    }
+
+    public void addChangeListener(Runnable listener) {
+        if (listener != null) {
+            listeners.add(listener);
+        }
+    }
+
+    public void removeChangeListener(Runnable listener) {
+        listeners.remove(listener);
+    }
+
+    public void notifyContextChanged() {
+        for (Runnable listener : listeners) {
+            listener.run();
+        }
     }
 
     public String getCurrentMonthDisplayText() {
@@ -79,7 +123,19 @@ public class AppContext {
         return "User";
     }
 
-    // Compatibility helpers for BP-PT1 pages.
+    public String getCurrentUserInitials() {
+        String name = getCurrentUserDisplayName();
+        if (name.isBlank()) {
+            return "US";
+        }
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) {
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        }
+        return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
+    }
+
+    // Compatibility helpers for BP-PT1/BP-PT2 pages.
     public YearMonth getCurrentMonth() {
         return getSelectedMonth();
     }
