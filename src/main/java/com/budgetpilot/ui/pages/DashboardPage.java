@@ -1,8 +1,16 @@
 package com.budgetpilot.ui.pages;
 
 import com.budgetpilot.core.AppContext;
+import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.Goal;
+import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.MonthlyPlan;
+import com.budgetpilot.model.SavingsBucket;
+import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.ui.components.KpiTile;
 import com.budgetpilot.ui.components.SectionCard;
+import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.UiUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -14,16 +22,41 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.YearMonth;
+import java.util.List;
+
 public class DashboardPage extends VBox {
     public DashboardPage(AppContext appContext) {
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
         getStyleClass().add("page-root");
 
-        String monthText = UiUtils.formatMonth(appContext.getCurrentMonth());
+        BudgetStore store = appContext.getStore();
+        YearMonth selectedMonth = appContext.getSelectedMonth();
+        String currencyCode = resolveCurrencyCode(appContext, store);
+
+        List<IncomeEntry> incomes = store == null ? List.of() : store.listIncomeEntries(selectedMonth);
+        List<ExpenseEntry> expenses = store == null ? List.of() : store.listExpenseEntries(selectedMonth);
+        List<Goal> goals = store == null ? List.of() : store.listGoals();
+        List<SavingsBucket> savingsBuckets = store == null ? List.of() : store.listSavingsBuckets();
+        int habitRulesCount = store == null ? 0 : store.listHabitRules().size();
+        MonthlyPlan plan = store == null ? null : store.getMonthlyPlan(selectedMonth);
+
+        BigDecimal totalIncome = incomes.stream()
+                .map(IncomeEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalExpenses = expenses.stream()
+                .map(ExpenseEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remainingMoney = MoneyUtils.safeSubtract(totalIncome, totalExpenses);
+        long activeGoalsCount = goals.stream().filter(Goal::isActive).count();
+
+        String monthText = appContext.getCurrentMonthDisplayText();
         getChildren().add(UiUtils.createPageHeader(
                 "Dashboard",
-                "Live cockpit for " + monthText + ". Plan, track, and forecast every dollar before month-end."
+                "Live cockpit for " + monthText + ". Real-time summary from your in-memory financial workspace."
         ));
 
         GridPane kpiGrid = new GridPane();
@@ -31,10 +64,29 @@ public class DashboardPage extends VBox {
         kpiGrid.setHgap(UiUtils.CARD_GAP);
         kpiGrid.setVgap(UiUtils.CARD_GAP);
 
-        kpiGrid.add(new KpiTile("Money Remaining", "$2,480", "62% of planned free cash still available"), 0, 0);
-        kpiGrid.add(new KpiTile("Spent This Month", "$1,620", "Essentials are within healthy range"), 1, 0);
-        kpiGrid.add(new KpiTile("Savings", "$740", "+8% contribution pace vs last month"), 2, 0);
-        kpiGrid.add(new KpiTile("Goals Progress", "41%", "2 of 5 goals are currently on schedule"), 3, 0);
+        kpiGrid.add(new KpiTile(
+                "Money Remaining",
+                MoneyUtils.format(remainingMoney, currencyCode),
+                "Income " + MoneyUtils.format(totalIncome, currencyCode) + " vs expenses " + MoneyUtils.format(totalExpenses, currencyCode)
+        ), 0, 0);
+
+        kpiGrid.add(new KpiTile(
+                "Income This Month",
+                MoneyUtils.format(totalIncome, currencyCode),
+                incomes.size() + " income entries tracked"
+        ), 1, 0);
+
+        kpiGrid.add(new KpiTile(
+                "Expenses This Month",
+                MoneyUtils.format(totalExpenses, currencyCode),
+                expenses.size() + " expense entries tracked"
+        ), 2, 0);
+
+        kpiGrid.add(new KpiTile(
+                "Active Goals",
+                String.valueOf(activeGoalsCount),
+                goals.size() + " total goals in workspace"
+        ), 3, 0);
 
         for (int i = 0; i < 4; i++) {
             ColumnConstraints column = new ColumnConstraints();
@@ -43,40 +95,62 @@ public class DashboardPage extends VBox {
             kpiGrid.getColumnConstraints().add(column);
         }
 
+        BigDecimal averageExpense = expenses.isEmpty()
+                ? BigDecimal.ZERO
+                : totalExpenses.divide(BigDecimal.valueOf(expenses.size()), 2, RoundingMode.HALF_UP);
+
         SectionCard spendingOverview = new SectionCard(
                 "Spending Overview",
-                "High-level snapshot of category pressure and monthly burn.",
+                "Current-month spending stats based on stored expense entries.",
                 createSummaryRows(new String[][]{
-                        {"Essentials", "$1,040 / $1,500"},
-                        {"Lifestyle", "$360 / $700"},
-                        {"Transport", "$220 / $300"},
-                        {"Subscriptions", "$74 / $110"}
+                        {"Expense Entries", String.valueOf(expenses.size())},
+                        {"Average Expense", MoneyUtils.format(averageExpense, currencyCode)},
+                        {"Total Expenses", MoneyUtils.format(totalExpenses, currencyCode)},
+                        {"Month", monthText}
                 })
         );
+
+        String plannedDiscretionary = plan == null
+                ? "No plan seeded"
+                : MoneyUtils.format(plan.getDiscretionaryBudget(), currencyCode);
+        String plannedSafety = plan == null
+                ? "No plan seeded"
+                : MoneyUtils.format(plan.getSafetyBufferAmount(), currencyCode);
 
         SectionCard plannerSummary = new SectionCard(
                 "Planner Summary",
-                "Plan adherence and reallocation room for the remaining weeks.",
+                "High-level snapshot from the monthly plan object.",
                 createSummaryRows(new String[][]{
-                        {"Planned Income", "$4,100"},
-                        {"Planned Bills", "$1,950"},
-                        {"Unallocated Balance", "$510"},
-                        {"Forecast Buffer", "$290"}
+                        {"Fixed Costs Budget", plan == null ? "No plan seeded" : MoneyUtils.format(plan.getFixedCostsBudget(), currencyCode)},
+                        {"Food Budget", plan == null ? "No plan seeded" : MoneyUtils.format(plan.getFoodBudget(), currencyCode)},
+                        {"Discretionary Budget", plannedDiscretionary},
+                        {"Safety Buffer", plannedSafety}
                 })
         );
 
-        SectionCard alertsInsights = new SectionCard(
-                "Alerts & Insights",
-                "System-generated guidance and upcoming pressure points.",
-                UiUtils.createInfoLines(
-                        "Dining category is trending 14% above your pacing target.",
-                        "Rent, utilities, and internet are all posted and reconciled.",
-                        "Savings goal \"Emergency Fund\" can be completed 9 days earlier at current pace."
-                )
+        SectionCard dataSnapshot = new SectionCard(
+                "Data Snapshot",
+                "Store-level counts used to power the dashboard foundation.",
+                createSummaryRows(new String[][]{
+                        {"Expense Entries", String.valueOf(expenses.size())},
+                        {"Savings Buckets", String.valueOf(savingsBuckets.size())},
+                        {"Habit Rules", String.valueOf(habitRulesCount)}
+                })
         );
 
         HBox summaryRow = UiUtils.createTwoColumn(spendingOverview, plannerSummary);
-        getChildren().addAll(kpiGrid, summaryRow, alertsInsights);
+        getChildren().addAll(kpiGrid, summaryRow, dataSnapshot);
+    }
+
+    private String resolveCurrencyCode(AppContext appContext, BudgetStore store) {
+        UserProfile profile = appContext.getCurrentUser();
+        if (profile == null && store != null) {
+            profile = store.getUserProfile();
+        }
+        if (profile == null || profile.getCurrencyCode() == null || profile.getCurrencyCode().isBlank()) {
+            return "EUR";
+        }
+        return profile.getCurrencyCode();
     }
 
     private Node createSummaryRows(String[][] rows) {
