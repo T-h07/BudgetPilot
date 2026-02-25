@@ -1,80 +1,98 @@
 package com.budgetpilot.core;
 
+import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.util.MonthUtils;
+import com.budgetpilot.util.ValidationUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 
 import java.time.YearMonth;
-import java.util.Objects;
 
 public class AppContext {
-    private final StringProperty currentUserName = new SimpleStringProperty(this, "currentUserName", "User");
-    private final ObjectProperty<YearMonth> currentMonth =
-            new SimpleObjectProperty<>(this, "currentMonth", YearMonth.now());
+    private final ObjectProperty<YearMonth> selectedMonth =
+            new SimpleObjectProperty<>(this, "selectedMonth", MonthUtils.currentMonth());
+    private final ObjectProperty<UserProfile> currentUser =
+            new SimpleObjectProperty<>(this, "currentUser");
 
-    // Service placeholders for future phases.
-    private Object budgetService;
-    private Object expenseService;
-    private Object analyticsService;
+    private BudgetStore store;
 
     public AppContext() {
-        this("User", YearMonth.now());
+        this(null, MonthUtils.currentMonth());
     }
 
-    public AppContext(String currentUserName, YearMonth currentMonth) {
-        setCurrentUserName(currentUserName);
-        setCurrentMonth(currentMonth);
+    public AppContext(BudgetStore store, YearMonth selectedMonth) {
+        setSelectedMonth(selectedMonth == null ? MonthUtils.currentMonth() : selectedMonth);
+        setStore(store);
     }
 
-    public String getCurrentUserName() {
-        return currentUserName.get();
+    public YearMonth getSelectedMonth() {
+        return selectedMonth.get();
     }
 
-    public void setCurrentUserName(String currentUserName) {
-        String resolvedName = currentUserName == null || currentUserName.isBlank()
-                ? "User"
-                : currentUserName.trim();
-        this.currentUserName.set(resolvedName);
+    public void setSelectedMonth(YearMonth selectedMonth) {
+        this.selectedMonth.set(ValidationUtils.requireNonNull(selectedMonth, "selectedMonth"));
     }
 
-    public StringProperty currentUserNameProperty() {
-        return currentUserName;
+    public ObjectProperty<YearMonth> selectedMonthProperty() {
+        return selectedMonth;
     }
 
+    public BudgetStore getStore() {
+        return store;
+    }
+
+    public void setStore(BudgetStore store) {
+        this.store = store;
+        if (store != null) {
+            this.currentUser.set(store.getUserProfile());
+        }
+    }
+
+    public UserProfile getCurrentUser() {
+        return currentUser.get();
+    }
+
+    public void setCurrentUser(UserProfile currentUser) {
+        this.currentUser.set(currentUser);
+    }
+
+    public ObjectProperty<UserProfile> currentUserProperty() {
+        return currentUser;
+    }
+
+    public String getCurrentMonthDisplayText() {
+        return MonthUtils.format(getSelectedMonth());
+    }
+
+    public String getCurrentUserDisplayName() {
+        UserProfile profile = getCurrentUser();
+        if (profile != null && !profile.getDisplayName().isBlank()) {
+            return profile.getDisplayName();
+        }
+        if (store != null) {
+            UserProfile storeProfile = store.getUserProfile();
+            if (storeProfile != null && !storeProfile.getDisplayName().isBlank()) {
+                return storeProfile.getDisplayName();
+            }
+        }
+        return "User";
+    }
+
+    // Compatibility helpers for BP-PT1 pages.
     public YearMonth getCurrentMonth() {
-        return currentMonth.get();
+        return getSelectedMonth();
     }
 
-    public void setCurrentMonth(YearMonth currentMonth) {
-        this.currentMonth.set(Objects.requireNonNullElse(currentMonth, YearMonth.now()));
+    public void setCurrentMonth(YearMonth month) {
+        setSelectedMonth(month);
     }
 
     public ObjectProperty<YearMonth> currentMonthProperty() {
-        return currentMonth;
+        return selectedMonthProperty();
     }
 
-    public Object getBudgetService() {
-        return budgetService;
-    }
-
-    public void setBudgetService(Object budgetService) {
-        this.budgetService = budgetService;
-    }
-
-    public Object getExpenseService() {
-        return expenseService;
-    }
-
-    public void setExpenseService(Object expenseService) {
-        this.expenseService = expenseService;
-    }
-
-    public Object getAnalyticsService() {
-        return analyticsService;
-    }
-
-    public void setAnalyticsService(Object analyticsService) {
-        this.analyticsService = analyticsService;
+    public String getCurrentUserName() {
+        return getCurrentUserDisplayName();
     }
 }

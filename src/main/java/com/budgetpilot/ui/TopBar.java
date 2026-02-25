@@ -2,7 +2,6 @@ package com.budgetpilot.ui;
 
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
-import com.budgetpilot.util.UiUtils;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -42,8 +41,8 @@ public class TopBar extends HBox {
         monthChip.getStyleClass().add("month-pill");
         monthChip.textProperty().bind(
                 Bindings.createStringBinding(
-                        () -> UiUtils.formatMonth(appContext.getCurrentMonth()),
-                        appContext.currentMonthProperty()
+                        appContext::getCurrentMonthDisplayText,
+                        appContext.selectedMonthProperty()
                 )
         );
 
@@ -55,8 +54,8 @@ public class TopBar extends HBox {
         profileInitials.getStyleClass().add("profile-initials");
         profileInitials.textProperty().bind(
                 Bindings.createStringBinding(
-                        () -> toInitials(appContext.getCurrentUserName()),
-                        appContext.currentUserNameProperty()
+                        () -> toInitials(appContext.getCurrentUserDisplayName()),
+                        appContext.currentUserProperty()
                 )
         );
 
