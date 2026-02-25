@@ -1,6 +1,7 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
@@ -36,6 +37,10 @@ public class InMemoryStore implements BudgetStore {
             Comparator.comparing(GoalContribution::getContributionDate, Comparator.nullsLast(Comparator.reverseOrder()))
                     .thenComparing(GoalContribution::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
 
+    private static final Comparator<FamilyExpenseEntry> FAMILY_EXPENSE_SORT =
+            Comparator.comparing(FamilyExpenseEntry::getExpenseDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(FamilyExpenseEntry::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
+
     private UserProfile userProfile;
     private final Map<YearMonth, MonthlyPlan> monthlyPlans = new LinkedHashMap<>();
     private final Map<String, IncomeEntry> incomes = new LinkedHashMap<>();
@@ -45,6 +50,7 @@ public class InMemoryStore implements BudgetStore {
     private final Map<String, Goal> goals = new LinkedHashMap<>();
     private final Map<String, GoalContribution> goalContributions = new LinkedHashMap<>();
     private final Map<String, FamilyMember> familyMembers = new LinkedHashMap<>();
+    private final Map<String, FamilyExpenseEntry> familyExpenses = new LinkedHashMap<>();
     private final Map<String, HabitRule> habitRules = new LinkedHashMap<>();
 
     @Override
@@ -276,6 +282,53 @@ public class InMemoryStore implements BudgetStore {
     }
 
     @Override
+    public synchronized List<FamilyExpenseEntry> listFamilyExpenseEntries(YearMonth month) {
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<FamilyExpenseEntry> results = familyExpenses.values().stream()
+                .filter(entry -> normalizedMonth.equals(entry.getMonth()))
+                .sorted(FAMILY_EXPENSE_SORT)
+                .map(FamilyExpenseEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<FamilyExpenseEntry> listFamilyExpenseEntriesForMember(String familyMemberId) {
+        String normalizedMemberId = ValidationUtils.requireNonBlank(familyMemberId, "familyMemberId");
+        List<FamilyExpenseEntry> results = familyExpenses.values().stream()
+                .filter(entry -> normalizedMemberId.equals(entry.getFamilyMemberId()))
+                .sorted(FAMILY_EXPENSE_SORT)
+                .map(FamilyExpenseEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<FamilyExpenseEntry> listFamilyExpenseEntriesForMember(String familyMemberId, YearMonth month) {
+        String normalizedMemberId = ValidationUtils.requireNonBlank(familyMemberId, "familyMemberId");
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<FamilyExpenseEntry> results = familyExpenses.values().stream()
+                .filter(entry -> normalizedMemberId.equals(entry.getFamilyMemberId()))
+                .filter(entry -> normalizedMonth.equals(entry.getMonth()))
+                .sorted(FAMILY_EXPENSE_SORT)
+                .map(FamilyExpenseEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveFamilyExpenseEntry(FamilyExpenseEntry entry) {
+        ValidationUtils.requireNonNull(entry, "entry");
+        FamilyExpenseEntry copy = entry.copy();
+        familyExpenses.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteFamilyExpenseEntry(String id) {
+        familyExpenses.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
     public synchronized List<HabitRule> listHabitRules() {
         List<HabitRule> results = new ArrayList<>();
         for (HabitRule rule : habitRules.values()) {
@@ -307,6 +360,7 @@ public class InMemoryStore implements BudgetStore {
         goals.clear();
         goalContributions.clear();
         familyMembers.clear();
+        familyExpenses.clear();
         habitRules.clear();
     }
 }

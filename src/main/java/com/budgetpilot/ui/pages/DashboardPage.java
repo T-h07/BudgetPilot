@@ -226,7 +226,30 @@ public class DashboardPage extends VBox {
         plannerBadge.setText(snapshot.isPlannerOverallocated() ? "Planner Overallocated" : "Planner Healthy");
         plannerBadge.setStatus(snapshot.isPlannerOverallocated() ? "warn" : "good");
 
-        HBox badges = new HBox(8, forecastBadge, plannerBadge);
+        StatusBadge familyBadge = new StatusBadge();
+        boolean familyOverBudget = snapshot.getFamilyBudgetPlanned().compareTo(java.math.BigDecimal.ZERO) > 0
+                && snapshot.getFamilyCostsActual().compareTo(snapshot.getFamilyBudgetPlanned()) > 0;
+        if (snapshot.getActiveFamilyMembersCount() <= 0) {
+            familyBadge.setText("Family Module Idle");
+            familyBadge.setStatus("info");
+        } else {
+            familyBadge.setText(familyOverBudget ? "Family Over Budget" : "Family On Track");
+            familyBadge.setStatus(familyOverBudget ? "warn" : "good");
+        }
+
+        StatusBadge habitBadge = new StatusBadge();
+        if (snapshot.getHabitExceededCount() > 0) {
+            habitBadge.setText(snapshot.getHabitExceededCount() + " Habit Exceeded");
+            habitBadge.setStatus("danger");
+        } else if (snapshot.getHabitWarningCount() > 0) {
+            habitBadge.setText(snapshot.getHabitWarningCount() + " Habit Warning");
+            habitBadge.setStatus("warn");
+        } else {
+            habitBadge.setText("Habits On Track");
+            habitBadge.setStatus("good");
+        }
+
+        HBox badges = new HBox(8, forecastBadge, plannerBadge, familyBadge, habitBadge);
         content.getChildren().addAll(
                 scoreLabel,
                 healthBadge,
@@ -235,6 +258,11 @@ public class DashboardPage extends VBox {
                 new MetricRow("Projected Remaining", MoneyUtils.format(snapshot.getProjectedRemainingAfterPlan(), currencyCode)),
                 new MetricRow("Savings Total", MoneyUtils.format(snapshot.getSavingsCurrentTotal(), currencyCode)),
                 new MetricRow("Goals Total", MoneyUtils.format(snapshot.getGoalsCurrentTotal(), currencyCode)),
+                new MetricRow("Family Costs", MoneyUtils.format(snapshot.getFamilyCostsActual(), currencyCode)),
+                new MetricRow("Family Budget", MoneyUtils.format(snapshot.getFamilyBudgetPlanned(), currencyCode)),
+                new MetricRow("Habit Tracked Spend", MoneyUtils.format(snapshot.getHabitTrackedSpend(), currencyCode)),
+                new MetricRow("Habit Risk", snapshot.getHabitWarningCount() + " warning / "
+                        + snapshot.getHabitExceededCount() + " exceeded"),
                 badges
         );
 

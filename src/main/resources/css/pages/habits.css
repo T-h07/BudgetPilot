@@ -1,0 +1,66 @@
+.page-habits {
+    -fx-spacing: 16;
+}
+
+.habits-summary-grid {
+    -fx-spacing: 12;
+}
+
+.habit-rules-card,
+.habit-evaluations-card {
+    -fx-min-height: 620;
+}
+
+.habit-rule-list {
+    -fx-spacing: 10;
+}
+
+.habit-rule-card {
+    -fx-padding: 12;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 10;
+}
+
+.habit-rule-card-selected {
+    -fx-background-color: rgba(54, 163, 255, 0.16);
+    -fx-border-color: rgba(54, 163, 255, 0.45);
+}
+
+.habit-evaluation-list {
+    -fx-spacing: 10;
+}
+
+.habit-progress-bar {
+    -fx-accent: -bp-accent;
+}
+
+.habit-progress-bar > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.habit-progress-bar > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+}
+
+.habit-status-ontrack {
+    -fx-text-fill: #8cf5ba;
+    -fx-font-weight: 700;
+}
+
+.habit-status-warning {
+    -fx-text-fill: #ffd486;
+    -fx-font-weight: 700;
+}
+
+.habit-status-exceeded {
+    -fx-text-fill: #ffb5b5;
+    -fx-font-weight: 700;
+}
+
+.habit-insights-panel {
+    -fx-spacing: 10;
+}
