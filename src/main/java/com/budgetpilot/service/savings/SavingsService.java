@@ -50,17 +50,23 @@ public class SavingsService {
 
     public void addContribution(String bucketId, BigDecimal amount, LocalDate date, String note) {
         BigDecimal normalizedAmount = requirePositiveAmount(amount, "Contribution amount");
-        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.CONTRIBUTION, note);
+        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.CONTRIBUTION, note, null);
     }
 
     public void withdraw(String bucketId, BigDecimal amount, LocalDate date, String note) {
         BigDecimal normalizedAmount = requirePositiveAmount(amount, "Withdrawal amount").negate();
-        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.WITHDRAWAL, note);
+        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.WITHDRAWAL, note, null);
     }
 
     public void addAdjustment(String bucketId, BigDecimal amount, LocalDate date, String note) {
         BigDecimal normalizedAmount = normalizeNonZero(amount, "Adjustment amount");
-        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.ADJUSTMENT, note);
+        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.ADJUSTMENT, note, null);
+    }
+
+    public void transferToGoal(String bucketId, String goalId, BigDecimal amount, LocalDate date, String note) {
+        ValidationUtils.requireNonBlank(goalId, "goalId");
+        BigDecimal normalizedAmount = requirePositiveAmount(amount, "Transfer amount").negate();
+        recordEntry(bucketId, normalizedAmount, date, SavingsEntryType.WITHDRAWAL, note, goalId);
     }
 
     public List<SavingsEntry> listBucketEntries(String bucketId) {
@@ -188,6 +194,13 @@ public class SavingsService {
         ).abs();
     }
 
+    public BigDecimal getMonthlyNetAllocationsTotal(YearMonth month) {
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        BigDecimal contributions = getMonthlyContributionsTotal(targetMonth);
+        BigDecimal withdrawals = getMonthlyWithdrawalsTotal(targetMonth);
+        return MoneyUtils.normalize(contributions.subtract(withdrawals));
+    }
+
     public int getActiveBucketCount() {
         return (int) listBuckets().stream().filter(SavingsBucket::isActive).count();
     }
@@ -210,7 +223,14 @@ public class SavingsService {
         return result;
     }
 
-    private void recordEntry(String bucketId, BigDecimal signedAmount, LocalDate date, SavingsEntryType entryType, String note) {
+    private void recordEntry(
+            String bucketId,
+            BigDecimal signedAmount,
+            LocalDate date,
+            SavingsEntryType entryType,
+            String note,
+            String relatedGoalId
+    ) {
         String targetBucketId = ValidationUtils.requireNonBlank(bucketId, "bucketId");
         LocalDate entryDate = ValidationUtils.requireNonNull(date, "date");
         BigDecimal normalizedAmount = normalizeNonZero(signedAmount, "amount");
@@ -227,6 +247,7 @@ public class SavingsService {
         entry.setEntryDate(entryDate);
         entry.setAmount(normalizedAmount);
         entry.setEntryType(ValidationUtils.requireNonNull(entryType, "entryType"));
+        entry.setRelatedGoalId(relatedGoalId);
         entry.setNote(note);
 
         budgetStore.saveSavingsEntry(entry);

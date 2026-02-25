@@ -219,3 +219,38 @@
     -fx-border-width: 1;
 }
 
+.cash-flow-card {
+    -fx-border-color: rgba(87, 163, 250, 0.25);
+}
+
+.cash-flow-metrics {
+    -fx-spacing: 6;
+}
+
+.cash-flow-warning {
+    -fx-padding: 8 10;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.cash-flow-warning-ok {
+    -fx-background-color: rgba(87, 198, 120, 0.18);
+    -fx-border-color: rgba(87, 198, 120, 0.4);
+    -fx-text-fill: #d7ffe7;
+}
+
+.cash-flow-warning-low {
+    -fx-background-color: rgba(246, 185, 80, 0.2);
+    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-text-fill: #ffe8b6;
+}
+
+.cash-flow-warning-negative {
+    -fx-background-color: rgba(239, 102, 102, 0.2);
+    -fx-border-color: rgba(239, 102, 102, 0.45);
+    -fx-text-fill: #ffd3d3;
+}
+
