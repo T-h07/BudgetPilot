@@ -20,10 +20,10 @@ import com.budgetpilot.model.enums.InvestmentType;
 import com.budgetpilot.model.enums.PaymentMethod;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.UserProfileType;
-import com.budgetpilot.service.FamilyService;
-import com.budgetpilot.service.GoalService;
-import com.budgetpilot.service.InvestmentService;
-import com.budgetpilot.service.SavingsService;
+import com.budgetpilot.service.family.FamilyService;
+import com.budgetpilot.service.goals.GoalService;
+import com.budgetpilot.service.investments.InvestmentService;
+import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
 

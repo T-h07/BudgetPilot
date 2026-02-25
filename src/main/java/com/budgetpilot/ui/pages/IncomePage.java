@@ -4,7 +4,7 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.IncomeEntry;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.IncomeType;
-import com.budgetpilot.service.IncomeService;
+import com.budgetpilot.service.income.IncomeService;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
