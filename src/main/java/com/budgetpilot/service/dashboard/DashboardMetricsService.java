@@ -1,9 +1,7 @@
 package com.budgetpilot.service.dashboard;
 
 import com.budgetpilot.model.ExpenseEntry;
-import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.IncomeEntry;
-import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.service.BudgetSummary;
 import com.budgetpilot.service.ExpenseCategorySummary;
@@ -11,8 +9,12 @@ import com.budgetpilot.service.ExpenseService;
 import com.budgetpilot.service.ExpenseSummary;
 import com.budgetpilot.service.ForecastService;
 import com.budgetpilot.service.ForecastSummary;
+import com.budgetpilot.service.GoalService;
+import com.budgetpilot.service.GoalSummary;
 import com.budgetpilot.service.IncomeService;
 import com.budgetpilot.service.PlannerService;
+import com.budgetpilot.service.SavingsService;
+import com.budgetpilot.service.SavingsSummary;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.MoneyUtils;
@@ -35,6 +37,8 @@ public class DashboardMetricsService {
     private final PlannerService plannerService;
     private final ExpenseService expenseService;
     private final ForecastService forecastService;
+    private final GoalService goalService;
+    private final SavingsService savingsService;
 
     public DashboardMetricsService(BudgetStore budgetStore) {
         this.budgetStore = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
@@ -42,6 +46,8 @@ public class DashboardMetricsService {
         this.plannerService = new PlannerService(budgetStore);
         this.expenseService = new ExpenseService(budgetStore);
         this.forecastService = new ForecastService(budgetStore);
+        this.goalService = new GoalService(budgetStore);
+        this.savingsService = new SavingsService(budgetStore);
     }
 
     public DashboardSnapshot buildSnapshot(YearMonth month) {
@@ -52,8 +58,8 @@ public class DashboardMetricsService {
 
         List<IncomeEntry> incomeEntries = incomeService.listForMonth(targetMonth);
         List<ExpenseEntry> expenseEntries = expenseService.listForMonth(targetMonth);
-        List<Goal> goals = budgetStore.listGoals();
-        List<SavingsBucket> savingsBuckets = budgetStore.listSavingsBuckets();
+        GoalSummary goalsSummary = goalService.getGoalsSummary(targetMonth);
+        SavingsSummary savingsSummary = savingsService.getSavingsSummary(targetMonth);
 
         BudgetSummary budgetSummary = plannerService.buildBudgetSummary(targetMonth, familyEnabled);
         ForecastSummary forecastSummary = forecastService.buildForecast(targetMonth, familyEnabled);
@@ -63,9 +69,9 @@ public class DashboardMetricsService {
         boolean hasIncomeData = !incomeEntries.isEmpty();
         boolean hasExpenseData = !expenseEntries.isEmpty();
 
-        BigDecimal goalsCurrentTotal = sumGoalsCurrent(goals);
-        BigDecimal goalsTargetTotal = sumGoalsTarget(goals);
-        BigDecimal savingsCurrentTotal = sumSavingsCurrent(savingsBuckets);
+        BigDecimal goalsCurrentTotal = goalsSummary.getTotalCurrentAmount();
+        BigDecimal goalsTargetTotal = goalsSummary.getTotalTargetAmount();
+        BigDecimal savingsCurrentTotal = savingsSummary.getTotalCurrentSavings();
 
         List<CategorySpendPoint> categorySpending = mapCategorySpending(expenseService.getCategorySummaries(targetMonth));
         List<WeeklySpendPoint> weeklySpending = buildWeeklySpending(targetMonth, expenseEntries);
@@ -130,8 +136,8 @@ public class DashboardMetricsService {
                 forecastSummary.getProjectedRemainingAfterPlan(),
                 expenseSummary.getExpenseCount(),
                 incomeEntries.size(),
-                (int) goals.stream().filter(Goal::isActive).count(),
-                (int) savingsBuckets.stream().filter(SavingsBucket::isActive).count(),
+                goalsSummary.getActiveGoalCount(),
+                savingsSummary.getActiveBucketCount(),
                 healthScore.getScore(),
                 healthScore.getLabel(),
                 primaryStatusMessage,
@@ -412,36 +418,6 @@ public class DashboardMetricsService {
             case WARNING -> 1;
             case INFO -> 2;
         };
-    }
-
-    private BigDecimal sumGoalsCurrent(List<Goal> goals) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (Goal goal : goals) {
-            if (goal.isActive()) {
-                total = total.add(goal.getCurrentAmount());
-            }
-        }
-        return MoneyUtils.normalize(total);
-    }
-
-    private BigDecimal sumGoalsTarget(List<Goal> goals) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (Goal goal : goals) {
-            if (goal.isActive()) {
-                total = total.add(goal.getTargetAmount());
-            }
-        }
-        return MoneyUtils.normalize(total);
-    }
-
-    private BigDecimal sumSavingsCurrent(List<SavingsBucket> buckets) {
-        BigDecimal total = BigDecimal.ZERO;
-        for (SavingsBucket bucket : buckets) {
-            if (bucket.isActive()) {
-                total = total.add(bucket.getCurrentAmount());
-            }
-        }
-        return MoneyUtils.normalize(total);
     }
 
     private String resolveCurrencyCode(UserProfile profile) {
