@@ -11,6 +11,7 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.util.List;
 import java.net.URL;
 import java.time.YearMonth;
 
@@ -34,11 +35,24 @@ public class Main extends Application {
         MainLayout mainLayout = new MainLayout(appContext, startupPage);
 
         Scene scene = new Scene(mainLayout, DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        URL stylesheet = Main.class.getResource("/css/app.css");
-        if (stylesheet == null) {
-            throw new IllegalStateException("Missing stylesheet: /css/app.css");
+        List<String> stylesheets = List.of(
+                "/css/base.css",
+                "/css/layout.css",
+                "/css/components.css",
+                "/css/forms.css",
+                "/css/pages/dashboard.css",
+                "/css/pages/onboarding.css",
+                "/css/pages/settings.css",
+                "/css/pages/income.css",
+                "/css/pages/planner.css"
+        );
+        for (String stylesheetPath : stylesheets) {
+            URL stylesheet = Main.class.getResource(stylesheetPath);
+            if (stylesheet == null) {
+                throw new IllegalStateException("Missing stylesheet: " + stylesheetPath);
+            }
+            scene.getStylesheets().add(stylesheet.toExternalForm());
         }
-        scene.getStylesheets().add(stylesheet.toExternalForm());
 
         stage.setTitle("BudgetPilot");
         stage.setScene(scene);

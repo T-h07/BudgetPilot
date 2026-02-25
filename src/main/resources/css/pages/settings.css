@@ -1,0 +1,12 @@
+.settings-section {
+    -fx-padding: 2;
+}
+
+.settings-section .toggle-row {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+}
+
+.settings-section .button {
+    -fx-padding: 8 14;
+}
+

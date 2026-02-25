@@ -40,4 +40,43 @@ public final class MoneyUtils {
     public static BigDecimal safeSubtract(BigDecimal a, BigDecimal b) {
         return normalize(zeroIfNull(a).subtract(zeroIfNull(b)));
     }
+
+    public static BigDecimal safeAdd(BigDecimal a, BigDecimal b) {
+        return normalize(zeroIfNull(a).add(zeroIfNull(b)));
+    }
+
+    public static BigDecimal percentOf(BigDecimal baseAmount, BigDecimal percent) {
+        BigDecimal base = zeroIfNull(baseAmount);
+        BigDecimal pct = zeroIfNull(percent);
+        return normalize(base.multiply(pct).divide(HUNDRED, 2, RoundingMode.HALF_UP));
+    }
+
+    public static BigDecimal parse(String rawValue, String fieldName, boolean allowZero) {
+        if (rawValue == null || rawValue.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+
+        String normalizedInput = rawValue.trim().replace(',', '.');
+        try {
+            BigDecimal parsed = normalize(new BigDecimal(normalizedInput));
+            int comparison = parsed.compareTo(BigDecimal.ZERO);
+            if (comparison < 0 || (!allowZero && comparison == 0)) {
+                throw new IllegalArgumentException(
+                        allowZero
+                                ? fieldName + " must be non-negative"
+                                : fieldName + " must be greater than 0"
+                );
+            }
+            return parsed;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(fieldName + " must be a valid amount");
+        }
+    }
+
+    public static BigDecimal parseNonNegativeOrZero(String rawValue, String fieldName) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return ZERO;
+        }
+        return parse(rawValue, fieldName, true);
+    }
 }

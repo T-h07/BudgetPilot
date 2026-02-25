@@ -1,0 +1,8 @@
+.kpi-grid {
+    -fx-padding: 0;
+}
+
+.kpi-grid > .kpi-tile {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 12, 0.15, 0, 4);
+}
+

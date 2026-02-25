@@ -1,0 +1,83 @@
+.form-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.form-error-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #ffb4b4;
+}
+
+.text-input,
+.text-area,
+.combo-box,
+.date-picker {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.text-input,
+.date-picker,
+.combo-box {
+    -fx-padding: 8 10;
+}
+
+.text-input,
+.text-area .content {
+    -fx-prompt-text-fill: rgba(159, 176, 211, 0.75);
+}
+
+.text-input:focused,
+.text-area:focused,
+.combo-box:focused,
+.date-picker:focused {
+    -fx-border-color: rgba(54, 163, 255, 0.55);
+}
+
+.money-input {
+    -fx-font-weight: 700;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #152038;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.combo-box-popup .list-cell:hover,
+.combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.24);
+}
+
+.text-area {
+    -fx-padding: 0;
+}
+
+.text-area .content {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 8;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.check-box {
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.check-box:selected {
+    -fx-text-fill: -bp-text-primary;
+}
+

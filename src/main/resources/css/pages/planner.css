@@ -1,0 +1,65 @@
+.page-planner {
+    -fx-spacing: 16;
+}
+
+.planner-summary-grid {
+    -fx-spacing: 12;
+}
+
+.planner-form-card,
+.planner-computed-card {
+    -fx-min-height: 380;
+}
+
+.planner-weekly-card {
+    -fx-min-height: 330;
+}
+
+.planner-weekly-table {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.planner-weekly-table .column-header-background {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10 10 0 0;
+}
+
+.planner-weekly-table .column-header,
+.planner-weekly-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.planner-weekly-table .column-header .label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.planner-weekly-table .table-row-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-border-color: transparent;
+}
+
+.planner-weekly-table .table-row-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.2);
+}
+
+.planner-weekly-table .table-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+}
+
+.planner-status-healthy {
+    -fx-text-fill: #8cf5ba;
+    -fx-font-weight: 700;
+}
+
+.planner-status-warning {
+    -fx-text-fill: #ffc99b;
+    -fx-font-weight: 700;
+}
+
