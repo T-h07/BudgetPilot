@@ -7,6 +7,8 @@ import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.Investment;
+import com.budgetpilot.model.InvestmentTransaction;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.SavingsBucket;
@@ -41,6 +43,10 @@ public class InMemoryStore implements BudgetStore {
             Comparator.comparing(FamilyExpenseEntry::getExpenseDate, Comparator.nullsLast(Comparator.reverseOrder()))
                     .thenComparing(FamilyExpenseEntry::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
 
+    private static final Comparator<InvestmentTransaction> INVESTMENT_TRANSACTION_SORT =
+            Comparator.comparing(InvestmentTransaction::getTransactionDate, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(InvestmentTransaction::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
+
     private UserProfile userProfile;
     private final Map<YearMonth, MonthlyPlan> monthlyPlans = new LinkedHashMap<>();
     private final Map<String, IncomeEntry> incomes = new LinkedHashMap<>();
@@ -52,6 +58,8 @@ public class InMemoryStore implements BudgetStore {
     private final Map<String, FamilyMember> familyMembers = new LinkedHashMap<>();
     private final Map<String, FamilyExpenseEntry> familyExpenses = new LinkedHashMap<>();
     private final Map<String, HabitRule> habitRules = new LinkedHashMap<>();
+    private final Map<String, Investment> investments = new LinkedHashMap<>();
+    private final Map<String, InvestmentTransaction> investmentTransactions = new LinkedHashMap<>();
 
     @Override
     public synchronized UserProfile getUserProfile() {
@@ -350,6 +358,74 @@ public class InMemoryStore implements BudgetStore {
     }
 
     @Override
+    public synchronized List<Investment> listInvestments() {
+        List<Investment> results = new ArrayList<>();
+        for (Investment investment : investments.values()) {
+            results.add(investment.copy());
+        }
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveInvestment(Investment investment) {
+        ValidationUtils.requireNonNull(investment, "investment");
+        Investment copy = investment.copy();
+        investments.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteInvestment(String id) {
+        investments.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
+    public synchronized List<InvestmentTransaction> listInvestmentTransactions(String investmentId) {
+        String normalizedInvestmentId = ValidationUtils.requireNonBlank(investmentId, "investmentId");
+        List<InvestmentTransaction> results = investmentTransactions.values().stream()
+                .filter(tx -> normalizedInvestmentId.equals(tx.getInvestmentId()))
+                .sorted(INVESTMENT_TRANSACTION_SORT)
+                .map(InvestmentTransaction::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<InvestmentTransaction> listInvestmentTransactions(String investmentId, YearMonth month) {
+        String normalizedInvestmentId = ValidationUtils.requireNonBlank(investmentId, "investmentId");
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<InvestmentTransaction> results = investmentTransactions.values().stream()
+                .filter(tx -> normalizedInvestmentId.equals(tx.getInvestmentId()))
+                .filter(tx -> normalizedMonth.equals(tx.getMonth()))
+                .sorted(INVESTMENT_TRANSACTION_SORT)
+                .map(InvestmentTransaction::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<InvestmentTransaction> listAllInvestmentTransactions(YearMonth month) {
+        YearMonth normalizedMonth = ValidationUtils.requireNonNull(month, "month");
+        List<InvestmentTransaction> results = investmentTransactions.values().stream()
+                .filter(tx -> normalizedMonth.equals(tx.getMonth()))
+                .sorted(INVESTMENT_TRANSACTION_SORT)
+                .map(InvestmentTransaction::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveInvestmentTransaction(InvestmentTransaction tx) {
+        ValidationUtils.requireNonNull(tx, "tx");
+        InvestmentTransaction copy = tx.copy();
+        investmentTransactions.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteInvestmentTransaction(String id) {
+        investmentTransactions.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
     public synchronized void clearAll() {
         userProfile = null;
         monthlyPlans.clear();
@@ -362,5 +438,7 @@ public class InMemoryStore implements BudgetStore {
         familyMembers.clear();
         familyExpenses.clear();
         habitRules.clear();
+        investments.clear();
+        investmentTransactions.clear();
     }
 }

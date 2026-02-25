@@ -1,0 +1,92 @@
+.page-achievements {
+    -fx-spacing: 16;
+}
+
+.achievements-summary-grid {
+    -fx-spacing: 12;
+}
+
+.achievements-filter-bar {
+    -fx-padding: 10;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.achievement-card {
+    -fx-padding: 12;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.achievement-card-unlocked {
+    -fx-background-color: rgba(92, 197, 128, 0.12);
+    -fx-border-color: rgba(92, 197, 128, 0.45);
+}
+
+.achievement-card-progress {
+    -fx-accent: -bp-accent;
+}
+
+.achievement-card-progress > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.achievement-card-progress > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+}
+
+.achievement-category-badge {
+    -fx-text-fill: #dbe8ff;
+}
+
+.achievement-tier-bronze {
+    -fx-text-fill: #ffe2be;
+    -fx-background-color: rgba(218, 145, 64, 0.22);
+    -fx-border-color: rgba(218, 145, 64, 0.5);
+}
+
+.achievement-tier-silver {
+    -fx-text-fill: #eff4ff;
+    -fx-background-color: rgba(151, 171, 207, 0.22);
+    -fx-border-color: rgba(151, 171, 207, 0.5);
+}
+
+.achievement-tier-gold {
+    -fx-text-fill: #ffefb3;
+    -fx-background-color: rgba(241, 196, 82, 0.22);
+    -fx-border-color: rgba(241, 196, 82, 0.5);
+}
+
+.achievement-status-locked {
+    -fx-text-fill: #c7d4ef;
+}
+
+.achievement-status-progress {
+    -fx-text-fill: #ffd486;
+    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-background-color: rgba(246, 185, 80, 0.2);
+}
+
+.achievement-status-unlocked {
+    -fx-text-fill: #cbffdc;
+    -fx-border-color: rgba(87, 198, 120, 0.45);
+    -fx-background-color: rgba(87, 198, 120, 0.2);
+}
+
+.alert-info {
+    -fx-text-fill: #d7ebff;
+}
+
+.alert-warning {
+    -fx-text-fill: #ffe8b6;
+}
+
+.alert-success {
+    -fx-text-fill: #d7ffe7;
+}

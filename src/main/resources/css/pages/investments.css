@@ -1,0 +1,101 @@
+.page-investments {
+    -fx-spacing: 16;
+}
+
+.investment-summary-grid {
+    -fx-spacing: 12;
+}
+
+.investment-list-card,
+.investment-details-card {
+    -fx-min-height: 640;
+}
+
+.investment-list {
+    -fx-spacing: 10;
+}
+
+.investment-card {
+    -fx-padding: 12;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 10;
+}
+
+.investment-card-selected {
+    -fx-background-color: rgba(54, 163, 255, 0.16);
+    -fx-border-color: rgba(54, 163, 255, 0.45);
+}
+
+.investment-status-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #d8e8ff;
+}
+
+.investment-roi-positive {
+    -fx-text-fill: #8cf5ba;
+    -fx-font-weight: 700;
+}
+
+.investment-roi-negative {
+    -fx-text-fill: #ffb5b5;
+    -fx-font-weight: 700;
+}
+
+.investment-progress-bar {
+    -fx-accent: -bp-accent;
+}
+
+.investment-progress-bar > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.investment-progress-bar > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+}
+
+.investment-transaction-table {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.investment-transaction-table .column-header-background {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10 10 0 0;
+}
+
+.investment-transaction-table .column-header,
+.investment-transaction-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.investment-transaction-table .column-header .label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.investment-transaction-table .table-row-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-border-color: transparent;
+}
+
+.investment-transaction-table .table-row-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.2);
+}
+
+.investment-transaction-table .table-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+}
+
+.investment-transaction-table .placeholder .label {
+    -fx-text-fill: -bp-text-secondary;
+}
