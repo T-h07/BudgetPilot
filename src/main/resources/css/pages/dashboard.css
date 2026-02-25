@@ -1,8 +1,112 @@
-.kpi-grid {
+.page-dashboard {
+    -fx-spacing: 16;
+}
+
+.dashboard-kpi-grid {
     -fx-padding: 0;
 }
 
-.kpi-grid > .kpi-tile {
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 12, 0.15, 0, 4);
+.dashboard-kpi-tile {
+    -fx-min-height: 122;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0.15, 0, 4);
 }
 
+.dashboard-main-grid,
+.dashboard-lower-grid {
+    -fx-spacing: 16;
+}
+
+.dashboard-panel {
+    -fx-min-height: 300;
+}
+
+.chart-card {
+    -fx-min-height: 320;
+}
+
+.dashboard-category-list {
+    -fx-spacing: 10;
+}
+
+.category-row {
+    -fx-padding: 10;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.05);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+
+.category-progress {
+    -fx-accent: -bp-accent;
+}
+
+.category-progress > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.category-progress > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+}
+
+.dashboard-weekly-chart {
+    -fx-background-color: rgba(255, 255, 255, 0.02);
+    -fx-background-radius: 10;
+    -fx-padding: 8;
+}
+
+.dashboard-weekly-chart .chart-content {
+    -fx-padding: 8 6 6 6;
+}
+
+.dashboard-weekly-chart .chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+.dashboard-weekly-chart .chart-vertical-grid-lines,
+.dashboard-weekly-chart .chart-horizontal-grid-lines {
+    -fx-stroke: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-weekly-chart .axis-label,
+.dashboard-weekly-chart .axis {
+    -fx-tick-label-fill: -bp-text-secondary;
+}
+
+.dashboard-weekly-chart .chart-bar {
+    -fx-bar-fill: linear-gradient(to top, -bp-accent-strong, -bp-accent);
+}
+
+.health-card {
+    -fx-spacing: 10;
+}
+
+.health-score {
+    -fx-font-size: 32px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -bp-text-primary;
+}
+
+.dashboard-alerts-panel {
+    -fx-min-height: 220;
+}
+
+.alert-item {
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.05);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 10 12;
+}
+
+.metric-row {
+    -fx-padding: 2 0;
+}
+
+.empty-panel-state {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 12px;
+}
