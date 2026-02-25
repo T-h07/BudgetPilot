@@ -94,6 +94,8 @@ public class MainLayout extends BorderPane {
                 || currentPage == PageId.EXPENSES
                 || currentPage == PageId.SAVINGS
                 || currentPage == PageId.GOALS
+                || currentPage == PageId.INVESTMENTS
+                || currentPage == PageId.ACHIEVEMENTS
                 || currentPage == PageId.FAMILY
                 || currentPage == PageId.HABITS) {
             navigateTo(currentPage);

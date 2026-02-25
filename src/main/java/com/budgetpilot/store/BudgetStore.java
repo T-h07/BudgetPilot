@@ -7,6 +7,8 @@ import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.Investment;
+import com.budgetpilot.model.InvestmentTransaction;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.SavingsBucket;
@@ -89,6 +91,22 @@ public interface BudgetStore {
     void saveHabitRule(HabitRule rule);
 
     void deleteHabitRule(String id);
+
+    List<Investment> listInvestments();
+
+    void saveInvestment(Investment investment);
+
+    void deleteInvestment(String id);
+
+    List<InvestmentTransaction> listInvestmentTransactions(String investmentId);
+
+    List<InvestmentTransaction> listInvestmentTransactions(String investmentId, YearMonth month);
+
+    List<InvestmentTransaction> listAllInvestmentTransactions(YearMonth month);
+
+    void saveInvestmentTransaction(InvestmentTransaction tx);
+
+    void deleteInvestmentTransaction(String id);
 
     void clearAll();
 }
