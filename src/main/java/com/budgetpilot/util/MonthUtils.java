@@ -34,6 +34,41 @@ public final class MonthUtils {
         return source.plusMonths(deltaMonths);
     }
 
+    public static int daysInMonth(YearMonth month) {
+        YearMonth targetMonth = month == null ? currentMonth() : month;
+        return targetMonth.lengthOfMonth();
+    }
+
+    public static boolean isCurrentMonth(YearMonth month) {
+        YearMonth targetMonth = month == null ? currentMonth() : month;
+        return targetMonth.equals(currentMonth());
+    }
+
+    public static int elapsedDaysForForecast(YearMonth month, LocalDate referenceDate) {
+        YearMonth targetMonth = month == null ? currentMonth() : month;
+        LocalDate date = referenceDate == null ? LocalDate.now() : referenceDate;
+        YearMonth current = YearMonth.from(date);
+        if (targetMonth.isBefore(current)) {
+            return targetMonth.lengthOfMonth();
+        }
+        if (targetMonth.isAfter(current)) {
+            return 0;
+        }
+        return Math.min(date.getDayOfMonth(), targetMonth.lengthOfMonth());
+    }
+
+    public static int denominatorDaysForDailyAverage(YearMonth month) {
+        YearMonth targetMonth = month == null ? currentMonth() : month;
+        YearMonth current = currentMonth();
+        if (targetMonth.isBefore(current)) {
+            return targetMonth.lengthOfMonth();
+        }
+        if (targetMonth.isAfter(current)) {
+            return targetMonth.lengthOfMonth();
+        }
+        return Math.max(LocalDate.now().getDayOfMonth(), 1);
+    }
+
     public static List<WeekRange> calendarWeekRanges(YearMonth month) {
         YearMonth targetMonth = month == null ? currentMonth() : month;
         LocalDate monthStart = targetMonth.atDay(1);
