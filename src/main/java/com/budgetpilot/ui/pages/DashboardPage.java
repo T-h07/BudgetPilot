@@ -9,6 +9,8 @@ import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.service.BudgetSummary;
+import com.budgetpilot.service.ForecastService;
+import com.budgetpilot.service.ForecastSummary;
 import com.budgetpilot.service.PlannerService;
 import com.budgetpilot.ui.components.KpiTile;
 import com.budgetpilot.ui.components.SectionCard;
@@ -49,6 +51,9 @@ public class DashboardPage extends VBox {
         BudgetSummary budgetSummary = store == null
                 ? null
                 : new PlannerService(store).buildBudgetSummary(selectedMonth, familyEnabled);
+        ForecastSummary forecastSummary = store == null
+                ? null
+                : new ForecastService(store).buildForecast(selectedMonth, familyEnabled);
 
         BigDecimal totalIncome = incomes.stream()
                 .map(IncomeEntry::getAmount)
@@ -114,6 +119,9 @@ public class DashboardPage extends VBox {
                         {"Expense Entries", String.valueOf(expenses.size())},
                         {"Average Expense", MoneyUtils.format(averageExpense, currencyCode)},
                         {"Total Expenses", MoneyUtils.format(totalExpenses, currencyCode)},
+                        {"Projected Month-End Spend", forecastSummary == null
+                                ? "Unavailable"
+                                : MoneyUtils.format(forecastSummary.getProjectedExpensesByMonthEnd(), currencyCode)},
                         {"Month", monthText}
                 })
         );
@@ -124,6 +132,12 @@ public class DashboardPage extends VBox {
         String plannedSafety = plan == null
                 ? "No plan seeded"
                 : MoneyUtils.format(plan.getSafetyBufferAmount(), currencyCode);
+        String forecastRemainingAfterPlan = forecastSummary == null
+                ? "Unavailable"
+                : MoneyUtils.format(forecastSummary.getProjectedRemainingAfterPlan(), currencyCode);
+        String forecastStatus = forecastSummary == null
+                ? "Unavailable"
+                : (forecastSummary.isOverspendingRisk() ? "Overspending risk" : "On track");
 
         SectionCard plannerSummary = new SectionCard(
                 "Planner Summary",
@@ -132,7 +146,9 @@ public class DashboardPage extends VBox {
                         {"Fixed Costs Budget", plan == null ? "No plan seeded" : MoneyUtils.format(plan.getFixedCostsBudget(), currencyCode)},
                         {"Food Budget", plan == null ? "No plan seeded" : MoneyUtils.format(plan.getFoodBudget(), currencyCode)},
                         {"Discretionary Budget", plannedDiscretionary},
-                        {"Safety Buffer", plannedSafety}
+                        {"Safety Buffer", plannedSafety},
+                        {"Forecast Remaining", forecastRemainingAfterPlan},
+                        {"Forecast Status", forecastStatus}
                 })
         );
 
