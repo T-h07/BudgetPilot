@@ -22,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class InMemoryStore implements BudgetStore {
+public class InMemoryStore implements BudgetStore, FullDataStore {
     private static final Comparator<IncomeEntry> INCOME_SORT =
             Comparator.comparing(IncomeEntry::getReceivedDate, Comparator.nullsLast(Comparator.reverseOrder()))
                     .thenComparing(IncomeEntry::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()));
@@ -60,6 +60,7 @@ public class InMemoryStore implements BudgetStore {
     private final Map<String, HabitRule> habitRules = new LinkedHashMap<>();
     private final Map<String, Investment> investments = new LinkedHashMap<>();
     private final Map<String, InvestmentTransaction> investmentTransactions = new LinkedHashMap<>();
+    private final Map<String, String> appSettings = new LinkedHashMap<>();
 
     @Override
     public synchronized UserProfile getUserProfile() {
@@ -440,5 +441,91 @@ public class InMemoryStore implements BudgetStore {
         habitRules.clear();
         investments.clear();
         investmentTransactions.clear();
+        appSettings.clear();
+    }
+
+    @Override
+    public synchronized List<MonthlyPlan> listMonthlyPlans() {
+        List<MonthlyPlan> results = monthlyPlans.values().stream()
+                .map(MonthlyPlan::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<IncomeEntry> listAllIncomeEntries() {
+        List<IncomeEntry> results = incomes.values().stream()
+                .sorted(INCOME_SORT)
+                .map(IncomeEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<ExpenseEntry> listAllExpenseEntries() {
+        List<ExpenseEntry> results = expenses.values().stream()
+                .sorted(EXPENSE_SORT)
+                .map(ExpenseEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<SavingsEntry> listAllSavingsEntries() {
+        List<SavingsEntry> results = savingsEntries.values().stream()
+                .sorted(SAVINGS_ENTRY_SORT)
+                .map(SavingsEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<GoalContribution> listAllGoalContributions() {
+        List<GoalContribution> results = goalContributions.values().stream()
+                .sorted(GOAL_CONTRIBUTION_SORT)
+                .map(GoalContribution::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<FamilyExpenseEntry> listAllFamilyExpenseEntries() {
+        List<FamilyExpenseEntry> results = familyExpenses.values().stream()
+                .sorted(FAMILY_EXPENSE_SORT)
+                .map(FamilyExpenseEntry::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized List<InvestmentTransaction> listAllInvestmentTransactions() {
+        List<InvestmentTransaction> results = investmentTransactions.values().stream()
+                .sorted(INVESTMENT_TRANSACTION_SORT)
+                .map(InvestmentTransaction::copy)
+                .toList();
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized Map<String, String> listAppSettings() {
+        return Map.copyOf(appSettings);
+    }
+
+    @Override
+    public synchronized String getAppSetting(String key) {
+        return appSettings.get(ValidationUtils.requireNonBlank(key, "key"));
+    }
+
+    @Override
+    public synchronized void saveAppSetting(String key, String value) {
+        appSettings.put(
+                ValidationUtils.requireNonBlank(key, "key"),
+                value == null ? "" : value.trim()
+        );
+    }
+
+    @Override
+    public synchronized void deleteAppSetting(String key) {
+        appSettings.remove(ValidationUtils.requireNonBlank(key, "key"));
     }
 }

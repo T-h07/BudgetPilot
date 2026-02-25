@@ -147,6 +147,26 @@
     -fx-text-fill: #ffd7d7;
 }
 
+.banner-warning {
+    -fx-background-color: rgba(246, 185, 80, 0.2);
+    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+    -fx-text-fill: #ffe8b6;
+}
+
+.banner-info {
+    -fx-background-color: rgba(87, 163, 250, 0.2);
+    -fx-border-color: rgba(87, 163, 250, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+    -fx-text-fill: #d7ebff;
+}
+
 .status-badge {
     -fx-font-size: 10px;
     -fx-font-weight: 700;

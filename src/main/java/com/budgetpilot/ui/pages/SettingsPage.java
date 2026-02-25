@@ -3,12 +3,15 @@ package com.budgetpilot.ui.pages;
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.service.BackupService;
+import com.budgetpilot.service.PersistenceStatus;
 import com.budgetpilot.model.enums.UserProfileType;
 import com.budgetpilot.service.SettingsService;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.ToggleCard;
 import com.budgetpilot.util.UiUtils;
 import com.budgetpilot.util.ValidationUtils;
+import javafx.stage.FileChooser;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -24,12 +27,17 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
 
+import java.awt.Desktop;
+import java.io.File;
+import java.io.IOException;
 import java.util.Optional;
 
 public class SettingsPage extends VBox {
     private final AppContext appContext;
     private final SettingsService settingsService;
+    private final BackupService backupService;
     private final Runnable contextListener = this::populateFromContext;
 
     private final Label bannerLabel = new Label();
@@ -45,9 +53,14 @@ public class SettingsPage extends VBox {
     private final ToggleCard investmentsModuleToggle = new ToggleCard("Investments Module", "Enable investment tracking and allocation workspace.");
     private final ToggleCard achievementsModuleToggle = new ToggleCard("Achievements Module", "Enable habit streaks and achievement milestones.");
 
+    private final Label persistenceStatusLabel = new Label();
+    private final Label databasePathLabel = new Label();
+    private final Label backupsPathLabel = new Label();
+
     public SettingsPage(AppContext appContext) {
         this.appContext = appContext;
         this.settingsService = new SettingsService(appContext);
+        this.backupService = new BackupService(appContext);
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -83,6 +96,13 @@ public class SettingsPage extends VBox {
         );
         monthSection.getStyleClass().add("settings-section");
 
+        SectionCard persistenceSection = new SectionCard(
+                "Data & Persistence",
+                "Manage local database path, backup exports, imports, and persistence mode.",
+                buildPersistenceSectionBody()
+        );
+        persistenceSection.getStyleClass().add("settings-section");
+
         SectionCard developerSection = new SectionCard(
                 "Developer Tools",
                 "Utilities for quickly resetting and reseeding local app state.",
@@ -90,7 +110,7 @@ public class SettingsPage extends VBox {
         );
         developerSection.getStyleClass().add("settings-section");
 
-        getChildren().addAll(profileSection, modulesSection, monthSection, developerSection);
+        getChildren().addAll(profileSection, modulesSection, monthSection, persistenceSection, developerSection);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -201,6 +221,83 @@ public class SettingsPage extends VBox {
         return new VBox(10, clearAllButton, seedDemoButton, freshOnboardingButton);
     }
 
+    private Node buildPersistenceSectionBody() {
+        persistenceStatusLabel.getStyleClass().add("persistence-status-card");
+        databasePathLabel.getStyleClass().addAll("muted-text", "settings-data-path");
+        backupsPathLabel.getStyleClass().addAll("muted-text", "settings-data-path");
+
+        Button exportBackupButton = new Button("Export Backup");
+        exportBackupButton.getStyleClass().add("quick-add-button");
+        exportBackupButton.setOnAction(event -> {
+            clearBanner();
+            try {
+                var backupPath = backupService.exportBackup();
+                showSuccess("Backup exported to: " + backupPath);
+            } catch (Exception ex) {
+                showError("Backup export failed: " + ex.getMessage());
+            }
+        });
+
+        Button importBackupButton = new Button("Import Backup");
+        importBackupButton.setOnAction(event -> {
+            clearBanner();
+            if (!confirm("Import backup and replace current data?")) {
+                return;
+            }
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Select BudgetPilot Backup");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON Backup", "*.json"));
+            Window owner = getScene() == null ? null : getScene().getWindow();
+            File selected = fileChooser.showOpenDialog(owner);
+            if (selected == null) {
+                return;
+            }
+            try {
+                backupService.importBackup(selected.toPath());
+                populateFromContext();
+                showSuccess("Backup imported successfully.");
+                appContext.navigate(appContext.onboardingCompleted() ? PageId.DASHBOARD : PageId.ONBOARDING);
+            } catch (Exception ex) {
+                showError("Backup import failed: " + ex.getMessage());
+            }
+        });
+
+        Button openDataFolderButton = new Button("Open Data Folder");
+        openDataFolderButton.setOnAction(event -> {
+            clearBanner();
+            PersistenceStatus status = appContext.getPersistenceStatus();
+            if (status == null || status.getDatabasePath() == null) {
+                showError("Data directory is not available.");
+                return;
+            }
+            try {
+                if (Desktop.isDesktopSupported()) {
+                    Desktop.getDesktop().open(status.getDatabasePath().getParent().toFile());
+                } else {
+                    showError("Desktop integration is not supported on this system.");
+                    return;
+                }
+                showSuccess("Opened data folder.");
+            } catch (IOException ex) {
+                showError("Unable to open data folder: " + ex.getMessage());
+            }
+        });
+
+        HBox actions = new HBox(10, exportBackupButton, importBackupButton, openDataFolderButton);
+        actions.getStyleClass().add("backup-actions-row");
+        actions.setAlignment(Pos.CENTER_LEFT);
+
+        VBox box = new VBox(10,
+                persistenceStatusLabel,
+                new Label("Database Path:"),
+                databasePathLabel,
+                new Label("Backups Folder:"),
+                backupsPathLabel,
+                actions
+        );
+        return box;
+    }
+
     private void saveProfile() {
         clearBanner();
         try {
@@ -234,6 +331,7 @@ public class SettingsPage extends VBox {
     }
 
     private void populateFromContext() {
+        updatePersistenceStatus();
         UserProfile profile = appContext.getCurrentUser();
         if (profile == null) {
             firstNameField.setText("");
@@ -257,6 +355,27 @@ public class SettingsPage extends VBox {
         familyModuleToggle.getToggle().setSelected(profile.isFamilyModuleEnabled());
         investmentsModuleToggle.getToggle().setSelected(profile.isInvestmentsModuleEnabled());
         achievementsModuleToggle.getToggle().setSelected(profile.isAchievementsModuleEnabled());
+    }
+
+    private void updatePersistenceStatus() {
+        PersistenceStatus status = appContext.getPersistenceStatus();
+        if (status == null) {
+            persistenceStatusLabel.setText("Persistence status unavailable.");
+            persistenceStatusLabel.getStyleClass().removeAll("persistence-status-ok", "persistence-status-fallback");
+            persistenceStatusLabel.getStyleClass().add("persistence-status-fallback");
+            databasePathLabel.setText("-");
+            backupsPathLabel.setText("-");
+            return;
+        }
+
+        persistenceStatusLabel.setText(
+                (status.isPersistent() ? "Connected: " : "Fallback: ") + status.getMessage()
+        );
+        persistenceStatusLabel.getStyleClass().removeAll("persistence-status-ok", "persistence-status-fallback");
+        persistenceStatusLabel.getStyleClass().add(status.isPersistent() ? "persistence-status-ok" : "persistence-status-fallback");
+
+        databasePathLabel.setText(status.getDatabasePath() == null ? "-" : status.getDatabasePath().toString());
+        backupsPathLabel.setText(status.getBackupsPath() == null ? "-" : status.getBackupsPath().toString());
     }
 
     private boolean confirm(String message) {
