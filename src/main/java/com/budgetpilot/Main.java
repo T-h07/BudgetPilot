@@ -168,6 +168,7 @@ public class Main extends Application {
                 "/css/pages/planner.css",
                 "/css/pages/expenses.css",
                 "/css/pages/templates.css",
+                "/css/pages/analytics.css",
                 "/css/pages/insights.css",
                 "/css/pages/savings.css",
                 "/css/pages/goals.css",
@@ -272,3 +273,4 @@ public class Main extends Application {
             ex.printStackTrace(System.err);
         }
     }
+}
