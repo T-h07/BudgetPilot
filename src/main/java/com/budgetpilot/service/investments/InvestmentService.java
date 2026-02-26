@@ -299,6 +299,19 @@ public class InvestmentService {
         return result;
     }
 
+    public BigDecimal getMonthlyNetAllocationsTotal(YearMonth month) {
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        List<InvestmentTransaction> monthTransactions = normalizeTransactionsForRead(
+                budgetStore.listAllInvestmentTransactions(targetMonth)
+        );
+        InvestmentTotals totals = aggregateTotals(monthTransactions);
+        return MoneyUtils.normalize(
+                totals.contributions()
+                        .subtract(totals.withdrawals())
+                        .add(totals.adjustments())
+        );
+    }
+
     public InvestmentValidationResult validateTransaction(InvestmentTransaction tx) {
         InvestmentValidationResult result = new InvestmentValidationResult();
         if (tx == null) {

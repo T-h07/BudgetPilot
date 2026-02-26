@@ -3,14 +3,21 @@ package com.budgetpilot.ui.pages;
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.Investment;
 import com.budgetpilot.model.InvestmentTransaction;
+import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.model.enums.FundingSourceType;
 import com.budgetpilot.model.enums.InvestmentKind;
 import com.budgetpilot.model.enums.InvestmentStatus;
 import com.budgetpilot.model.enums.InvestmentTransactionType;
 import com.budgetpilot.model.enums.InvestmentType;
+import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
+import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
+import com.budgetpilot.service.investments.FundInvestmentRequest;
+import com.budgetpilot.service.investments.InvestmentFundingService;
 import com.budgetpilot.service.investments.InvestmentPageSummary;
 import com.budgetpilot.service.investments.InvestmentPositionSummary;
 import com.budgetpilot.service.investments.InvestmentService;
+import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
@@ -25,6 +32,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
@@ -54,6 +62,8 @@ import java.util.Optional;
 public class InvestmentsPage extends VBox {
     private final AppContext appContext;
     private final InvestmentService investmentService;
+    private final InvestmentFundingService investmentFundingService;
+    private final SavingsService savingsService;
     private final Runnable contextListener = this::refreshAll;
 
     private final Label bannerLabel = new Label();
@@ -91,6 +101,10 @@ public class InvestmentsPage extends VBox {
     private final MoneyField transactionAmountField = new MoneyField("Amount", "Amount");
     private final DatePicker transactionDatePicker = new DatePicker();
     private final ComboBox<InvestmentTransactionType> transactionTypeCombo = new ComboBox<>();
+    private final ComboBox<FundingSourceType> transactionSourceTypeCombo = new ComboBox<>();
+    private final ComboBox<SavingsBucket> transactionSourceBucketCombo = new ComboBox<>();
+    private final Label transactionSourceBucketLabel = new Label("Savings Bucket");
+    private final Label transactionSourceHintLabel = new Label();
     private final TextField transactionNoteField = textField("Note");
     private final Button addTransactionButton = new Button("Add Transaction");
     private final Button clearTransactionButton = new Button("Clear");
@@ -99,13 +113,17 @@ public class InvestmentsPage extends VBox {
     private final TableView<InvestmentTransaction> transactionTable = new TableView<>(transactionRows);
 
     private List<Investment> investments = List.of();
+    private List<SavingsBucket> sourceBuckets = List.of();
     private Map<String, InvestmentPositionSummary> positionById = new HashMap<>();
     private String selectedInvestmentId;
     private String editingInvestmentId;
+    private boolean transactionControlsEnabled;
 
     public InvestmentsPage(AppContext appContext) {
         this.appContext = ValidationUtils.requireNonNull(appContext, "appContext");
         this.investmentService = new InvestmentService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.investmentFundingService = new InvestmentFundingService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.savingsService = new SavingsService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -187,6 +205,37 @@ public class InvestmentsPage extends VBox {
         transactionTypeCombo.getItems().setAll(InvestmentTransactionType.values());
         transactionTypeCombo.getSelectionModel().select(InvestmentTransactionType.CONTRIBUTION);
         transactionTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        transactionTypeCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateFundingControls());
+
+        transactionSourceTypeCombo.getItems().setAll(FundingSourceType.values());
+        transactionSourceTypeCombo.getSelectionModel().select(FundingSourceType.FREE_MONEY);
+        transactionSourceTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        transactionSourceTypeCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateFundingControls());
+
+        transactionSourceBucketLabel.getStyleClass().add("form-label");
+        transactionSourceBucketCombo.getStyleClass().addAll("combo-box", "form-combo");
+        transactionSourceBucketCombo.setPromptText("Select savings bucket");
+        transactionSourceBucketCombo.setCellFactory(listView -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(SavingsBucket item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        transactionSourceBucketCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(SavingsBucket item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+
+        transactionSourceHintLabel.getStyleClass().addAll("muted-text", "investment-source-hint");
+        transactionSourceHintLabel.setManaged(false);
+        transactionSourceHintLabel.setVisible(false);
+        transactionSourceHintLabel.setWrapText(true);
+
+        updateFundingControls();
     }
 
     private void setupTransactionTable() {
@@ -370,7 +419,13 @@ public class InvestmentsPage extends VBox {
         addFormRow(grid, 0, "Amount", transactionAmountField);
         addFormRow(grid, 1, "Date", transactionDatePicker);
         addFormRow(grid, 2, "Type", transactionTypeCombo);
-        addFormRow(grid, 3, "Note", transactionNoteField);
+        addFormRow(grid, 3, "Source", transactionSourceTypeCombo);
+        grid.add(transactionSourceBucketLabel, 0, 4);
+        grid.add(transactionSourceBucketCombo, 1, 4);
+        transactionSourceBucketCombo.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setHgrow(transactionSourceBucketCombo, Priority.ALWAYS);
+        grid.add(transactionSourceHintLabel, 1, 5);
+        addFormRow(grid, 6, "Note", transactionNoteField);
 
         HBox actions = new HBox(10, addTransactionButton, clearTransactionButton);
         actions.setAlignment(Pos.CENTER_LEFT);
@@ -431,7 +486,40 @@ public class InvestmentsPage extends VBox {
                     : transactionAmountField.parseRequiredPositive();
 
             switch (txType) {
-                case CONTRIBUTION -> investmentService.addContribution(selectedInvestmentId, amount, txDate, transactionNoteField.getText());
+                case CONTRIBUTION -> {
+                    FundingSourceType sourceType = ValidationUtils.requireNonNull(
+                            transactionSourceTypeCombo.getValue(),
+                            "Funding source"
+                    );
+                    String sourceRefId = null;
+                    if (sourceType == FundingSourceType.SAVINGS_BUCKET) {
+                        SavingsBucket selectedBucket = transactionSourceBucketCombo.getValue();
+                        if (selectedBucket == null) {
+                            throw new IllegalArgumentException("Select a savings bucket for transfer funding.");
+                        }
+                        sourceRefId = selectedBucket.getId();
+                    }
+
+                    FundInvestmentRequest request = new FundInvestmentRequest(
+                            selectedInvestmentId,
+                            amount,
+                            txDate,
+                            InvestmentTransactionType.CONTRIBUTION,
+                            sourceType,
+                            sourceRefId,
+                            transactionNoteField.getText()
+                    );
+
+                    if (sourceType == FundingSourceType.FREE_MONEY) {
+                        MonthlyBalanceSnapshot projected = investmentFundingService.previewFreeMoneyContributionImpact(request);
+                        if (projected.getWarningLevel() != MonthlyBalanceWarningLevel.OK
+                                && !confirmLowBalance(projected, amount, "investment contribution")) {
+                            return;
+                        }
+                    }
+
+                    investmentFundingService.addContribution(request);
+                }
                 case RETURN -> investmentService.addReturn(selectedInvestmentId, amount, txDate, transactionNoteField.getText());
                 case WITHDRAWAL -> investmentService.addWithdrawal(selectedInvestmentId, amount, txDate, transactionNoteField.getText());
                 case FEE -> investmentService.addFee(selectedInvestmentId, amount, txDate, transactionNoteField.getText());
@@ -483,6 +571,10 @@ public class InvestmentsPage extends VBox {
     private void refreshAll() {
         YearMonth month = appContext.getSelectedMonth();
         investments = investmentService.listInvestments();
+        sourceBuckets = savingsService.listBuckets().stream()
+                .filter(SavingsBucket::isActive)
+                .toList();
+        refreshSourceBuckets();
         positionById = investmentService.listPositionSummaries(month).stream()
                 .collect(HashMap::new, (map, position) -> map.put(position.getInvestmentId(), position), HashMap::putAll);
 
@@ -650,6 +742,56 @@ public class InvestmentsPage extends VBox {
         setTransactionControlsEnabled(true);
     }
 
+    private void refreshSourceBuckets() {
+        String previousBucketId = transactionSourceBucketCombo.getValue() == null
+                ? null
+                : transactionSourceBucketCombo.getValue().getId();
+
+        transactionSourceBucketCombo.getItems().setAll(sourceBuckets);
+        if (sourceBuckets.isEmpty()) {
+            transactionSourceBucketCombo.getSelectionModel().clearSelection();
+            updateFundingControls();
+            return;
+        }
+
+        if (previousBucketId != null) {
+            sourceBuckets.stream()
+                    .filter(bucket -> previousBucketId.equals(bucket.getId()))
+                    .findFirst()
+                    .ifPresent(bucket -> transactionSourceBucketCombo.getSelectionModel().select(bucket));
+        }
+
+        if (transactionSourceBucketCombo.getValue() == null) {
+            transactionSourceBucketCombo.getSelectionModel().selectFirst();
+        }
+        updateFundingControls();
+    }
+
+    private void updateFundingControls() {
+        InvestmentTransactionType txType = transactionTypeCombo.getValue();
+        FundingSourceType sourceType = transactionSourceTypeCombo.getValue();
+        boolean isContribution = txType == InvestmentTransactionType.CONTRIBUTION;
+        boolean savingsSource = isContribution && sourceType == FundingSourceType.SAVINGS_BUCKET;
+        boolean hasBuckets = !sourceBuckets.isEmpty();
+
+        transactionSourceTypeCombo.setDisable(!transactionControlsEnabled || !isContribution);
+        transactionSourceBucketLabel.setManaged(savingsSource);
+        transactionSourceBucketLabel.setVisible(savingsSource);
+        transactionSourceBucketCombo.setManaged(savingsSource);
+        transactionSourceBucketCombo.setVisible(savingsSource);
+        transactionSourceBucketCombo.setDisable(!transactionControlsEnabled || !savingsSource || !hasBuckets);
+
+        boolean showNoBucketHint = savingsSource && !hasBuckets;
+        transactionSourceHintLabel.setManaged(showNoBucketHint);
+        transactionSourceHintLabel.setVisible(showNoBucketHint);
+        transactionSourceHintLabel.setText(showNoBucketHint
+                ? "No active savings buckets available. Create one in Savings before using transfer funding."
+                : "");
+
+        boolean disableAdd = !transactionControlsEnabled || showNoBucketHint;
+        addTransactionButton.setDisable(disableAdd);
+    }
+
     private void loadInvestmentForEdit(Investment investment) {
         editingInvestmentId = investment.getId();
 
@@ -698,17 +840,27 @@ public class InvestmentsPage extends VBox {
         transactionAmountField.clear();
         transactionDatePicker.setValue(defaultDateForSelectedMonth());
         transactionTypeCombo.getSelectionModel().select(InvestmentTransactionType.CONTRIBUTION);
+        transactionSourceTypeCombo.getSelectionModel().select(FundingSourceType.FREE_MONEY);
+        if (!transactionSourceBucketCombo.getItems().isEmpty()) {
+            transactionSourceBucketCombo.getSelectionModel().selectFirst();
+        } else {
+            transactionSourceBucketCombo.getSelectionModel().clearSelection();
+        }
         transactionNoteField.clear();
+        updateFundingControls();
     }
 
     private void setTransactionControlsEnabled(boolean enabled) {
+        transactionControlsEnabled = enabled;
         transactionAmountField.setDisable(!enabled);
         transactionDatePicker.setDisable(!enabled);
         transactionTypeCombo.setDisable(!enabled);
+        transactionSourceTypeCombo.setDisable(!enabled);
+        transactionSourceBucketCombo.setDisable(!enabled);
         transactionNoteField.setDisable(!enabled);
-        addTransactionButton.setDisable(!enabled);
         clearTransactionButton.setDisable(!enabled);
         transactionTable.setDisable(!enabled);
+        updateFundingControls();
     }
 
     private Investment findInvestmentOrThrow(String id) {
@@ -767,6 +919,27 @@ public class InvestmentsPage extends VBox {
         alert.setContentText(message);
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;
+    }
+
+    private boolean confirmLowBalance(MonthlyBalanceSnapshot projected, BigDecimal amount, String actionLabel) {
+        String header = projected.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE
+                ? "Projected monthly balance will be negative"
+                : "Projected monthly balance is low";
+        String body = "This " + actionLabel
+                + " is " + MoneyUtils.format(amount, resolveCurrencyCode())
+                + ".\n"
+                + projected.getWarningMessage()
+                + "\nProceed anyway?";
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setHeaderText(header);
+        alert.setContentText(body);
+        ButtonType proceed = new ButtonType("Proceed anyway");
+        ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(proceed, cancel);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == proceed;
     }
 
     private void addFormRow(GridPane grid, int rowIndex, String labelText, Node field) {
