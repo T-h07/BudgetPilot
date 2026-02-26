@@ -428,6 +428,18 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     }
 
     @Override
+    public synchronized void purgeMonthsBefore(YearMonth cutoff) {
+        YearMonth normalizedCutoff = ValidationUtils.requireNonNull(cutoff, "cutoff");
+
+        incomes.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        expenses.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        savingsEntries.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        goalContributions.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        familyExpenses.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        investmentTransactions.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+    }
+
+    @Override
     public synchronized void clearAll() {
         userProfile = null;
         monthlyPlans.clear();
@@ -535,5 +547,9 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     @Override
     public synchronized void deleteAppSetting(String key) {
         appSettings.remove(ValidationUtils.requireNonBlank(key, "key"));
+    }
+
+    private boolean isOlderThanCutoff(YearMonth month, YearMonth cutoff) {
+        return month != null && month.isBefore(cutoff);
     }
 }

@@ -182,6 +182,11 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     }
 
     @Override
+    public synchronized void purgeMonthsBefore(YearMonth cutoff) {
+        persistWith(() -> super.purgeMonthsBefore(cutoff));
+    }
+
+    @Override
     public synchronized void saveAppSetting(String key, String value) {
         persistWith(() -> super.saveAppSetting(key, value));
     }

@@ -79,8 +79,8 @@
     -fx-tick-label-fill: -bp-text-secondary;
 }
 
-.dashboard-weekly-chart .chart-bar {
-    -fx-bar-fill: linear-gradient(to top, -bp-accent-strong, -bp-accent);
+.dashboard-weekly-chart .default-color0.chart-bar {
+    -fx-bar-fill: -bp-accent;
 }
 
 .health-card {

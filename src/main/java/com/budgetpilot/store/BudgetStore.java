@@ -108,5 +108,7 @@ public interface BudgetStore {
 
     void deleteInvestmentTransaction(String id);
 
+    void purgeMonthsBefore(YearMonth cutoff);
+
     void clearAll();
 }

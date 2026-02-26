@@ -319,3 +319,73 @@
     -fx-background-color: transparent;
 }
 
+.month-rollover-dialog {
+    -fx-background-color: linear-gradient(to bottom, -bp-surface, -bp-surface-elevated);
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1;
+}
+
+.month-rollover-dialog .header-panel {
+    -fx-background-color: rgba(11, 18, 32, 0.95);
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 16 10 16;
+}
+
+.month-rollover-dialog:header .header-panel .label,
+.month-rollover-dialog .header-panel .label {
+    -fx-text-fill: -bp-text-primary;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+}
+
+.month-rollover-dialog > .content.label {
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.month-rollover-dialog .content {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-dialog .button-bar {
+    -fx-background-color: rgba(11, 18, 32, 0.9);
+    -fx-padding: 12 14;
+    -fx-border-color: rgba(255, 255, 255, 0.06) transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.month-rollover-body {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.month-rollover-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-scroll .content {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-sections {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-bucket-section {
+    -fx-padding: 2 0 6 0;
+}
+
+.month-rollover-template-row {
+    -fx-background-color: linear-gradient(to bottom, -bp-surface, -bp-surface-elevated);
+}

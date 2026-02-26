@@ -5,10 +5,17 @@ import com.budgetpilot.core.PageId;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.service.backup.BackupService;
 import com.budgetpilot.service.PersistenceStatus;
+import com.budgetpilot.service.month.ExpenseTemplateCandidate;
+import com.budgetpilot.service.month.MonthRolloverService;
 import com.budgetpilot.model.enums.UserProfileType;
+import com.budgetpilot.service.retention.DataRetentionService;
 import com.budgetpilot.service.settings.SettingsService;
+import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.store.DbStore;
+import com.budgetpilot.ui.components.MonthRolloverDialog;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.ToggleCard;
+import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.UiUtils;
 import com.budgetpilot.util.ValidationUtils;
 import javafx.stage.FileChooser;
@@ -32,12 +39,17 @@ import javafx.stage.Window;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 
 public class SettingsPage extends VBox {
     private final AppContext appContext;
     private final SettingsService settingsService;
     private final BackupService backupService;
+    private final MonthRolloverService rolloverService;
+    private final DataRetentionService dataRetentionService;
     private final Runnable contextListener = this::populateFromContext;
 
     private final Label bannerLabel = new Label();
@@ -61,6 +73,8 @@ public class SettingsPage extends VBox {
         this.appContext = appContext;
         this.settingsService = new SettingsService(appContext);
         this.backupService = new BackupService(appContext);
+        this.rolloverService = new MonthRolloverService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.dataRetentionService = new DataRetentionService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -184,18 +198,11 @@ public class SettingsPage extends VBox {
         nextButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         nextButton.setOnAction(event -> settingsService.shiftSelectedMonth(1));
 
-        Button currentButton = new Button("Current Month");
-        currentButton.getStyleClass().addAll("secondary-button", "btn-secondary");
-        currentButton.setOnAction(event -> settingsService.jumpToCurrentMonth());
-
         Button newMonthButton = new Button("Start New Month");
         newMonthButton.getStyleClass().addAll("quick-add-button", "btn-primary");
-        newMonthButton.setOnAction(event -> {
-            settingsService.startNewMonth();
-            showSuccess("Moved to a new month and ensured a monthly plan exists.");
-        });
+        newMonthButton.setOnAction(event -> startNewMonthFromSettings());
 
-        HBox controls = new HBox(10, prevButton, nextButton, currentButton, newMonthButton);
+        HBox controls = new HBox(10, prevButton, nextButton, newMonthButton);
         controls.setAlignment(Pos.CENTER_LEFT);
 
         return new VBox(12, monthLabel, controls);
@@ -301,12 +308,17 @@ public class SettingsPage extends VBox {
         actions.getStyleClass().add("backup-actions-row");
         actions.setAlignment(Pos.CENTER_LEFT);
 
+        Label retentionInfo = new Label("Old monthly data older than 12 months is automatically removed.");
+        retentionInfo.getStyleClass().addAll("banner-info", "muted-text");
+        retentionInfo.setWrapText(true);
+
         VBox box = new VBox(10,
                 persistenceStatusLabel,
                 new Label("Database Path:"),
                 databasePathLabel,
                 new Label("Backups Folder:"),
                 backupsPathLabel,
+                retentionInfo,
                 actions
         );
         return box;
@@ -341,6 +353,52 @@ public class SettingsPage extends VBox {
             appContext.navigate(PageId.SETTINGS);
         } catch (IllegalArgumentException ex) {
             showError(ex.getMessage());
+        }
+    }
+
+    private void startNewMonthFromSettings() {
+        clearBanner();
+        YearMonth sourceMonth = appContext.getSelectedMonth();
+        YearMonth targetMonth = sourceMonth.plusMonths(1);
+
+        if (sourceMonth.equals(MonthUtils.currentMonth())) {
+            int todayDay = LocalDate.now().getDayOfMonth();
+            if (todayDay < sourceMonth.lengthOfMonth()) {
+                boolean confirmed = confirm("This month is not finished yet. Are you sure you want to start a new month?");
+                if (!confirmed) {
+                    return;
+                }
+            }
+        }
+
+        String currencyCode = appContext.getCurrentUser() == null ? "EUR" : appContext.getCurrentUser().getCurrencyCode();
+        List<ExpenseTemplateCandidate> candidates = rolloverService.buildExpenseTemplateCandidates(sourceMonth);
+        MonthRolloverDialog.Result wizardResult = MonthRolloverDialog.show(
+                getScene() == null ? null : getScene().getWindow(),
+                targetMonth,
+                candidates,
+                currencyCode
+        );
+        if (!wizardResult.isStartNewMonth()) {
+            return;
+        }
+
+        try {
+            BudgetStore store = ValidationUtils.requireNonNull(appContext.getStore(), "store");
+            if (store instanceof DbStore dbStore) {
+                dbStore.runBulkUpdate(() -> {
+                    rolloverService.startNewMonth(targetMonth, wizardResult.getOptions());
+                    dataRetentionService.purgeOldMonthData();
+                });
+            } else {
+                rolloverService.startNewMonth(targetMonth, wizardResult.getOptions());
+                dataRetentionService.purgeOldMonthData();
+            }
+            appContext.setSelectedMonth(targetMonth);
+            appContext.notifyContextChanged();
+            showSuccess("Started " + MonthUtils.format(targetMonth) + " successfully.");
+        } catch (RuntimeException ex) {
+            showError("Unable to start new month: " + ex.getMessage());
         }
     }
 

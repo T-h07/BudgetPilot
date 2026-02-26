@@ -5,6 +5,7 @@ import com.budgetpilot.service.PersistenceStatus;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
@@ -53,6 +54,14 @@ public class AppContext {
 
     public ObjectProperty<YearMonth> selectedMonthProperty() {
         return selectedMonth;
+    }
+
+    public void addSelectedMonthListener(ChangeListener<? super YearMonth> listener) {
+        selectedMonth.addListener(listener);
+    }
+
+    public void removeSelectedMonthListener(ChangeListener<? super YearMonth> listener) {
+        selectedMonth.removeListener(listener);
     }
 
     public BudgetStore getStore() {

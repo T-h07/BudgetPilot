@@ -4,15 +4,20 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.persistence.DbManager;
 import com.budgetpilot.service.PersistenceStatus;
+import com.budgetpilot.service.month.ExpenseTemplateCandidate;
+import com.budgetpilot.service.month.MonthRolloverService;
+import com.budgetpilot.service.retention.DataRetentionService;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.store.DbStore;
 import com.budgetpilot.store.DemoDataSeeder;
 import com.budgetpilot.store.FullDataStore;
 import com.budgetpilot.store.InMemoryStore;
 import com.budgetpilot.ui.MainLayout;
+import com.budgetpilot.ui.components.MonthRolloverDialog;
 import com.budgetpilot.util.AppPaths;
 import com.budgetpilot.util.MonthUtils;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.image.Image;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -97,6 +102,12 @@ public class Main extends Application {
         AppContext appContext = new AppContext(store, selectedMonth);
         appContext.setPersistenceStatus(persistenceStatus);
         appContext.reloadCurrentUserFromStore();
+        DataRetentionService dataRetentionService = new DataRetentionService(store);
+        try {
+            dataRetentionService.purgeOldMonthData();
+        } catch (RuntimeException ex) {
+            System.err.println("Failed running 12-month data retention purge: " + ex.getMessage());
+        }
 
         if (store instanceof FullDataStore fullDataStore) {
             try {
@@ -160,6 +171,9 @@ public class Main extends Application {
         stage.setMinWidth(1100);
         stage.setMinHeight(720);
         stage.show();
+
+        MonthRolloverService rolloverService = new MonthRolloverService(store);
+        Platform.runLater(() -> handleMonthRollover(stage, appContext, rolloverService, dataRetentionService));
     }
 
     @Override
@@ -191,6 +205,45 @@ public class Main extends Application {
             } catch (Exception ignored) {
                 // Keep startup resilient; missing/invalid icons should not block app launch.
             }
+        }
+    }
+
+    private void handleMonthRollover(
+            Stage stage,
+            AppContext appContext,
+            MonthRolloverService rolloverService,
+            DataRetentionService dataRetentionService
+    ) {
+        YearMonth systemMonth = MonthUtils.currentMonth();
+        if (!appContext.onboardingCompleted() || !rolloverService.shouldPromptForMonth(systemMonth)) {
+            return;
+        }
+
+        List<ExpenseTemplateCandidate> candidates =
+                rolloverService.buildExpenseTemplateCandidates(systemMonth.minusMonths(1));
+        String currencyCode = appContext.getCurrentUser() == null ? "EUR" : appContext.getCurrentUser().getCurrencyCode();
+        MonthRolloverDialog.Result result = MonthRolloverDialog.show(stage, systemMonth, candidates, currencyCode);
+        if (!result.isStartNewMonth()) {
+            rolloverService.acknowledgeMonth(systemMonth);
+            return;
+        }
+
+        try {
+            BudgetStore store = appContext.getStore();
+            if (store instanceof DbStore dbStore) {
+                dbStore.runBulkUpdate(() -> {
+                    rolloverService.startNewMonth(systemMonth, result.getOptions());
+                    dataRetentionService.purgeOldMonthData();
+                });
+            } else {
+                rolloverService.startNewMonth(systemMonth, result.getOptions());
+                dataRetentionService.purgeOldMonthData();
+            }
+            appContext.setSelectedMonth(systemMonth);
+            appContext.notifyContextChanged();
+        } catch (RuntimeException ex) {
+            System.err.println("Month rollover failed: " + ex.getMessage());
+            ex.printStackTrace(System.err);
         }
     }
 }

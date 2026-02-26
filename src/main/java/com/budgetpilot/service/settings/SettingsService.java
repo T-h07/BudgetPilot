@@ -52,7 +52,11 @@ public class SettingsService {
     }
 
     public void shiftSelectedMonth(int delta) {
-        appContext.setSelectedMonth(MonthUtils.shift(appContext.getSelectedMonth(), delta));
+        YearMonth target = MonthUtils.shift(appContext.getSelectedMonth(), delta);
+        if (target.isAfter(MonthUtils.currentMonth())) {
+            target = MonthUtils.currentMonth();
+        }
+        appContext.setSelectedMonth(target);
     }
 
     public void jumpToCurrentMonth() {

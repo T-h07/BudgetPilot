@@ -48,6 +48,53 @@
     -fx-text-fill: -bp-text-secondary;
 }
 
+.topbar-month-selector {
+    -fx-min-width: 178;
+    -fx-pref-width: 190;
+    -fx-max-width: 220;
+    -fx-min-height: 36;
+}
+
+.topbar-month-selector .arrow-button {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+    -fx-padding: 0 8 0 8;
+    -fx-min-width: 24;
+    -fx-pref-width: 24;
+}
+
+.topbar-month-selector .arrow-button .arrow {
+    -fx-background-color: #dce6ff;
+    -fx-shape: "M 0 0 L 6 0 L 3 4 z";
+}
+
+.topbar-month-nav-btn {
+    -fx-min-width: 34;
+    -fx-pref-width: 34;
+    -fx-padding: 7 10;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #f5f8ff;
+}
+
+.topbar-nav-arrow {
+    -fx-background-color: #f5f8ff;
+}
+
+.topbar-arrow-left {
+    -fx-shape: "M 9 0 L 1 6 L 9 12 L 11 10 L 5 6 L 11 2 z";
+}
+
+.topbar-arrow-right {
+    -fx-shape: "M 3 0 L 11 6 L 3 12 L 1 10 L 7 6 L 1 2 z";
+}
+
+.topbar-history-badge {
+    -fx-background-color: rgba(87, 163, 250, 0.16);
+    -fx-border-color: rgba(87, 163, 250, 0.45);
+    -fx-text-fill: #d7ebff;
+}
+
 .profile-badge {
     -fx-background-color: rgba(255, 255, 255, 0.08);
     -fx-border-color: rgba(255, 255, 255, 0.12);
