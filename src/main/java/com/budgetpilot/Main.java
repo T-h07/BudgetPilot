@@ -4,9 +4,10 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.core.Theme;
 import com.budgetpilot.core.ThemeManager;
+import com.budgetpilot.model.ExpenseTemplate;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.persistence.DbManager;
 import com.budgetpilot.service.PersistenceStatus;
-import com.budgetpilot.service.month.ExpenseTemplateCandidate;
 import com.budgetpilot.service.month.MonthRolloverService;
 import com.budgetpilot.service.retention.DataRetentionService;
 import com.budgetpilot.store.BudgetStore;
@@ -166,6 +167,7 @@ public class Main extends Application {
                 "/css/pages/income.css",
                 "/css/pages/planner.css",
                 "/css/pages/expenses.css",
+                "/css/pages/templates.css",
                 "/css/pages/savings.css",
                 "/css/pages/goals.css",
                 "/css/pages/family.css",
@@ -236,10 +238,16 @@ public class Main extends Application {
             return;
         }
 
-        List<ExpenseTemplateCandidate> candidates =
-                rolloverService.buildExpenseTemplateCandidates(systemMonth.minusMonths(1));
+        List<ExpenseTemplate> expenseTemplates = rolloverService.listActiveExpenseTemplates();
+        List<IncomeTemplate> incomeTemplates = rolloverService.listActiveIncomeTemplates();
         String currencyCode = appContext.getCurrentUser() == null ? "EUR" : appContext.getCurrentUser().getCurrencyCode();
-        MonthRolloverDialog.Result result = MonthRolloverDialog.show(stage, systemMonth, candidates, currencyCode);
+        MonthRolloverDialog.Result result = MonthRolloverDialog.show(
+                stage,
+                systemMonth,
+                expenseTemplates,
+                incomeTemplates,
+                currencyCode
+        );
         if (!result.isStartNewMonth()) {
             rolloverService.acknowledgeMonth(systemMonth);
             return;

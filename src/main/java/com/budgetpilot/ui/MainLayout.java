@@ -17,6 +17,7 @@ import com.budgetpilot.ui.pages.OnboardingPage;
 import com.budgetpilot.ui.pages.PlannerPage;
 import com.budgetpilot.ui.pages.SavingsPage;
 import com.budgetpilot.ui.pages.SettingsPage;
+import com.budgetpilot.ui.pages.TemplatesPage;
 import com.budgetpilot.util.UiUtils;
 import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
@@ -97,6 +98,7 @@ public class MainLayout extends BorderPane {
                 || currentPage == PageId.GOALS
                 || currentPage == PageId.INVESTMENTS
                 || currentPage == PageId.ACHIEVEMENTS
+                || currentPage == PageId.TEMPLATES
                 || currentPage == PageId.FAMILY
                 || currentPage == PageId.HABITS) {
             navigateTo(currentPage);
@@ -121,6 +123,7 @@ public class MainLayout extends BorderPane {
         registerPage(PageId.INVESTMENTS, () -> new InvestmentsPage(appContext));
         registerPage(PageId.GOALS, () -> new GoalsPage(appContext));
         registerPage(PageId.INCOME, () -> new IncomePage(appContext));
+        registerPage(PageId.TEMPLATES, () -> new TemplatesPage(appContext));
         registerPage(PageId.ACHIEVEMENTS, () -> new AchievementsPage(appContext));
         registerPage(PageId.FAMILY, () -> new FamilyPage(appContext));
         registerPage(PageId.HABITS, () -> new HabitsPage(appContext));

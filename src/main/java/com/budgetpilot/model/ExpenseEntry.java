@@ -24,6 +24,7 @@ public class ExpenseEntry {
     private PaymentMethod paymentMethod;
     private PlannerBucket plannerBucket;
     private boolean recurring;
+    private String sourceTemplateId;
     private String tag;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -40,6 +41,7 @@ public class ExpenseEntry {
         this.paymentMethod = PaymentMethod.CARD;
         this.plannerBucket = PlannerBucket.DISCRETIONARY;
         this.recurring = false;
+        this.sourceTemplateId = "";
         this.tag = "";
         this.createdAt = now;
         this.updatedAt = now;
@@ -73,6 +75,7 @@ public class ExpenseEntry {
         this.paymentMethod = other.paymentMethod;
         this.plannerBucket = other.plannerBucket;
         this.recurring = other.recurring;
+        this.sourceTemplateId = other.sourceTemplateId;
         this.tag = other.tag;
         this.createdAt = other.createdAt;
         this.updatedAt = other.updatedAt;
@@ -176,6 +179,15 @@ public class ExpenseEntry {
         touch();
     }
 
+    public String getSourceTemplateId() {
+        return sourceTemplateId;
+    }
+
+    public void setSourceTemplateId(String sourceTemplateId) {
+        this.sourceTemplateId = sourceTemplateId == null ? "" : sourceTemplateId.trim();
+        touch();
+    }
+
     public String getTag() {
         return tag;
     }
@@ -214,6 +226,7 @@ public class ExpenseEntry {
                 ", amount=" + amount +
                 ", category=" + category +
                 ", plannerBucket=" + plannerBucket +
+                ", sourceTemplateId='" + sourceTemplateId + '\'' +
                 ", paymentMethod=" + paymentMethod +
                 '}';
     }

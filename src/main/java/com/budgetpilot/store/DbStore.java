@@ -1,12 +1,14 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.ExpenseTemplate;
 import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.model.Investment;
 import com.budgetpilot.model.InvestmentTransaction;
 import com.budgetpilot.model.MonthlyPlan;
@@ -25,6 +27,7 @@ import com.budgetpilot.model.enums.InvestmentTransactionType;
 import com.budgetpilot.model.enums.InvestmentType;
 import com.budgetpilot.model.enums.PaymentMethod;
 import com.budgetpilot.model.enums.PlannerBucket;
+import com.budgetpilot.model.enums.RecurrenceCadence;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.SavingsEntryType;
 import com.budgetpilot.model.enums.UserProfileType;
@@ -162,6 +165,26 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     }
 
     @Override
+    public synchronized void saveExpenseTemplate(ExpenseTemplate template) {
+        persistWith(() -> super.saveExpenseTemplate(template));
+    }
+
+    @Override
+    public synchronized void deleteExpenseTemplate(String id) {
+        persistWith(() -> super.deleteExpenseTemplate(id));
+    }
+
+    @Override
+    public synchronized void saveIncomeTemplate(IncomeTemplate template) {
+        persistWith(() -> super.saveIncomeTemplate(template));
+    }
+
+    @Override
+    public synchronized void deleteIncomeTemplate(String id) {
+        persistWith(() -> super.deleteIncomeTemplate(id));
+    }
+
+    @Override
     public synchronized void saveInvestment(Investment investment) {
         persistWith(() -> super.saveInvestment(investment));
     }
@@ -271,6 +294,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
         loadFamilyMembers();
         loadFamilyExpenseEntries();
         loadHabitRules();
+        loadExpenseTemplates();
+        loadIncomeTemplates();
         loadInvestments();
         loadInvestmentTransactions();
     }
@@ -312,6 +337,7 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setIncomeType(DbUtils.parseEnum(rs.getString("income_type"), IncomeType.class, IncomeType.OTHER, "income_entries.income_type"));
                 entry.setAmount(DbUtils.parseBigDecimal(rs.getString("amount"), "income_entries.amount", BigDecimal.ZERO));
                 entry.setRecurring(DbUtils.fromIntBoolean(rs.getInt("recurring")));
+                entry.setSourceTemplateId(rs.getString("source_template_id"));
                 entry.setReceived(DbUtils.fromIntBoolean(rs.getInt("received")));
                 entry.setNotes(rs.getString("notes"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "income_entries.created_at"));
@@ -344,6 +370,7 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 );
                 entry.setPlannerBucket(plannerBucket);
                 entry.setRecurring(DbUtils.fromIntBoolean(rs.getInt("recurring")));
+                entry.setSourceTemplateId(rs.getString("source_template_id"));
                 entry.setTag(rs.getString("tag"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "expense_entries.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "expense_entries.updated_at"));
@@ -513,6 +540,108 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
         }
     }
 
+    private void loadExpenseTemplates() {
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("SELECT * FROM expense_templates")) {
+            while (rs.next()) {
+                ExpenseTemplate template = new ExpenseTemplate();
+                template.setId(rs.getString("id"));
+                template.setName(rs.getString("name"));
+                template.setPlannerBucket(DbUtils.parseEnum(
+                        rs.getString("planner_bucket"),
+                        PlannerBucket.class,
+                        PlannerBucket.DISCRETIONARY,
+                        "expense_templates.planner_bucket"
+                ));
+                template.setCategory(DbUtils.parseEnum(
+                        rs.getString("category"),
+                        ExpenseCategory.class,
+                        ExpenseCategory.OTHER,
+                        "expense_templates.category"
+                ));
+                template.setSubcategory(rs.getString("subcategory"));
+                template.setPaymentMethod(DbUtils.parseEnum(
+                        rs.getString("payment_method"),
+                        PaymentMethod.class,
+                        null,
+                        "expense_templates.payment_method"
+                ));
+                template.setDefaultAmount(DbUtils.parseBigDecimal(
+                        rs.getString("default_amount"),
+                        "expense_templates.default_amount",
+                        BigDecimal.ZERO
+                ));
+                template.setCadence(DbUtils.parseEnum(
+                        rs.getString("cadence"),
+                        RecurrenceCadence.class,
+                        RecurrenceCadence.MONTHLY,
+                        "expense_templates.cadence"
+                ));
+                template.setDayOfMonth(rs.getInt("day_of_month"));
+                template.setActive(DbUtils.fromIntBoolean(rs.getInt("active")));
+                template.setTag(rs.getString("tag"));
+                template.setNote(rs.getString("note"));
+                template.setCreatedAt(DbUtils.parseLocalDateTime(
+                        rs.getString("created_at"),
+                        LocalDateTime.now(),
+                        "expense_templates.created_at"
+                ));
+                template.setUpdatedAt(DbUtils.parseLocalDateTime(
+                        rs.getString("updated_at"),
+                        LocalDateTime.now(),
+                        "expense_templates.updated_at"
+                ));
+                super.saveExpenseTemplate(template);
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed loading expense_templates", ex);
+        }
+    }
+
+    private void loadIncomeTemplates() {
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("SELECT * FROM income_templates")) {
+            while (rs.next()) {
+                IncomeTemplate template = new IncomeTemplate();
+                template.setId(rs.getString("id"));
+                template.setSourceName(rs.getString("source_name"));
+                template.setIncomeType(DbUtils.parseEnum(
+                        rs.getString("income_type"),
+                        IncomeType.class,
+                        IncomeType.OTHER,
+                        "income_templates.income_type"
+                ));
+                template.setDefaultAmount(DbUtils.parseBigDecimal(
+                        rs.getString("default_amount"),
+                        "income_templates.default_amount",
+                        BigDecimal.ZERO
+                ));
+                template.setCadence(DbUtils.parseEnum(
+                        rs.getString("cadence"),
+                        RecurrenceCadence.class,
+                        RecurrenceCadence.MONTHLY,
+                        "income_templates.cadence"
+                ));
+                template.setDayOfMonth(rs.getInt("day_of_month"));
+                template.setActive(DbUtils.fromIntBoolean(rs.getInt("active")));
+                template.setNote(rs.getString("note"));
+                template.setCreatedAt(DbUtils.parseLocalDateTime(
+                        rs.getString("created_at"),
+                        LocalDateTime.now(),
+                        "income_templates.created_at"
+                ));
+                template.setUpdatedAt(DbUtils.parseLocalDateTime(
+                        rs.getString("updated_at"),
+                        LocalDateTime.now(),
+                        "income_templates.updated_at"
+                ));
+                super.saveIncomeTemplate(template);
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed loading income_templates", ex);
+        }
+    }
+
     private void loadInvestments() {
         try (Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery("SELECT * FROM investments")) {
@@ -594,6 +723,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
             statement.executeUpdate("DELETE FROM monthly_plans");
             statement.executeUpdate("DELETE FROM income_entries");
             statement.executeUpdate("DELETE FROM expense_entries");
+            statement.executeUpdate("DELETE FROM expense_templates");
+            statement.executeUpdate("DELETE FROM income_templates");
             statement.executeUpdate("DELETE FROM savings_buckets");
             statement.executeUpdate("DELETE FROM goals");
             statement.executeUpdate("DELETE FROM family_members");
@@ -607,6 +738,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
         insertSettings();
         insertUserProfile();
         insertMonthlyPlans();
+        insertExpenseTemplates();
+        insertIncomeTemplates();
         insertIncomeEntries();
         insertExpenseEntries();
         insertSavingsBuckets();
@@ -697,12 +830,66 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
         }
     }
 
+    private void insertExpenseTemplates() throws SQLException {
+        String sql = """
+                INSERT INTO expense_templates (
+                    id, name, planner_bucket, category, subcategory, payment_method, default_amount,
+                    cadence, day_of_month, active, tag, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (ExpenseTemplate template : listExpenseTemplates()) {
+                ps.setString(1, template.getId());
+                ps.setString(2, template.getName());
+                ps.setString(3, template.getPlannerBucket().name());
+                ps.setString(4, template.getCategory().name());
+                DbUtils.setNullableString(ps, 5, template.getSubcategory());
+                DbUtils.setNullableString(ps, 6, template.getPaymentMethod() == null ? null : template.getPaymentMethod().name());
+                ps.setString(7, template.getDefaultAmount().toPlainString());
+                ps.setString(8, template.getCadence().name());
+                ps.setInt(9, template.getDayOfMonth());
+                ps.setInt(10, DbUtils.toIntBoolean(template.isActive()));
+                DbUtils.setNullableString(ps, 11, template.getTag());
+                DbUtils.setNullableString(ps, 12, template.getNote());
+                ps.setString(13, template.getCreatedAt().toString());
+                ps.setString(14, template.getUpdatedAt().toString());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    private void insertIncomeTemplates() throws SQLException {
+        String sql = """
+                INSERT INTO income_templates (
+                    id, source_name, income_type, default_amount, cadence, day_of_month,
+                    active, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (IncomeTemplate template : listIncomeTemplates()) {
+                ps.setString(1, template.getId());
+                ps.setString(2, template.getSourceName());
+                ps.setString(3, template.getIncomeType().name());
+                ps.setString(4, template.getDefaultAmount().toPlainString());
+                ps.setString(5, template.getCadence().name());
+                ps.setInt(6, template.getDayOfMonth());
+                ps.setInt(7, DbUtils.toIntBoolean(template.isActive()));
+                DbUtils.setNullableString(ps, 8, template.getNote());
+                ps.setString(9, template.getCreatedAt().toString());
+                ps.setString(10, template.getUpdatedAt().toString());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
     private void insertIncomeEntries() throws SQLException {
         String sql = """
                 INSERT INTO income_entries (
-                    id, month, received_date, source_name, income_type, amount, recurring, received,
+                    id, month, received_date, source_name, income_type, amount, recurring, source_template_id, received,
                     notes, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (IncomeEntry entry : listAllIncomeEntries()) {
@@ -713,10 +900,11 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(5, entry.getIncomeType().name());
                 ps.setString(6, entry.getAmount().toPlainString());
                 ps.setInt(7, DbUtils.toIntBoolean(entry.isRecurring()));
-                ps.setInt(8, DbUtils.toIntBoolean(entry.isReceived()));
-                DbUtils.setNullableString(ps, 9, entry.getNotes());
-                ps.setString(10, entry.getCreatedAt().toString());
-                ps.setString(11, entry.getUpdatedAt().toString());
+                DbUtils.setNullableString(ps, 8, entry.getSourceTemplateId());
+                ps.setInt(9, DbUtils.toIntBoolean(entry.isReceived()));
+                DbUtils.setNullableString(ps, 10, entry.getNotes());
+                ps.setString(11, entry.getCreatedAt().toString());
+                ps.setString(12, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -726,9 +914,9 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertExpenseEntries() throws SQLException {
         String sql = """
                 INSERT INTO expense_entries (
-                    id, month, expense_date, amount, category, planner_bucket, recurring,
+                    id, month, expense_date, amount, category, planner_bucket, recurring, source_template_id,
                     subcategory, note, payment_method, tag, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (ExpenseEntry entry : listAllExpenseEntries()) {
@@ -742,12 +930,13 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(5, entry.getCategory().name());
                 ps.setString(6, plannerBucket.name());
                 ps.setInt(7, DbUtils.toIntBoolean(entry.isRecurring()));
-                DbUtils.setNullableString(ps, 8, entry.getSubcategory());
-                DbUtils.setNullableString(ps, 9, entry.getNote());
-                ps.setString(10, entry.getPaymentMethod().name());
-                DbUtils.setNullableString(ps, 11, entry.getTag());
-                ps.setString(12, entry.getCreatedAt().toString());
-                ps.setString(13, entry.getUpdatedAt().toString());
+                DbUtils.setNullableString(ps, 8, entry.getSourceTemplateId());
+                DbUtils.setNullableString(ps, 9, entry.getSubcategory());
+                DbUtils.setNullableString(ps, 10, entry.getNote());
+                ps.setString(11, entry.getPaymentMethod().name());
+                DbUtils.setNullableString(ps, 12, entry.getTag());
+                ps.setString(13, entry.getCreatedAt().toString());
+                ps.setString(14, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();

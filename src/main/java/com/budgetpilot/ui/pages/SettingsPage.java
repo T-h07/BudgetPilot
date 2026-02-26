@@ -4,10 +4,11 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.core.Theme;
 import com.budgetpilot.core.ThemeManager;
+import com.budgetpilot.model.ExpenseTemplate;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.service.backup.BackupService;
 import com.budgetpilot.service.PersistenceStatus;
-import com.budgetpilot.service.month.ExpenseTemplateCandidate;
 import com.budgetpilot.service.month.MonthRolloverService;
 import com.budgetpilot.model.enums.UserProfileType;
 import com.budgetpilot.service.retention.DataRetentionService;
@@ -410,11 +411,13 @@ public class SettingsPage extends VBox {
         }
 
         String currencyCode = appContext.getCurrentUser() == null ? "EUR" : appContext.getCurrentUser().getCurrencyCode();
-        List<ExpenseTemplateCandidate> candidates = rolloverService.buildExpenseTemplateCandidates(sourceMonth);
+        List<ExpenseTemplate> expenseTemplates = rolloverService.listActiveExpenseTemplates();
+        List<IncomeTemplate> incomeTemplates = rolloverService.listActiveIncomeTemplates();
         MonthRolloverDialog.Result wizardResult = MonthRolloverDialog.show(
                 getScene() == null ? null : getScene().getWindow(),
                 targetMonth,
-                candidates,
+                expenseTemplates,
+                incomeTemplates,
                 currencyCode
         );
         if (!wizardResult.isStartNewMonth()) {
