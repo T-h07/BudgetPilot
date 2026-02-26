@@ -1,8 +1,8 @@
 .date-picker,
 .form-datepicker {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
-    -fx-control-inner-background: rgba(255, 255, 255, 0.06);
-    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-background-color: -bp-control-bg;
+    -fx-control-inner-background: -bp-control-inner;
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
@@ -13,21 +13,21 @@
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-text-fill: -bp-text-primary;
-    -fx-prompt-text-fill: rgba(159, 176, 211, 0.78);
+    -fx-prompt-text-fill: -bp-text-muted;
 }
 
 .date-picker > .arrow-button,
 .form-datepicker > .arrow-button {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-control-bg-strong;
     -fx-background-radius: 0 10 10 0;
-    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 0 0 0 1;
     -fx-border-radius: 0 10 10 0;
 }
 
 .date-picker > .arrow-button:hover,
 .form-datepicker > .arrow-button:hover {
-    -fx-background-color: rgba(54, 163, 255, 0.2);
+    -fx-background-color: -bp-accent-soft;
 }
 
 .date-picker .arrow,
@@ -37,18 +37,18 @@
 
 .date-picker:focused,
 .form-datepicker:focused {
-    -fx-border-color: rgba(54, 163, 255, 0.58);
+    -fx-border-color: -bp-accent;
     -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.18), 8, 0.2, 0, 2);
 }
 
 .date-picker-popup {
-    -fx-background-color: #152038;
-    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-background-color: -bp-surface-alt;
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-border-radius: 12;
     -fx-background-radius: 12;
     -fx-padding: 8;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 18, 0.25, 0, 6);
+    -fx-effect: dropshadow(gaussian, -bp-shadow-color, 18, 0.25, 0, 6);
 }
 
 .date-picker-popup > * {
@@ -56,8 +56,8 @@
 }
 
 .date-picker-popup .month-year-pane {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-background-color: -bp-surface-subtle;
+    -fx-border-color: -bp-border-muted;
     -fx-border-width: 0 0 1 0;
     -fx-padding: 8 10;
 }
@@ -68,8 +68,8 @@
 }
 
 .date-picker-popup .spinner .button {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-strong;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
 }
@@ -105,24 +105,24 @@
 }
 
 .date-picker-popup .day-cell:hover {
-    -fx-background-color: rgba(54, 163, 255, 0.2);
+    -fx-background-color: -bp-accent-soft;
 }
 
 .date-picker-popup .day-cell:focused {
-    -fx-border-color: rgba(54, 163, 255, 0.55);
+    -fx-border-color: -bp-accent;
 }
 
 .date-picker-popup .day-cell:selected {
     -fx-background-color: -bp-accent;
-    -fx-text-fill: white;
+    -fx-text-fill: -bp-text-inverse;
 }
 
 .date-picker-popup .day-cell.today {
-    -fx-border-color: rgba(54, 163, 255, 0.72);
+    -fx-border-color: -bp-accent;
     -fx-border-width: 1;
     -fx-background-color: rgba(54, 163, 255, 0.14);
 }
 
 .date-picker-popup .day-cell:disabled {
-    -fx-text-fill: rgba(159, 176, 211, 0.45);
+    -fx-text-fill: -bp-text-muted;
 }

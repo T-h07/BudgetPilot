@@ -13,13 +13,13 @@
 
 .income-table {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
 
 .income-table .column-header-background {
-    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-color: -bp-surface-soft;
     -fx-background-radius: 10 10 0 0;
 }
 
@@ -36,12 +36,12 @@
 }
 
 .income-table .table-row-cell {
-    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-background-color: -bp-surface-muted;
     -fx-border-color: transparent;
 }
 
 .income-table .table-row-cell:filled:selected {
-    -fx-background-color: rgba(54, 163, 255, 0.2);
+    -fx-background-color: -bp-surface-selected;
 }
 
 .income-table .table-cell {

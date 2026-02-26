@@ -25,6 +25,8 @@ public class AppContext {
             new SimpleObjectProperty<>(this, "authenticatedUserId", null);
     private final ObjectProperty<PersistenceStatus> persistenceStatus =
             new SimpleObjectProperty<>(this, "persistenceStatus", new PersistenceStatus(false, "Persistence unavailable", null, null));
+    private final ObjectProperty<Theme> theme =
+            new SimpleObjectProperty<>(this, "theme", Theme.DARK);
 
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private BudgetStore store;
@@ -191,6 +193,24 @@ public class AppContext {
 
     public ObjectProperty<PersistenceStatus> persistenceStatusProperty() {
         return persistenceStatus;
+    }
+
+    public Theme getTheme() {
+        Theme value = theme.get();
+        return value == null ? Theme.DARK : value;
+    }
+
+    public void setTheme(Theme theme) {
+        Theme normalized = theme == null ? Theme.DARK : theme;
+        if (normalized == getTheme()) {
+            return;
+        }
+        this.theme.set(normalized);
+        notifyContextChanged();
+    }
+
+    public ObjectProperty<Theme> themeProperty() {
+        return theme;
     }
 
     public boolean isPersistenceAvailable() {

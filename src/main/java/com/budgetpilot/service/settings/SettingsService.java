@@ -1,18 +1,21 @@
 package com.budgetpilot.service.settings;
 
 import com.budgetpilot.core.AppContext;
+import com.budgetpilot.core.Theme;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.UserProfileType;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.store.DbStore;
 import com.budgetpilot.store.DemoDataSeeder;
+import com.budgetpilot.store.FullDataStore;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
 
 import java.time.YearMonth;
 
 public class SettingsService {
+    public static final String THEME_SETTING_KEY = "theme";
     private final AppContext appContext;
 
     public SettingsService(AppContext appContext) {
@@ -71,6 +74,23 @@ public class SettingsService {
             store.saveMonthlyPlan(new MonthlyPlan(nextMonth));
         }
         appContext.notifyContextChanged();
+    }
+
+    public Theme loadTheme() {
+        BudgetStore store = requiredStore();
+        if (store instanceof FullDataStore fullDataStore) {
+            return Theme.fromSettingValue(fullDataStore.getAppSetting(THEME_SETTING_KEY));
+        }
+        return appContext.getTheme();
+    }
+
+    public void updateTheme(Theme theme) {
+        Theme normalized = ValidationUtils.requireNonNull(theme, "theme");
+        BudgetStore store = requiredStore();
+        if (store instanceof FullDataStore fullDataStore) {
+            fullDataStore.saveAppSetting(THEME_SETTING_KEY, normalized.getSettingValue());
+        }
+        appContext.setTheme(normalized);
     }
 
     public void clearAllData() {

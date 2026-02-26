@@ -6,7 +6,7 @@
 
 .form-error-label {
     -fx-font-size: 11px;
-    -fx-text-fill: #ffb4b4;
+    -fx-text-fill: -bp-danger;
 }
 
 .text-field,
@@ -16,14 +16,14 @@
 .form-combo,
 .date-picker,
 .form-datepicker {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
-    -fx-control-inner-background: rgba(255, 255, 255, 0.06);
-    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-background-color: -bp-control-bg;
+    -fx-control-inner-background: -bp-control-inner;
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
     -fx-text-fill: -bp-text-primary;
-    -fx-prompt-text-fill: rgba(159, 176, 211, 0.78);
+    -fx-prompt-text-fill: -bp-text-muted;
     -fx-padding: 8 10;
     -fx-min-height: 38;
 }
@@ -35,7 +35,7 @@
 .form-combo:focused,
 .date-picker:focused,
 .form-datepicker:focused {
-    -fx-border-color: rgba(54, 163, 255, 0.58);
+    -fx-border-color: -bp-accent;
     -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.18), 8, 0.2, 0, 2);
 }
 
@@ -52,18 +52,18 @@
 }
 
 .combo-box-popup .list-view {
-    -fx-background-color: #152038;
-    -fx-control-inner-background: #152038;
+    -fx-background-color: -bp-surface-alt;
+    -fx-control-inner-background: -bp-surface-alt;
     -fx-background-insets: 0;
-    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.38), 12, 0.2, 0, 4);
+    -fx-effect: dropshadow(gaussian, -bp-shadow-color, 12, 0.2, 0, 4);
 }
 
 .combo-box-popup .list-cell {
-    -fx-background-color: #152038;
+    -fx-background-color: -bp-surface-alt;
     -fx-text-fill: -bp-text-primary;
 }
 
@@ -73,21 +73,21 @@
 }
 
 .combo-box-popup > .list-view .list-cell:empty {
-    -fx-background-color: #152038;
+    -fx-background-color: -bp-surface-alt;
 }
 
 .text-area,
 .form-textarea,
 .onboarding-notes-area {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -bp-control-bg;
     -fx-background-insets: 0;
-    -fx-control-inner-background: rgba(255, 255, 255, 0.06);
-    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-control-inner-background: -bp-control-inner;
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
     -fx-text-fill: -bp-text-primary;
-    -fx-prompt-text-fill: rgba(159, 176, 211, 0.78);
+    -fx-prompt-text-fill: -bp-text-muted;
     -fx-highlight-fill: rgba(54, 163, 255, 0.38);
     -fx-highlight-text-fill: #f5f9ff;
     -fx-padding: 0;
@@ -96,7 +96,7 @@
 .text-area:focused,
 .form-textarea:focused,
 .onboarding-notes-area:focused {
-    -fx-border-color: rgba(54, 163, 255, 0.58);
+    -fx-border-color: -bp-accent;
     -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.18), 8, 0.2, 0, 2);
 }
 
@@ -134,8 +134,8 @@
 }
 
 .check-box .box {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
-    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-background-color: -bp-control-bg;
+    -fx-border-color: -bp-border-strong;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
 }
@@ -150,16 +150,16 @@
 
 .check-box:selected .box {
     -fx-background-color: rgba(54, 163, 255, 0.3);
-    -fx-border-color: rgba(54, 163, 255, 0.65);
+    -fx-border-color: -bp-accent;
 }
 
 .check-box:selected .mark {
-    -fx-background-color: #f5f8ff;
+    -fx-background-color: -bp-text-inverse;
 }
 
 .page-root .button {
-    -fx-background-color: rgba(255, 255, 255, 0.07);
-    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-background-radius: 10;
     -fx-border-radius: 10;
@@ -170,7 +170,7 @@
 }
 
 .page-root .button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-color: -bp-control-hover;
 }
 
 .page-root .button:pressed {
@@ -185,7 +185,7 @@
 .quick-add-button {
     -fx-background-color: linear-gradient(to bottom, -bp-accent, -bp-accent-strong);
     -fx-border-color: transparent;
-    -fx-text-fill: white;
+    -fx-text-fill: -bp-text-inverse;
 }
 
 .btn-primary:hover,
@@ -195,27 +195,27 @@
 
 .btn-secondary,
 .secondary-button {
-    -fx-background-color: rgba(255, 255, 255, 0.07);
-    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-strong;
     -fx-text-fill: -bp-text-primary;
 }
 
 .btn-secondary:hover,
 .secondary-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.12);
-    -fx-border-color: rgba(255, 255, 255, 0.24);
+    -fx-background-color: -bp-control-hover;
+    -fx-border-color: -bp-border;
 }
 
 .btn-secondary:pressed,
 .secondary-button:pressed {
-    -fx-background-color: rgba(255, 255, 255, 0.14);
+    -fx-background-color: -bp-surface-hover;
 }
 
 .btn-danger,
 .danger-button {
-    -fx-background-color: rgba(240, 97, 97, 0.18);
-    -fx-border-color: rgba(240, 97, 97, 0.48);
-    -fx-text-fill: #ffd7d7;
+    -fx-background-color: -bp-danger-soft;
+    -fx-border-color: -bp-danger;
+    -fx-text-fill: -bp-danger-text;
 }
 
 .btn-danger:hover,
@@ -230,12 +230,12 @@
 
 .btn-ghost {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-color: -bp-border-strong;
     -fx-text-fill: -bp-text-secondary;
 }
 
 .btn-ghost:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -bp-surface-subtle;
     -fx-text-fill: -bp-text-primary;
 }
 

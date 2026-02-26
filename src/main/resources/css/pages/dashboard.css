@@ -12,7 +12,7 @@
     -fx-min-height: 154;
     -fx-pref-height: 154;
     -fx-max-height: 154;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0.15, 0, 4);
+    -fx-effect: dropshadow(gaussian, -bp-shadow-color, 12, 0.15, 0, 4);
 }
 
 .dashboard-main-grid,
@@ -34,9 +34,9 @@
 
 .category-row {
     -fx-padding: 10;
-    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-color: -bp-surface-muted;
     -fx-background-radius: 10;
-    -fx-border-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: -bp-border-soft;
     -fx-border-width: 1;
     -fx-border-radius: 10;
 }
@@ -51,12 +51,12 @@
 }
 
 .category-progress > .track {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-strong;
     -fx-background-radius: 8;
 }
 
 .dashboard-weekly-chart {
-    -fx-background-color: rgba(255, 255, 255, 0.02);
+    -fx-background-color: -bp-surface-muted;
     -fx-background-radius: 10;
     -fx-padding: 8;
 }
@@ -71,7 +71,7 @@
 
 .dashboard-weekly-chart .chart-vertical-grid-lines,
 .dashboard-weekly-chart .chart-horizontal-grid-lines {
-    -fx-stroke: rgba(255, 255, 255, 0.08);
+    -fx-stroke: -bp-chart-grid;
 }
 
 .dashboard-weekly-chart .axis-label,
@@ -98,9 +98,9 @@
 }
 
 .alert-item {
-    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-color: -bp-surface-muted;
     -fx-background-radius: 10;
-    -fx-border-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: -bp-border-soft;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-padding: 10 12;

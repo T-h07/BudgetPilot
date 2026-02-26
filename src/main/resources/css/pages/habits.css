@@ -17,15 +17,15 @@
 
 .habit-rule-card {
     -fx-padding: 12;
-    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-color: -bp-surface-muted;
     -fx-background-radius: 10;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
 }
 
 .habit-rule-card-selected {
     -fx-background-color: rgba(54, 163, 255, 0.16);
-    -fx-border-color: rgba(54, 163, 255, 0.45);
+    -fx-border-color: -bp-accent;
 }
 
 .habit-evaluation-list {
@@ -42,22 +42,22 @@
 }
 
 .habit-progress-bar > .track {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-strong;
     -fx-background-radius: 8;
 }
 
 .habit-status-ontrack {
-    -fx-text-fill: #8cf5ba;
+    -fx-text-fill: -bp-success;
     -fx-font-weight: 700;
 }
 
 .habit-status-warning {
-    -fx-text-fill: #ffd486;
+    -fx-text-fill: -bp-warning;
     -fx-font-weight: 700;
 }
 
 .habit-status-exceeded {
-    -fx-text-fill: #ffb5b5;
+    -fx-text-fill: -bp-danger;
     -fx-font-weight: 700;
 }
 

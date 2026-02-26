@@ -1,9 +1,9 @@
 .app-shell {
-    -fx-background-color: linear-gradient(to bottom right, #0b1220, #09101d);
+    -fx-background-color: linear-gradient(to bottom right, -bp-bg-gradient-start, -bp-bg-gradient-end);
 }
 
 .sidebar {
-    -fx-background-color: linear-gradient(to bottom, #0f182b, #0d1526);
+    -fx-background-color: linear-gradient(to bottom, -bp-surface, -bp-surface-elevated);
     -fx-border-color: transparent -bp-border transparent transparent;
     -fx-border-width: 0 1 0 0;
 }
@@ -20,7 +20,7 @@
 }
 
 .topbar {
-    -fx-background-color: rgba(10, 17, 31, 0.88);
+    -fx-background-color: -bp-overlay;
     -fx-border-color: transparent transparent -bp-border transparent;
     -fx-border-width: 0 0 1 0;
 }
@@ -37,8 +37,8 @@
 }
 
 .month-pill {
-    -fx-background-color: rgba(255, 255, 255, 0.07);
-    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-muted;
     -fx-border-width: 1;
     -fx-background-radius: 999;
     -fx-border-radius: 999;
@@ -56,7 +56,7 @@
 }
 
 .topbar-month-selector .arrow-button {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-strong;
     -fx-background-radius: 8;
     -fx-padding: 0 8 0 8;
     -fx-min-width: 24;
@@ -64,7 +64,7 @@
 }
 
 .topbar-month-selector .arrow-button .arrow {
-    -fx-background-color: #dce6ff;
+    -fx-background-color: -bp-text-primary;
     -fx-shape: "M 0 0 L 6 0 L 3 4 z";
 }
 
@@ -74,11 +74,11 @@
     -fx-padding: 7 10;
     -fx-font-size: 12px;
     -fx-font-weight: 700;
-    -fx-text-fill: #f5f8ff;
+    -fx-text-fill: -bp-text-primary;
 }
 
 .topbar-nav-arrow {
-    -fx-background-color: #f5f8ff;
+    -fx-background-color: -bp-text-primary;
 }
 
 .topbar-arrow-left {
@@ -90,14 +90,14 @@
 }
 
 .topbar-history-badge {
-    -fx-background-color: rgba(87, 163, 250, 0.16);
-    -fx-border-color: rgba(87, 163, 250, 0.45);
-    -fx-text-fill: #d7ebff;
+    -fx-background-color: -bp-accent-soft;
+    -fx-border-color: -bp-accent;
+    -fx-text-fill: -bp-info-text;
 }
 
 .profile-badge {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-muted;
     -fx-border-width: 1;
     -fx-background-radius: 999;
     -fx-border-radius: 999;

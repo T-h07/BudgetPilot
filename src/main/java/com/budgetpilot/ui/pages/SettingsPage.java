@@ -2,6 +2,8 @@ package com.budgetpilot.ui.pages;
 
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
+import com.budgetpilot.core.Theme;
+import com.budgetpilot.core.ThemeManager;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.service.backup.BackupService;
 import com.budgetpilot.service.PersistenceStatus;
@@ -60,10 +62,12 @@ public class SettingsPage extends VBox {
     private final TextField ageField = textField("Age");
     private final TextField currencyField = textField("Currency");
     private final ComboBox<UserProfileType> profileTypeCombo = new ComboBox<>();
+    private final ComboBox<Theme> themeCombo = new ComboBox<>();
 
     private final ToggleCard familyModuleToggle = new ToggleCard("Family Module", "Enable dependent and family budgeting pages.");
     private final ToggleCard investmentsModuleToggle = new ToggleCard("Investments Module", "Enable investment tracking and allocation workspace.");
     private final ToggleCard achievementsModuleToggle = new ToggleCard("Achievements Module", "Enable habit streaks and achievement milestones.");
+    private boolean populatingForm;
 
     private final Label persistenceStatusLabel = new Label();
     private final Label databasePathLabel = new Label();
@@ -103,6 +107,13 @@ public class SettingsPage extends VBox {
         );
         modulesSection.getStyleClass().add("settings-section");
 
+        SectionCard appearanceSection = new SectionCard(
+                "Appearance",
+                "Switch between dark and light theme palettes. Changes apply instantly.",
+                buildAppearanceSectionBody()
+        );
+        appearanceSection.getStyleClass().add("settings-section");
+
         SectionCard monthSection = new SectionCard(
                 "Month & Session",
                 "Move between months and optionally initialize a fresh plan.",
@@ -124,7 +135,7 @@ public class SettingsPage extends VBox {
         );
         developerSection.getStyleClass().add("settings-section");
 
-        getChildren().addAll(profileSection, modulesSection, monthSection, persistenceSection, developerSection);
+        getChildren().addAll(profileSection, modulesSection, appearanceSection, monthSection, persistenceSection, developerSection);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -324,6 +335,33 @@ public class SettingsPage extends VBox {
         return box;
     }
 
+    private Node buildAppearanceSectionBody() {
+        themeCombo.getItems().setAll(Theme.values());
+        themeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        themeCombo.valueProperty().addListener((obs, oldTheme, newTheme) -> {
+            if (populatingForm || newTheme == null || newTheme == oldTheme) {
+                return;
+            }
+            clearBanner();
+            try {
+                settingsService.updateTheme(newTheme);
+                if (getScene() != null) {
+                    ThemeManager.apply(getScene(), newTheme);
+                }
+                showSuccess("Theme applied: " + newTheme.getLabel() + ".");
+            } catch (RuntimeException ex) {
+                showError("Unable to apply theme: " + ex.getMessage());
+            }
+        });
+
+        GridPane form = createFormGrid();
+        addFormRow(form, 0, "Theme", themeCombo);
+
+        Label helper = new Label("Applied instantly and remembered for next startup.");
+        helper.getStyleClass().add("muted-text");
+        return new VBox(10, form, helper);
+    }
+
     private void saveProfile() {
         clearBanner();
         try {
@@ -403,30 +441,37 @@ public class SettingsPage extends VBox {
     }
 
     private void populateFromContext() {
-        updatePersistenceStatus();
-        UserProfile profile = appContext.getCurrentUser();
-        if (profile == null) {
-            firstNameField.setText("");
-            lastNameField.setText("");
-            emailField.setText("");
-            ageField.setText("");
-            currencyField.setText("EUR");
-            profileTypeCombo.getSelectionModel().select(UserProfileType.PERSONAL_USE);
-            familyModuleToggle.getToggle().setSelected(false);
-            investmentsModuleToggle.getToggle().setSelected(true);
-            achievementsModuleToggle.getToggle().setSelected(true);
-            return;
-        }
+        populatingForm = true;
+        try {
+            updatePersistenceStatus();
+            UserProfile profile = appContext.getCurrentUser();
+            if (profile == null) {
+                firstNameField.setText("");
+                lastNameField.setText("");
+                emailField.setText("");
+                ageField.setText("");
+                currencyField.setText("EUR");
+                profileTypeCombo.getSelectionModel().select(UserProfileType.PERSONAL_USE);
+                familyModuleToggle.getToggle().setSelected(false);
+                investmentsModuleToggle.getToggle().setSelected(true);
+                achievementsModuleToggle.getToggle().setSelected(true);
+                themeCombo.getSelectionModel().select(appContext.getTheme());
+                return;
+            }
 
-        firstNameField.setText(profile.getFirstName());
-        lastNameField.setText(profile.getLastName());
-        emailField.setText(profile.getEmail());
-        ageField.setText(profile.getAge() == null ? "" : String.valueOf(profile.getAge()));
-        currencyField.setText(profile.getCurrencyCode());
-        profileTypeCombo.getSelectionModel().select(profile.getProfileType());
-        familyModuleToggle.getToggle().setSelected(profile.isFamilyModuleEnabled());
-        investmentsModuleToggle.getToggle().setSelected(profile.isInvestmentsModuleEnabled());
-        achievementsModuleToggle.getToggle().setSelected(profile.isAchievementsModuleEnabled());
+            firstNameField.setText(profile.getFirstName());
+            lastNameField.setText(profile.getLastName());
+            emailField.setText(profile.getEmail());
+            ageField.setText(profile.getAge() == null ? "" : String.valueOf(profile.getAge()));
+            currencyField.setText(profile.getCurrencyCode());
+            profileTypeCombo.getSelectionModel().select(profile.getProfileType());
+            familyModuleToggle.getToggle().setSelected(profile.isFamilyModuleEnabled());
+            investmentsModuleToggle.getToggle().setSelected(profile.isInvestmentsModuleEnabled());
+            achievementsModuleToggle.getToggle().setSelected(profile.isAchievementsModuleEnabled());
+            themeCombo.getSelectionModel().select(appContext.getTheme());
+        } finally {
+            populatingForm = false;
+        }
     }
 
     private void updatePersistenceStatus() {

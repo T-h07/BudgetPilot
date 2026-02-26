@@ -2,6 +2,8 @@ package com.budgetpilot;
 
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
+import com.budgetpilot.core.Theme;
+import com.budgetpilot.core.ThemeManager;
 import com.budgetpilot.persistence.DbManager;
 import com.budgetpilot.service.PersistenceStatus;
 import com.budgetpilot.service.month.ExpenseTemplateCandidate;
@@ -33,6 +35,7 @@ public class Main extends Application {
     private static final double DEFAULT_HEIGHT = 800;
     private static final boolean DEV_MODE_SEED_DEMO = false;
     private static final String SELECTED_MONTH_SETTING_KEY = "selected_month";
+    private static final String THEME_SETTING_KEY = "theme";
 
     private AutoCloseable closeableStore;
 
@@ -49,6 +52,7 @@ public class Main extends Application {
         }
 
         YearMonth selectedMonth = MonthUtils.currentMonth();
+        Theme selectedTheme = Theme.DARK;
         BudgetStore store;
         PersistenceStatus persistenceStatus;
 
@@ -68,6 +72,7 @@ public class Main extends Application {
                     selectedMonth = MonthUtils.currentMonth();
                 }
             }
+            selectedTheme = Theme.fromSettingValue(dbStore.getAppSetting(THEME_SETTING_KEY));
 
             if (DEV_MODE_SEED_DEMO && store.getUserProfile() == null) {
                 YearMonth seedMonth = selectedMonth;
@@ -100,6 +105,7 @@ public class Main extends Application {
         }
 
         AppContext appContext = new AppContext(store, selectedMonth);
+        appContext.setTheme(selectedTheme);
         appContext.setPersistenceStatus(persistenceStatus);
         appContext.reloadCurrentUserFromStore();
         DataRetentionService dataRetentionService = new DataRetentionService(store);
@@ -123,6 +129,16 @@ public class Main extends Application {
                     fullDataStore.saveAppSetting(SELECTED_MONTH_SETTING_KEY, newMonth.toString());
                 } catch (Exception ex) {
                     System.err.println("Failed persisting selected month setting: " + ex.getMessage());
+                }
+            });
+            appContext.themeProperty().addListener((obs, oldTheme, newTheme) -> {
+                if (newTheme == null) {
+                    return;
+                }
+                try {
+                    fullDataStore.saveAppSetting(THEME_SETTING_KEY, newTheme.getSettingValue());
+                } catch (Exception ex) {
+                    System.err.println("Failed persisting theme setting: " + ex.getMessage());
                 }
             });
         }
@@ -164,6 +180,7 @@ public class Main extends Application {
             }
             scene.getStylesheets().add(stylesheet.toExternalForm());
         }
+        ThemeManager.apply(scene, appContext.getTheme());
 
         stage.setTitle("BudgetPilot");
         applyAppIcon(stage);

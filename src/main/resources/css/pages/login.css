@@ -8,7 +8,7 @@
 }
 
 .login-logo {
-    -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.28), 18, 0.3, 0, 3);
+    -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.24), 18, 0.3, 0, 3);
 }
 
 .login-logo-fallback-circle {
@@ -18,7 +18,7 @@
 .login-logo-fallback-text {
     -fx-font-size: 30px;
     -fx-font-weight: 800;
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: -bp-text-inverse;
 }
 
 .login-title {

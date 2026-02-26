@@ -17,15 +17,15 @@
 
 .bucket-card {
     -fx-padding: 12;
-    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-color: -bp-surface-muted;
     -fx-background-radius: 10;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
 }
 
 .bucket-card-selected {
     -fx-background-color: rgba(54, 163, 255, 0.16);
-    -fx-border-color: rgba(54, 163, 255, 0.45);
+    -fx-border-color: -bp-accent;
 }
 
 .bucket-progress-bar {
@@ -38,19 +38,19 @@
 }
 
 .bucket-progress-bar > .track {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-strong;
     -fx-background-radius: 8;
 }
 
 .savings-transaction-table {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
 
 .savings-transaction-table .column-header-background {
-    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-color: -bp-surface-soft;
     -fx-background-radius: 10 10 0 0;
 }
 
@@ -67,12 +67,12 @@
 }
 
 .savings-transaction-table .table-row-cell {
-    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-background-color: -bp-surface-muted;
     -fx-border-color: transparent;
 }
 
 .savings-transaction-table .table-row-cell:filled:selected {
-    -fx-background-color: rgba(54, 163, 255, 0.2);
+    -fx-background-color: -bp-surface-selected;
 }
 
 .savings-transaction-table .table-cell {
