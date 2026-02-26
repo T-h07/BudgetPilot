@@ -436,12 +436,7 @@ public class PlannerPage extends VBox {
     }
 
     private void updatePlanVsActual(YearMonth month, boolean familyEnabled) {
-        List<PlanVsActualRow> rows = plannerService.getPlanVsActual(month);
-        if (!familyEnabled) {
-            rows = rows.stream()
-                    .filter(row -> row.getBucket() != PlannerBucket.FAMILY)
-                    .toList();
-        }
+        List<PlanVsActualRow> rows = plannerService.getPlanVsActual(month, familyEnabled);
         planVsActualRows.setAll(rows);
 
         BigDecimal unplannedTotal = plannerService.getUnplannedTotal(month);

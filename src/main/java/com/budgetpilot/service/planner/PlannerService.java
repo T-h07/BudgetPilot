@@ -173,20 +173,25 @@ public class PlannerService {
     }
 
     public List<PlanVsActualRow> getPlanVsActual(YearMonth month) {
+        return getPlanVsActual(month, isFamilyModuleEnabled());
+    }
+
+    public List<PlanVsActualRow> getPlanVsActual(YearMonth month, boolean familyEnabled) {
         YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
         MonthlyPlan plan = getOrCreateMonthlyPlan(targetMonth);
-        boolean familyEnabled = isFamilyModuleEnabled();
         Map<PlannerBucket, BigDecimal> actualByBucket = expenseService.getTotalsByBucket(targetMonth);
 
         List<PlanVsActualRow> rows = new ArrayList<>();
         rows.add(buildPlanVsActualRow(PlannerBucket.FIXED_COSTS, MoneyUtils.zeroIfNull(plan.getFixedCostsBudget()), actualByBucket));
         rows.add(buildPlanVsActualRow(PlannerBucket.FOOD, MoneyUtils.zeroIfNull(plan.getFoodBudget()), actualByBucket));
         rows.add(buildPlanVsActualRow(PlannerBucket.TRANSPORT, MoneyUtils.zeroIfNull(plan.getTransportBudget()), actualByBucket));
-        rows.add(buildPlanVsActualRow(
-                PlannerBucket.FAMILY,
-                familyEnabled ? MoneyUtils.zeroIfNull(plan.getFamilyBudget()) : BigDecimal.ZERO.setScale(2),
-                actualByBucket
-        ));
+        if (familyEnabled) {
+            rows.add(buildPlanVsActualRow(
+                    PlannerBucket.FAMILY,
+                    MoneyUtils.zeroIfNull(plan.getFamilyBudget()),
+                    actualByBucket
+            ));
+        }
         rows.add(buildPlanVsActualRow(PlannerBucket.DISCRETIONARY, MoneyUtils.zeroIfNull(plan.getDiscretionaryBudget()), actualByBucket));
         rows.sort(Comparator.comparingInt(row -> bucketOrder(row.getBucket())));
         return List.copyOf(rows);

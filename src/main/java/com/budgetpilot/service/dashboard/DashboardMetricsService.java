@@ -9,6 +9,7 @@ import com.budgetpilot.service.achievements.AchievementService;
 import com.budgetpilot.service.balance.MonthlyBalanceService;
 import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
 import com.budgetpilot.service.planner.BudgetSummary;
+import com.budgetpilot.service.planner.PlanVsActualRow;
 import com.budgetpilot.service.expenses.ExpenseCategorySummary;
 import com.budgetpilot.service.expenses.ExpenseService;
 import com.budgetpilot.service.expenses.ExpenseSummary;
@@ -129,6 +130,7 @@ public class DashboardMetricsService {
 
         List<DashboardAlert> alerts = buildAlerts(
                 targetMonth,
+                currencyCode,
                 hasMonthlyPlan,
                 hasIncomeData,
                 hasExpenseData,
@@ -738,6 +740,7 @@ public class DashboardMetricsService {
 
     private List<DashboardAlert> buildAlerts(
             YearMonth month,
+            String currencyCode,
             boolean hasMonthlyPlan,
             boolean hasIncomeData,
             boolean hasExpenseData,
@@ -788,6 +791,29 @@ public class DashboardMetricsService {
             ));
         }
 
+        List<PlanVsActualRow> overBucketRows = hasMonthlyPlan
+                ? plannerService.getPlanVsActual(month, familyEnabled).stream()
+                .filter(row -> row.getActual().compareTo(row.getPlanned()) > 0)
+                .toList()
+                : List.of();
+        if (!overBucketRows.isEmpty()) {
+            PlanVsActualRow highestOverrun = overBucketRows.stream()
+                    .max(Comparator.comparing(row -> row.getActual().subtract(row.getPlanned())))
+                    .orElse(overBucketRows.get(0));
+            BigDecimal overAmount = MoneyUtils.normalize(highestOverrun.getActual().subtract(highestOverrun.getPlanned()));
+            alerts.add(new DashboardAlert(
+                    "planner-bucket-over-" + highestOverrun.getBucket().name().toLowerCase(Locale.ROOT),
+                    AlertLevel.WARNING,
+                    "Bucket over budget",
+                    highestOverrun.getBucket().getDisplayName()
+                            + " over budget by "
+                            + MoneyUtils.format(overAmount, currencyCode)
+                            + ".",
+                    "planner",
+                    "Rebalance this bucket or reduce related expenses."
+            ));
+        }
+
         if (forecastSummary.isOverspendingRisk()) {
             alerts.add(new DashboardAlert(
                     "forecast-risk",
@@ -835,7 +861,7 @@ public class DashboardMetricsService {
                     "unplanned-spend",
                     significant ? AlertLevel.WARNING : AlertLevel.INFO,
                     "Unplanned spend",
-                    "Unplanned spend this month: " + unplannedSpend.stripTrailingZeros().toPlainString() + ".",
+                    "Unplanned spend this month: " + MoneyUtils.format(unplannedSpend, currencyCode) + ".",
                     "expenses",
                     significant
                             ? "Review one-time purchases and rebalance discretionary spending."
