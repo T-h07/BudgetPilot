@@ -741,16 +741,23 @@ public class InvestmentsPage extends VBox {
     }
 
     private String formatSignedTransaction(InvestmentTransaction tx) {
+        if (tx == null) {
+            return MoneyUtils.format(BigDecimal.ZERO, resolveCurrencyCode());
+        }
         BigDecimal amount = MoneyUtils.zeroIfNull(tx.getAmount());
+        BigDecimal magnitude = amount.abs();
         String prefix = isPositiveTransaction(tx) ? "+" : "-";
-        return prefix + MoneyUtils.format(amount.abs(), resolveCurrencyCode());
+        return prefix + MoneyUtils.format(magnitude, resolveCurrencyCode());
     }
 
     private boolean isPositiveTransaction(InvestmentTransaction tx) {
+        if (tx == null || tx.getType() == null) {
+            return true;
+        }
         return switch (tx.getType()) {
             case CONTRIBUTION, RETURN -> true;
             case WITHDRAWAL, FEE -> false;
-            case ADJUSTMENT -> tx.getAmount().compareTo(BigDecimal.ZERO) >= 0;
+            case ADJUSTMENT -> MoneyUtils.zeroIfNull(tx.getAmount()).compareTo(BigDecimal.ZERO) >= 0;
         };
     }
 
