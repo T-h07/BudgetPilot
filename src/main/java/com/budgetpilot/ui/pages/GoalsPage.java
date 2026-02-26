@@ -13,6 +13,7 @@ import com.budgetpilot.service.balance.MonthlyBalanceService;
 import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
 import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
 import com.budgetpilot.service.planner.BudgetSummary;
+import com.budgetpilot.service.funding.FundingService;
 import com.budgetpilot.service.goals.GoalProgressSummary;
 import com.budgetpilot.service.goals.GoalService;
 import com.budgetpilot.service.goals.GoalSummary;
@@ -51,6 +52,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.Scene;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -63,6 +65,7 @@ import java.util.stream.Collectors;
 public class GoalsPage extends VBox {
     private final AppContext appContext;
     private final GoalService goalService;
+    private final FundingService fundingService;
     private final SavingsService savingsService;
     private final PlannerService plannerService;
     private final MonthlyBalanceService monthlyBalanceService;
@@ -118,6 +121,7 @@ public class GoalsPage extends VBox {
     public GoalsPage(AppContext appContext) {
         this.appContext = ValidationUtils.requireNonNull(appContext, "appContext");
         this.goalService = new GoalService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.fundingService = new FundingService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
         this.savingsService = new SavingsService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
         this.plannerService = new PlannerService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
         this.monthlyBalanceService = new MonthlyBalanceService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
@@ -501,12 +505,13 @@ public class GoalsPage extends VBox {
                         if (selectedBucket == null) {
                             throw new IllegalArgumentException("Select a savings bucket for transfer funding.");
                         }
-                        goalService.contributeFromSavingsBucket(
+                        fundingService.fundGoal(
                                 selectedGoalId,
-                                selectedBucket.getId(),
                                 amount,
                                 contributionDate,
-                                contributionNoteField.getText()
+                                contributionNoteField.getText(),
+                                GoalFundingSource.SAVINGS_BUCKET,
+                                selectedBucket.getId()
                         );
                     } else {
                         MonthlyBalanceSnapshot projected = monthlyBalanceService.buildProjectedSnapshot(
@@ -518,7 +523,7 @@ public class GoalsPage extends VBox {
                                 && !confirmLowBalance(projected, amount, "goal contribution")) {
                             return;
                         }
-                        goalService.contributeWithFunding(
+                        fundingService.fundGoal(
                                 selectedGoalId,
                                 amount,
                                 contributionDate,
@@ -917,6 +922,7 @@ public class GoalsPage extends VBox {
 
     private boolean confirm(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        styleAlert(alert);
         alert.setHeaderText(title);
         alert.setContentText(message);
         Optional<ButtonType> result = alert.showAndWait();
@@ -934,7 +940,8 @@ public class GoalsPage extends VBox {
                 + "You are allocating more money than your month currently supports (income - expenses).";
 
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Low available balance");
+        styleAlert(alert);
+        alert.setTitle(header);
         alert.setHeaderText(header);
         alert.setContentText(message);
         ButtonType proceed = new ButtonType("Proceed anyway");
@@ -942,6 +949,14 @@ public class GoalsPage extends VBox {
         alert.getButtonTypes().setAll(proceed, cancel);
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == proceed;
+    }
+
+    private void styleAlert(Alert alert) {
+        Scene scene = getScene();
+        if (scene != null) {
+            alert.getDialogPane().getStylesheets().setAll(scene.getStylesheets());
+        }
+        alert.getDialogPane().getStyleClass().addAll("page-root", "card", "month-rollover-dialog");
     }
 
     private void addFormRow(GridPane grid, int rowIndex, String labelText, Node field) {

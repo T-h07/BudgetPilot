@@ -87,7 +87,12 @@ public class MonthlyBalanceService {
             return MonthlyBalanceWarningLevel.NEGATIVE;
         }
 
-        BigDecimal tenPercentThreshold = MoneyUtils.normalize(MoneyUtils.zeroIfNull(plannedIncome).multiply(LOW_CASH_PERCENT));
+        BigDecimal safePlannedIncome = MoneyUtils.zeroIfNull(plannedIncome);
+        if (safePlannedIncome.compareTo(BigDecimal.ZERO) <= 0) {
+            return MonthlyBalanceWarningLevel.LOW;
+        }
+
+        BigDecimal tenPercentThreshold = MoneyUtils.normalize(safePlannedIncome.multiply(LOW_CASH_PERCENT));
         if (availableAfterAllocations.compareTo(tenPercentThreshold) < 0
                 || availableAfterAllocations.compareTo(LOW_CASH_FLOOR) < 0) {
             return MonthlyBalanceWarningLevel.LOW;
