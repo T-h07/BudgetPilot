@@ -85,6 +85,7 @@ public class Sidebar extends VBox {
     private List<PageId> buildMainPages() {
         List<PageId> pages = new ArrayList<>(List.of(
                 PageId.DASHBOARD,
+                PageId.INSIGHTS,
                 PageId.EXPENSES,
                 PageId.PLANNER,
                 PageId.SAVINGS,
