@@ -33,11 +33,12 @@ public class ForecastService {
 
         int daysInMonth = MonthUtils.daysInMonth(targetMonth);
         int daysElapsed = MonthUtils.elapsedDaysForForecast(targetMonth, LocalDate.now());
+        int safeDaysElapsed = Math.max(daysElapsed, 1);
 
         BigDecimal actualSpent = expenseService.getTotalExpenses(targetMonth);
         BigDecimal averageDailySpend = daysElapsed <= 0
                 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
-                : MoneyUtils.normalize(actualSpent.divide(BigDecimal.valueOf(daysElapsed), 2, RoundingMode.HALF_UP));
+                : MoneyUtils.normalize(actualSpent.divide(BigDecimal.valueOf(safeDaysElapsed), 2, RoundingMode.HALF_UP));
         BigDecimal projectedExpenses = daysElapsed <= 0
                 ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 : MoneyUtils.normalize(averageDailySpend.multiply(BigDecimal.valueOf(daysInMonth)));
@@ -64,7 +65,7 @@ public class ForecastService {
         );
 
         MonthlyPlan existingPlan = budgetStore.getMonthlyPlan(targetMonth);
-        boolean planMissing = existingPlan == null;
+        boolean planMissing = existingPlan == null || plannedExpenseBudget.compareTo(BigDecimal.ZERO) <= 0;
         boolean hasNoData = actualSpent.compareTo(BigDecimal.ZERO) <= 0;
         boolean overPlannerBudgetRisk = !planMissing && projectedExpenses.compareTo(plannedExpenseBudget) > 0;
         boolean overspendingRisk = overPlannerBudgetRisk || projectedRemainingAfterPlan.compareTo(BigDecimal.ZERO) < 0;
@@ -119,18 +120,17 @@ public class ForecastService {
             return "No expense data yet for this month.";
         }
         if (planMissing) {
-            return "No monthly plan found for this month; forecast comparisons are limited.";
+            return "Projected month-end spend is available, but no spending plan baseline is set.";
         }
         if (overPlannerBudgetRisk) {
-            BigDecimal delta = MoneyUtils.safeSubtract(projectedExpenses, plannedExpenseBudget);
-            return "At current pace, expenses are projected to exceed planned expense budget by " + delta + ".";
+            return "Projected month-end spend is above planned spending budget.";
         }
         if (plannedIncome.compareTo(BigDecimal.ZERO) <= 0) {
             return "No income entered for this month; remaining projections are limited.";
         }
         if (projectedRemainingAfterPlan.compareTo(BigDecimal.ZERO) < 0) {
-            return "At current pace, month-end balance may be negative after plan allocations.";
+            return "Projected month-end balance may be negative after plan allocations.";
         }
-        return "You are on track this month.";
+        return "Spending pace is within planned budget.";
     }
 }

@@ -4,10 +4,14 @@
 
 .dashboard-kpi-grid {
     -fx-padding: 0;
+    -fx-alignment: top-left;
 }
 
-.dashboard-kpi-tile {
-    -fx-min-height: 122;
+.dashboard-kpi-tile,
+.kpi-chart-tile {
+    -fx-min-height: 154;
+    -fx-pref-height: 154;
+    -fx-max-height: 154;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0.15, 0, 4);
 }
 

@@ -90,9 +90,63 @@
 }
 
 .kpi-value {
-    -fx-font-size: 27px;
+    -fx-font-size: 28px;
     -fx-font-weight: 800;
     -fx-text-fill: -bp-text-primary;
+    -fx-padding: 0 0 1 0;
+}
+
+.kpi-subtext {
+    -fx-font-size: 11px;
+    -fx-text-fill: -bp-text-secondary;
+    -fx-padding: 1 0 0 0;
+}
+
+.kpi-secondary {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -bp-text-secondary;
+    -fx-padding: 0;
+}
+
+.kpi-status-dot {
+    -fx-stroke: rgba(255, 255, 255, 0.35);
+    -fx-stroke-width: 1;
+}
+
+.kpi-good {
+    -fx-text-fill: #57c678;
+}
+
+.kpi-warn {
+    -fx-text-fill: #f6b950;
+}
+
+.kpi-danger {
+    -fx-text-fill: #ef6666;
+}
+
+.kpi-chart-tile {
+    -fx-min-height: 154;
+    -fx-pref-height: 154;
+    -fx-max-height: 154;
+    -fx-padding: 12 14 12 14;
+}
+
+.kpi-visual-host {
+    -fx-alignment: center;
+    -fx-min-width: 84;
+    -fx-pref-width: 84;
+    -fx-max-width: 84;
+    -fx-min-height: 52;
+    -fx-pref-height: 52;
+    -fx-max-height: 52;
+}
+
+.kpi-micro-label {
+    -fx-font-size: 9px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -bp-text-secondary;
 }
 
 .kpi-tile {
@@ -252,5 +306,16 @@
     -fx-background-color: rgba(239, 102, 102, 0.2);
     -fx-border-color: rgba(239, 102, 102, 0.45);
     -fx-text-fill: #ffd3d3;
+}
+
+.mini-sparkline,
+.mini-bars,
+.mini-density,
+.mini-gauge,
+.mini-ring,
+.mini-arrows,
+.mini-battery,
+.mini-income-stack {
+    -fx-background-color: transparent;
 }
 

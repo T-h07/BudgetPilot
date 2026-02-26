@@ -7,8 +7,8 @@ import com.budgetpilot.service.dashboard.DashboardKpi;
 import com.budgetpilot.service.dashboard.DashboardMetricsService;
 import com.budgetpilot.service.dashboard.DashboardSnapshot;
 import com.budgetpilot.service.dashboard.WeeklySpendPoint;
-import com.budgetpilot.ui.components.DashboardKpiTile;
 import com.budgetpilot.ui.components.InsightListCard;
+import com.budgetpilot.ui.components.KpiChartTile;
 import com.budgetpilot.ui.components.MetricRow;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.StatusBadge;
@@ -25,6 +25,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
@@ -71,12 +72,15 @@ public class DashboardPage extends VBox {
 
         int index = 0;
         for (DashboardKpi kpi : kpis) {
-            DashboardKpiTile tile = new DashboardKpiTile();
-            tile.setContent(kpi.getTitle(), kpi.getValueText(), kpi.getSubtext());
+            KpiChartTile tile = new KpiChartTile();
+            tile.setContent(kpi);
             int col = index % 4;
             int row = index / 4;
             kpiGrid.add(tile, col, row);
             GridPane.setHgrow(tile, Priority.ALWAYS);
+            GridPane.setVgrow(tile, Priority.ALWAYS);
+            GridPane.setFillWidth(tile, true);
+            GridPane.setFillHeight(tile, true);
             tile.setMaxWidth(Double.MAX_VALUE);
             index++;
         }
@@ -85,6 +89,14 @@ public class DashboardPage extends VBox {
             column.setPercentWidth(25);
             column.setHgrow(Priority.ALWAYS);
             kpiGrid.getColumnConstraints().add(column);
+        }
+        int rowCount = Math.max(1, (int) Math.ceil(kpis.size() / 4.0));
+        for (int i = 0; i < rowCount; i++) {
+            RowConstraints row = new RowConstraints();
+            row.setPrefHeight(154);
+            row.setMinHeight(154);
+            row.setVgrow(Priority.ALWAYS);
+            kpiGrid.getRowConstraints().add(row);
         }
         return kpiGrid;
     }

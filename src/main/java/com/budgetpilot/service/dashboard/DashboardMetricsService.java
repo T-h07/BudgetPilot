@@ -146,14 +146,18 @@ public class DashboardMetricsService {
         );
 
         List<DashboardKpi> kpis = buildKpis(
+                targetMonth,
                 currencyCode,
                 budgetSummary,
                 forecastSummary,
                 expenseSummary,
+                goalsSummary,
+                savingsSummary,
                 goalsCurrentTotal,
                 goalsTargetTotal,
                 healthScore,
-                monthlyBalance
+                monthlyBalance,
+                weeklySpending
         );
 
         String primaryStatusMessage = alerts.isEmpty()
@@ -208,65 +212,432 @@ public class DashboardMetricsService {
     }
 
     private List<DashboardKpi> buildKpis(
+            YearMonth month,
             String currencyCode,
             BudgetSummary budgetSummary,
             ForecastSummary forecastSummary,
             ExpenseSummary expenseSummary,
+            GoalSummary goalsSummary,
+            SavingsSummary savingsSummary,
             BigDecimal goalsCurrentTotal,
             BigDecimal goalsTargetTotal,
             BudgetHealthScore healthScore,
-            MonthlyBalanceSnapshot monthlyBalance
+            MonthlyBalanceSnapshot monthlyBalance,
+            List<WeeklySpendPoint> weeklySpending
     ) {
         List<DashboardKpi> kpis = new ArrayList<>();
+        BigDecimal plannedIncome = budgetSummary.getPlannedIncome();
+        BigDecimal plannedSpendingBudget = forecastSummary.getPlannedExpenseBudget();
+        int daysInMonth = Math.max(forecastSummary.getDaysInMonth(), 1);
+        int safeDaysElapsed = Math.max(forecastSummary.getDaysElapsed(), 1);
+        BigDecimal safeDailyPlan = resolveDailyPlanBudget(plannedSpendingBudget, plannedIncome, daysInMonth);
+
+        KpiStatus moneyRemainingStatus = resolveMoneyRemainingStatus(monthlyBalance.getAvailableAfterAllocations(), plannedIncome);
+        double remainingRatio = ratio(monthlyBalance.getAvailableAfterAllocations(), plannedIncome);
         kpis.add(new DashboardKpi(
                 "money_remaining",
                 "Money Remaining",
                 MoneyUtils.format(monthlyBalance.getAvailableAfterAllocations(), currencyCode),
-                "After savings/goals allocations"
+                "Remaining "
+                        + MoneyUtils.format(monthlyBalance.getAvailableAfterAllocations(), currencyCode)
+                        + " after allocations",
+                "After savings/goals allocations",
+                moneyRemainingStatus,
+                new KpiVisualData(
+                        KpiVisualType.BATTERY_BAR,
+                        moneyRemainingStatus,
+                        List.of(),
+                        remainingRatio,
+                        0d,
+                        TrendDirection.UNKNOWN
+                )
         ));
+
+        BigDecimal actualDailySpend = expenseSummary.getTotalExpenses()
+                .divide(BigDecimal.valueOf(safeDaysElapsed), 4, RoundingMode.HALF_UP);
+        BigDecimal paceRatioValue = safeDailyPlan.compareTo(BigDecimal.ZERO) <= 0
+                ? BigDecimal.ONE
+                : actualDailySpend.divide(safeDailyPlan, 4, RoundingMode.HALF_UP);
+        KpiStatus totalSpentStatus = resolvePaceStatus(paceRatioValue, safeDailyPlan, actualDailySpend);
         kpis.add(new DashboardKpi(
                 "total_spent",
                 "Total Spent",
                 MoneyUtils.format(expenseSummary.getTotalExpenses(), currencyCode),
-                expenseSummary.getExpenseCount() + " expense entries"
+                "Pace " + paceRatioValue.setScale(2, RoundingMode.HALF_UP).toPlainString() + "x vs plan",
+                expenseSummary.getExpenseCount() + " expense entries",
+                totalSpentStatus,
+                new KpiVisualData(
+                        KpiVisualType.DENSITY_CURVE,
+                        totalSpentStatus,
+                        List.of(),
+                        clamp01(paceRatioValue.doubleValue() / 1.5d),
+                        0d,
+                        TrendDirection.UNKNOWN
+                )
         ));
+
+        BigDecimal receivedIncome = budgetSummary.getReceivedIncome();
+        BigDecimal receivedRatio = plannedIncome.compareTo(BigDecimal.ZERO) <= 0
+                ? BigDecimal.ZERO
+                : receivedIncome.divide(plannedIncome, 4, RoundingMode.HALF_UP);
+        KpiStatus plannedIncomeStatus = resolvePlannedIncomeStatus(
+                month,
+                plannedIncome,
+                receivedIncome,
+                forecastSummary.getDaysElapsed()
+        );
         kpis.add(new DashboardKpi(
                 "planned_income",
                 "Planned Income",
-                MoneyUtils.format(budgetSummary.getPlannedIncome(), currencyCode),
-                "Received " + MoneyUtils.format(budgetSummary.getReceivedIncome(), currencyCode)
+                MoneyUtils.format(plannedIncome, currencyCode),
+                "Received " + receivedRatio.multiply(MoneyUtils.HUNDRED).setScale(0, RoundingMode.HALF_UP) + "%",
+                "Received " + MoneyUtils.format(receivedIncome, currencyCode),
+                plannedIncomeStatus,
+                new KpiVisualData(
+                        KpiVisualType.STACKED_INCOME_BAR,
+                        plannedIncomeStatus,
+                        List.of(),
+                        clamp01(receivedRatio.doubleValue()),
+                        0d,
+                        TrendDirection.UNKNOWN
+                )
         ));
+
+        BigDecimal forecastDelta = MoneyUtils.safeSubtract(
+                forecastSummary.getProjectedExpensesByMonthEnd(),
+                plannedSpendingBudget
+        );
+        KpiStatus forecastStatus = resolveForecastStatus(forecastSummary, forecastDelta, plannedSpendingBudget);
+        TrendDirection forecastTrend = resolveWeeklyTrendDirection(weeklySpending);
+        String forecastAccent = forecastSummary.isPlanMissing()
+                ? "Projected month-end spend: " + MoneyUtils.format(forecastSummary.getProjectedExpensesByMonthEnd(), currencyCode)
+                : "Delta " + formatSignedCurrency(forecastDelta, currencyCode) + " vs planned";
+        String forecastSubtext = forecastSummary.isPlanMissing()
+                ? "Set a plan to compare against budgets."
+                : "Based on current pace: " + MoneyUtils.format(forecastSummary.getAverageDailySpend(), currencyCode) + "/day";
         kpis.add(new DashboardKpi(
                 "forecast_spend",
                 "Forecasted Spend",
                 MoneyUtils.format(forecastSummary.getProjectedExpensesByMonthEnd(), currencyCode),
-                forecastSummary.getStatusMessage()
+                forecastAccent,
+                forecastSubtext,
+                forecastStatus,
+                new KpiVisualData(
+                        KpiVisualType.TREND_ARROWS,
+                        forecastStatus,
+                        List.of(),
+                        0d,
+                        0d,
+                        forecastTrend
+                )
         ));
+
+        BigDecimal plannedSavings = budgetSummary.getSavingsAmountPlanned();
+        BigDecimal actualSavingsNet = savingsSummary.getMonthlyNetChange();
+        KpiStatus plannedSavingsStatus = resolveSavingsStatus(plannedSavings, actualSavingsNet);
+        double savingsRatio = plannedSavings.compareTo(BigDecimal.ZERO) <= 0
+                ? (actualSavingsNet.compareTo(BigDecimal.ZERO) > 0 ? 1d : 0d)
+                : clamp01(actualSavingsNet.divide(plannedSavings, 4, RoundingMode.HALF_UP).doubleValue());
         kpis.add(new DashboardKpi(
                 "planned_savings",
                 "Planned Savings",
-                MoneyUtils.format(budgetSummary.getSavingsAmountPlanned(), currencyCode),
-                "From " + budgetSummary.getSavingsPercent().toPlainString() + "%"
+                MoneyUtils.format(plannedSavings, currencyCode),
+                "Actual net " + MoneyUtils.format(actualSavingsNet, currencyCode),
+                "From " + budgetSummary.getSavingsPercent().toPlainString() + "% target",
+                plannedSavingsStatus,
+                new KpiVisualData(
+                        KpiVisualType.MICRO_BARS,
+                        plannedSavingsStatus,
+                        buildRatioBars(savingsRatio, 4),
+                        savingsRatio,
+                        0d,
+                        TrendDirection.UNKNOWN
+                )
         ));
+
+        BigDecimal goalsMonthlyContrib = goalsSummary.getMonthlyContributions();
+        KpiStatus goalsStatus = resolveGoalsStatus(goalsCurrentTotal, goalsTargetTotal, goalsMonthlyContrib);
+        List<Double> goalSpark = normalizeSeries(buildGoalContributionSeries(month, 6));
         kpis.add(new DashboardKpi(
                 "goals_progress",
                 "Goals Progress",
                 formatGoalsProgress(goalsCurrentTotal, goalsTargetTotal),
-                MoneyUtils.format(goalsCurrentTotal, currencyCode) + " / " + MoneyUtils.format(goalsTargetTotal, currencyCode)
+                "Contributed " + MoneyUtils.format(goalsMonthlyContrib, currencyCode) + " this month",
+                MoneyUtils.format(goalsCurrentTotal, currencyCode) + " / " + MoneyUtils.format(goalsTargetTotal, currencyCode),
+                goalsStatus,
+                new KpiVisualData(
+                        KpiVisualType.SPARKLINE,
+                        goalsStatus,
+                        goalSpark,
+                        clamp01(ratio(goalsCurrentTotal, goalsTargetTotal)),
+                        0d,
+                        resolveTrendDirection(goalSpark)
+                )
         ));
+
+        BigDecimal burnRate = expenseSummary.getAverageDailySpend();
+        BigDecimal burnRatio = safeDailyPlan.compareTo(BigDecimal.ZERO) <= 0
+                ? (burnRate.compareTo(BigDecimal.ZERO) > 0 ? BigDecimal.ONE : BigDecimal.ZERO)
+                : burnRate.divide(safeDailyPlan, 4, RoundingMode.HALF_UP);
+        KpiStatus burnRateStatus = resolvePaceStatus(burnRatio, safeDailyPlan, burnRate);
+        List<Double> burnBars = normalizeSeries(extractWeeklyTotals(weeklySpending));
         kpis.add(new DashboardKpi(
                 "burn_rate",
                 "Burn Rate",
-                MoneyUtils.format(expenseSummary.getAverageDailySpend(), currencyCode) + "/day",
-                "Current daily pace"
+                MoneyUtils.format(burnRate, currencyCode) + "/day",
+                "Safe daily " + MoneyUtils.format(safeDailyPlan, currencyCode) + "/day",
+                "Current daily pace",
+                burnRateStatus,
+                new KpiVisualData(
+                        KpiVisualType.MICRO_BARS,
+                        burnRateStatus,
+                        burnBars,
+                        clamp01(burnRatio.doubleValue()),
+                        0d,
+                        resolveTrendDirection(burnBars)
+                )
         ));
+
+        KpiStatus budgetHealthStatus = resolveBudgetHealthStatus(healthScore.getScore());
         kpis.add(new DashboardKpi(
                 "budget_health",
                 "Budget Health",
                 healthScore.getScore() + "/100",
-                healthScore.getLabel()
+                healthScore.getLabel(),
+                healthScore.getMessage(),
+                budgetHealthStatus,
+                new KpiVisualData(
+                        KpiVisualType.BATTERY_BAR,
+                        budgetHealthStatus,
+                        List.of(),
+                        clamp01(healthScore.getScore() / 100d),
+                        0d,
+                        TrendDirection.UNKNOWN
+                )
         ));
         return List.copyOf(kpis);
+    }
+
+    private BigDecimal resolveDailyPlanBudget(BigDecimal plannedSpendingBudget, BigDecimal plannedIncome, int daysInMonth) {
+        BigDecimal source = plannedSpendingBudget.compareTo(BigDecimal.ZERO) > 0 ? plannedSpendingBudget : plannedIncome;
+        if (source.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return source.divide(BigDecimal.valueOf(Math.max(daysInMonth, 1)), 2, RoundingMode.HALF_UP);
+    }
+
+    private KpiStatus resolveMoneyRemainingStatus(BigDecimal remaining, BigDecimal plannedIncome) {
+        double ratio = ratio(remaining, plannedIncome);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0
+                || remaining.compareTo(new BigDecimal("50.00")) < 0
+                || (plannedIncome.compareTo(BigDecimal.ZERO) > 0 && ratio < 0.10d)) {
+            return KpiStatus.DANGER;
+        }
+        if (remaining.compareTo(new BigDecimal("200.00")) < 0
+                || (plannedIncome.compareTo(BigDecimal.ZERO) > 0 && ratio < 0.25d)) {
+            return KpiStatus.WARNING;
+        }
+        return KpiStatus.GOOD;
+    }
+
+    private KpiStatus resolvePaceStatus(BigDecimal paceRatio, BigDecimal safeBaseline, BigDecimal actualDaily) {
+        if (safeBaseline.compareTo(BigDecimal.ZERO) <= 0) {
+            return actualDaily.compareTo(BigDecimal.ZERO) > 0 ? KpiStatus.WARNING : KpiStatus.GOOD;
+        }
+        if (paceRatio.compareTo(new BigDecimal("1.10")) > 0) {
+            return KpiStatus.DANGER;
+        }
+        if (paceRatio.compareTo(new BigDecimal("0.90")) > 0) {
+            return KpiStatus.WARNING;
+        }
+        return KpiStatus.GOOD;
+    }
+
+    private KpiStatus resolvePlannedIncomeStatus(
+            YearMonth month,
+            BigDecimal plannedIncome,
+            BigDecimal receivedIncome,
+            int elapsedDays
+    ) {
+        if (plannedIncome.compareTo(BigDecimal.ZERO) <= 0) {
+            if (receivedIncome.compareTo(BigDecimal.ZERO) > 0) {
+                return KpiStatus.WARNING;
+            }
+            return elapsedDays > 3 && MonthUtils.isCurrentMonth(month) ? KpiStatus.DANGER : KpiStatus.WARNING;
+        }
+
+        BigDecimal ratio = receivedIncome.divide(plannedIncome, 4, RoundingMode.HALF_UP);
+        if (ratio.compareTo(new BigDecimal("0.90")) >= 0) {
+            return KpiStatus.GOOD;
+        }
+        if (receivedIncome.compareTo(BigDecimal.ZERO) > 0) {
+            return KpiStatus.WARNING;
+        }
+        return elapsedDays > 3 && MonthUtils.isCurrentMonth(month) ? KpiStatus.DANGER : KpiStatus.WARNING;
+    }
+
+    private KpiStatus resolveForecastStatus(
+            ForecastSummary forecastSummary,
+            BigDecimal delta,
+            BigDecimal plannedSpendingBudget
+    ) {
+        if (forecastSummary.isPlanMissing()) {
+            return KpiStatus.WARNING;
+        }
+        if (delta.compareTo(BigDecimal.ZERO) <= 0) {
+            return KpiStatus.GOOD;
+        }
+        BigDecimal threshold = MoneyUtils.normalize(
+                plannedSpendingBudget.multiply(new BigDecimal("0.10")).max(new BigDecimal("50.00"))
+        );
+        return delta.compareTo(threshold) <= 0 ? KpiStatus.WARNING : KpiStatus.DANGER;
+    }
+
+    private KpiStatus resolveSavingsStatus(BigDecimal plannedSavings, BigDecimal actualSavingsNet) {
+        if (actualSavingsNet.compareTo(BigDecimal.ZERO) < 0) {
+            return KpiStatus.DANGER;
+        }
+        if (plannedSavings.compareTo(BigDecimal.ZERO) <= 0) {
+            return actualSavingsNet.compareTo(BigDecimal.ZERO) > 0 ? KpiStatus.GOOD : KpiStatus.WARNING;
+        }
+        BigDecimal ratio = actualSavingsNet.divide(plannedSavings, 4, RoundingMode.HALF_UP);
+        if (ratio.compareTo(BigDecimal.ONE) >= 0) {
+            return KpiStatus.GOOD;
+        }
+        if (ratio.compareTo(new BigDecimal("0.50")) >= 0) {
+            return KpiStatus.WARNING;
+        }
+        return KpiStatus.DANGER;
+    }
+
+    private KpiStatus resolveGoalsStatus(
+            BigDecimal goalsCurrentTotal,
+            BigDecimal goalsTargetTotal,
+            BigDecimal monthlyContributions
+    ) {
+        if (goalsTargetTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return KpiStatus.DANGER;
+        }
+        if (monthlyContributions.compareTo(BigDecimal.ZERO) > 0
+                && goalsCurrentTotal.compareTo(BigDecimal.ZERO) > 0) {
+            return KpiStatus.GOOD;
+        }
+        if (goalsCurrentTotal.compareTo(BigDecimal.ZERO) > 0) {
+            return KpiStatus.WARNING;
+        }
+        return KpiStatus.DANGER;
+    }
+
+    private KpiStatus resolveBudgetHealthStatus(int score) {
+        if (score >= 80) {
+            return KpiStatus.GOOD;
+        }
+        if (score >= 55) {
+            return KpiStatus.WARNING;
+        }
+        return KpiStatus.DANGER;
+    }
+
+    private List<BigDecimal> buildGoalContributionSeries(YearMonth month, int points) {
+        List<BigDecimal> series = new ArrayList<>();
+        for (int i = points - 1; i >= 0; i--) {
+            YearMonth cursor = month.minusMonths(i);
+            series.add(goalService.getGoalsSummary(cursor).getMonthlyContributions());
+        }
+        return series;
+    }
+
+    private List<BigDecimal> extractWeeklyTotals(List<WeeklySpendPoint> weeklySpending) {
+        List<BigDecimal> totals = new ArrayList<>();
+        for (WeeklySpendPoint point : weeklySpending) {
+            totals.add(point.getTotalSpent());
+        }
+        return totals;
+    }
+
+    private List<Double> normalizeSeries(List<BigDecimal> source) {
+        if (source == null || source.isEmpty()) {
+            return List.of(0.5d, 0.5d, 0.5d, 0.5d, 0.5d, 0.5d);
+        }
+        BigDecimal max = source.stream()
+                .map(MoneyUtils::zeroIfNull)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+        if (max.compareTo(BigDecimal.ZERO) <= 0) {
+            return source.stream().map(item -> 0.5d).toList();
+        }
+        return source.stream()
+                .map(MoneyUtils::zeroIfNull)
+                .map(item -> clamp01(item.divide(max, 6, RoundingMode.HALF_UP).doubleValue()))
+                .toList();
+    }
+
+    private List<Double> buildRatioBars(double ratio, int barCount) {
+        int safeCount = Math.max(1, barCount);
+        double clampedRatio = clamp01(ratio);
+        List<Double> bars = new ArrayList<>(safeCount);
+        for (int i = 1; i <= safeCount; i++) {
+            double threshold = (double) i / safeCount;
+            // Filled bars stay tall; unfilled bars still render as muted mini stubs.
+            bars.add(clampedRatio >= threshold ? 1d : 0.22d);
+        }
+        return List.copyOf(bars);
+    }
+
+    private TrendDirection resolveWeeklyTrendDirection(List<WeeklySpendPoint> weeklySpending) {
+        if (weeklySpending == null || weeklySpending.size() < 2) {
+            return TrendDirection.UNKNOWN;
+        }
+        BigDecimal previous = weeklySpending.get(weeklySpending.size() - 2).getTotalSpent();
+        BigDecimal latest = weeklySpending.get(weeklySpending.size() - 1).getTotalSpent();
+        return resolveTrendDirection(previous, latest);
+    }
+
+    private TrendDirection resolveTrendDirection(List<Double> points) {
+        if (points == null || points.size() < 2) {
+            return TrendDirection.UNKNOWN;
+        }
+        double previous = points.get(points.size() - 2);
+        double latest = points.get(points.size() - 1);
+        if (latest - previous > 0.04d) {
+            return TrendDirection.UP;
+        }
+        if (previous - latest > 0.04d) {
+            return TrendDirection.DOWN;
+        }
+        return TrendDirection.FLAT;
+    }
+
+    private TrendDirection resolveTrendDirection(BigDecimal previous, BigDecimal latest) {
+        BigDecimal delta = MoneyUtils.zeroIfNull(latest).subtract(MoneyUtils.zeroIfNull(previous));
+        if (delta.compareTo(new BigDecimal("1.00")) > 0) {
+            return TrendDirection.UP;
+        }
+        if (delta.compareTo(new BigDecimal("-1.00")) < 0) {
+            return TrendDirection.DOWN;
+        }
+        return TrendDirection.FLAT;
+    }
+
+    private String formatSignedCurrency(BigDecimal amount, String currencyCode) {
+        if (amount.compareTo(BigDecimal.ZERO) > 0) {
+            return "+" + MoneyUtils.format(amount, currencyCode);
+        }
+        return MoneyUtils.format(amount, currencyCode);
+    }
+
+    private double ratio(BigDecimal numerator, BigDecimal denominator) {
+        if (numerator == null || denominator == null || denominator.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0d;
+        }
+        return clamp01(numerator.divide(denominator, 6, RoundingMode.HALF_UP).doubleValue());
+    }
+
+    private double clamp01(double value) {
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            return 0d;
+        }
+        return Math.max(0d, Math.min(1d, value));
     }
 
     private String formatGoalsProgress(BigDecimal goalsCurrentTotal, BigDecimal goalsTargetTotal) {
