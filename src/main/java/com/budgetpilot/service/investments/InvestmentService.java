@@ -15,11 +15,14 @@ import java.time.temporal.ChronoUnit;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class InvestmentService {
     private final BudgetStore budgetStore;
+    private final Set<String> legacyNegativeAmountWarnings = new HashSet<>();
 
     public InvestmentService(BudgetStore budgetStore) {
         this.budgetStore = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
@@ -60,14 +63,14 @@ public class InvestmentService {
     }
 
     public List<InvestmentTransaction> listTransactions(String investmentId) {
-        return budgetStore.listInvestmentTransactions(ValidationUtils.requireNonBlank(investmentId, "investmentId"));
+        String targetId = ValidationUtils.requireNonBlank(investmentId, "investmentId");
+        return normalizeTransactionsForRead(budgetStore.listInvestmentTransactions(targetId));
     }
 
     public List<InvestmentTransaction> listTransactions(String investmentId, YearMonth month) {
-        return budgetStore.listInvestmentTransactions(
-                ValidationUtils.requireNonBlank(investmentId, "investmentId"),
-                ValidationUtils.requireNonNull(month, "month")
-        );
+        String targetId = ValidationUtils.requireNonBlank(investmentId, "investmentId");
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        return normalizeTransactionsForRead(budgetStore.listInvestmentTransactions(targetId, targetMonth));
     }
 
     public void addContribution(String investmentId, BigDecimal amount, LocalDate date, String note) {
@@ -88,7 +91,6 @@ public class InvestmentService {
 
     public void addFee(String investmentId, BigDecimal amount, LocalDate date, String note) {
         BigDecimal normalized = normalizePositive(amount, "Fee amount");
-        ensureCanReduceInvested(investmentId, normalized, "Fee would reduce invested amount below zero.");
         recordTransaction(investmentId, normalized, date, InvestmentTransactionType.FEE, note);
     }
 
@@ -165,31 +167,35 @@ public class InvestmentService {
         for (Investment investment : listInvestments()) {
             List<InvestmentTransaction> allTransactions = listTransactions(investment.getId());
             List<InvestmentTransaction> monthTransactions = listTransactions(investment.getId(), targetMonth);
+            InvestmentTotals totals = aggregateTotals(allTransactions);
+            InvestmentTotals monthTotals = aggregateTotals(monthTransactions);
 
-            BigDecimal contributions = sumByType(allTransactions, InvestmentTransactionType.CONTRIBUTION);
-            BigDecimal returns = sumByType(allTransactions, InvestmentTransactionType.RETURN);
-            BigDecimal withdrawals = sumByType(allTransactions, InvestmentTransactionType.WITHDRAWAL);
-            BigDecimal fees = sumByType(allTransactions, InvestmentTransactionType.FEE);
-            BigDecimal adjustments = sumByType(allTransactions, InvestmentTransactionType.ADJUSTMENT);
-
-            BigDecimal investedAmount = MoneyUtils.normalize(contributions
-                    .add(adjustments)
-                    .subtract(withdrawals)
-                    .subtract(fees));
-            if (investedAmount.compareTo(BigDecimal.ZERO) < 0) {
-                investedAmount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            }
+            BigDecimal contributions = totals.contributions();
+            BigDecimal returns = totals.returns();
+            BigDecimal withdrawals = totals.withdrawals();
+            BigDecimal fees = totals.fees();
+            BigDecimal adjustments = totals.adjustments();
+            BigDecimal investedAmount = computeEffectiveInvestedAmount(totals);
 
             BigDecimal estimatedValue = MoneyUtils.zeroIfNull(investment.getCurrentEstimatedValue());
             if (estimatedValue.compareTo(BigDecimal.ZERO) == 0 && !allTransactions.isEmpty()) {
-                estimatedValue = MoneyUtils.normalize(investedAmount.add(returns));
+                estimatedValue = investedAmount;
             }
 
-            BigDecimal netProfit = MoneyUtils.safeSubtract(estimatedValue, investedAmount);
-            BigDecimal roiPercent = investedAmount.compareTo(BigDecimal.ZERO) <= 0
+            // Net profit estimate rule:
+            // (Current Value + Withdrawals + Returns) - (Contributions + Fees), with adjustments applied as signed corrections.
+            BigDecimal netProfit = MoneyUtils.normalize(
+                    estimatedValue
+                            .add(withdrawals)
+                            .add(returns)
+                            .subtract(contributions)
+                            .subtract(fees)
+                            .subtract(adjustments)
+            );
+            BigDecimal roiPercent = contributions.compareTo(BigDecimal.ZERO) <= 0
                     ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                     : MoneyUtils.normalize(netProfit.multiply(MoneyUtils.HUNDRED)
-                    .divide(investedAmount, 2, RoundingMode.HALF_UP));
+                    .divide(contributions, 2, RoundingMode.HALF_UP));
 
             BigDecimal progressPercent = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
             if (investment.getTargetAmount() != null && investment.getTargetAmount().compareTo(BigDecimal.ZERO) > 0) {
@@ -201,8 +207,8 @@ public class InvestmentService {
                 }
             }
 
-            BigDecimal monthlyContribution = sumByType(monthTransactions, InvestmentTransactionType.CONTRIBUTION);
-            BigDecimal monthlyReturn = sumByType(monthTransactions, InvestmentTransactionType.RETURN);
+            BigDecimal monthlyContribution = monthTotals.contributions();
+            BigDecimal monthlyReturn = monthTotals.returns();
 
             positions.add(new InvestmentPositionSummary(
                     investment.getId(),
@@ -247,15 +253,16 @@ public class InvestmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Investment summary not found."));
 
         List<InvestmentTransaction> monthTransactions = listTransactions(targetInvestmentId, targetMonth);
+        InvestmentTotals monthTotals = aggregateTotals(monthTransactions);
 
         return new InvestmentSummary(
                 targetMonth,
                 investment,
                 position,
-                sumByType(monthTransactions, InvestmentTransactionType.CONTRIBUTION),
-                sumByType(monthTransactions, InvestmentTransactionType.RETURN),
-                sumByType(monthTransactions, InvestmentTransactionType.FEE),
-                sumByType(monthTransactions, InvestmentTransactionType.WITHDRAWAL),
+                monthTotals.contributions(),
+                monthTotals.returns(),
+                monthTotals.fees(),
+                monthTotals.withdrawals(),
                 listTransactions(targetInvestmentId)
         );
     }
@@ -292,6 +299,19 @@ public class InvestmentService {
         return result;
     }
 
+    public BigDecimal getMonthlyNetAllocationsTotal(YearMonth month) {
+        YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
+        List<InvestmentTransaction> monthTransactions = normalizeTransactionsForRead(
+                budgetStore.listAllInvestmentTransactions(targetMonth)
+        );
+        InvestmentTotals totals = aggregateTotals(monthTransactions);
+        return MoneyUtils.normalize(
+                totals.contributions()
+                        .subtract(totals.withdrawals())
+                        .add(totals.adjustments())
+        );
+    }
+
     public InvestmentValidationResult validateTransaction(InvestmentTransaction tx) {
         InvestmentValidationResult result = new InvestmentValidationResult();
         if (tx == null) {
@@ -313,9 +333,14 @@ public class InvestmentService {
         if (tx.getAmount() == null || tx.getAmount().compareTo(BigDecimal.ZERO) == 0) {
             result.addError("Transaction amount is required.");
         }
-        if (tx.getType() != null && tx.getType() != InvestmentTransactionType.ADJUSTMENT
-                && tx.getAmount() != null && tx.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            result.addError("Amount must be greater than 0.");
+        if (tx.getType() != null && tx.getAmount() != null) {
+            int amountSign = tx.getAmount().compareTo(BigDecimal.ZERO);
+            if (tx.getType() == InvestmentTransactionType.ADJUSTMENT && amountSign == 0) {
+                result.addError("Adjustment amount must not be zero.");
+            }
+            if (tx.getType() != InvestmentTransactionType.ADJUSTMENT && amountSign <= 0) {
+                result.addError("Amount must be greater than 0.");
+            }
         }
         return result;
     }
@@ -329,14 +354,16 @@ public class InvestmentService {
     ) {
         String targetInvestmentId = ValidationUtils.requireNonBlank(investmentId, "investmentId");
         LocalDate txDate = ValidationUtils.requireNonNull(date, "date");
+        InvestmentTransactionType txType = ValidationUtils.requireNonNull(type, "type");
+        BigDecimal normalizedAmount = normalizeAmountForStorage(amount, txType);
         getInvestmentOrThrow(targetInvestmentId);
 
         InvestmentTransaction tx = new InvestmentTransaction();
         tx.setInvestmentId(targetInvestmentId);
         tx.setTransactionDate(txDate);
         tx.setMonth(YearMonth.from(txDate));
-        tx.setType(ValidationUtils.requireNonNull(type, "type"));
-        tx.setAmount(amount);
+        tx.setType(txType);
+        tx.setAmount(normalizedAmount);
         tx.setNote(note);
 
         InvestmentValidationResult validation = validateTransaction(tx);
@@ -351,21 +378,9 @@ public class InvestmentService {
     private void recomputeInvestmentCachedAmounts(String investmentId) {
         Investment investment = getInvestmentOrThrow(investmentId);
         List<InvestmentTransaction> allTransactions = listTransactions(investmentId);
-
-        BigDecimal contributions = sumByType(allTransactions, InvestmentTransactionType.CONTRIBUTION);
-        BigDecimal returns = sumByType(allTransactions, InvestmentTransactionType.RETURN);
-        BigDecimal withdrawals = sumByType(allTransactions, InvestmentTransactionType.WITHDRAWAL);
-        BigDecimal fees = sumByType(allTransactions, InvestmentTransactionType.FEE);
-        BigDecimal adjustments = sumByType(allTransactions, InvestmentTransactionType.ADJUSTMENT);
-
-        BigDecimal invested = MoneyUtils.normalize(contributions.add(adjustments).subtract(withdrawals).subtract(fees));
-        if (invested.compareTo(BigDecimal.ZERO) < 0) {
-            invested = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        }
-
-        BigDecimal estimated = MoneyUtils.normalize(invested.add(returns));
+        InvestmentTotals totals = aggregateTotals(allTransactions);
+        BigDecimal invested = computeEffectiveInvestedAmount(totals);
         investment.setCurrentInvestedAmount(invested);
-        investment.setCurrentEstimatedValue(estimated);
         budgetStore.saveInvestment(investment);
     }
 
@@ -381,8 +396,7 @@ public class InvestmentService {
     }
 
     private void ensureCanReduceInvested(String investmentId, BigDecimal reduction, String errorMessage) {
-        Investment investment = getInvestmentOrThrow(investmentId);
-        BigDecimal invested = MoneyUtils.zeroIfNull(investment.getCurrentInvestedAmount());
+        BigDecimal invested = computeEffectiveInvestedAmount(aggregateTotals(listTransactions(investmentId)));
         if (invested.subtract(reduction).compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(errorMessage);
         }
@@ -395,11 +409,93 @@ public class InvestmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Investment not found."));
     }
 
-    private BigDecimal sumByType(List<InvestmentTransaction> transactions, InvestmentTransactionType type) {
-        return MoneyUtils.normalize(transactions.stream()
-                .filter(tx -> tx.getType() == type)
-                .map(InvestmentTransaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+    private List<InvestmentTransaction> normalizeTransactionsForRead(List<InvestmentTransaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) {
+            return List.of();
+        }
+        List<InvestmentTransaction> normalized = new ArrayList<>(transactions.size());
+        for (InvestmentTransaction tx : transactions) {
+            normalized.add(normalizeTransactionForRead(tx));
+        }
+        return List.copyOf(normalized);
+    }
+
+    private InvestmentTransaction normalizeTransactionForRead(InvestmentTransaction tx) {
+        InvestmentTransaction copy = ValidationUtils.requireNonNull(tx, "tx").copy();
+        if (copy.getType() == null || copy.getType() == InvestmentTransactionType.ADJUSTMENT) {
+            return copy;
+        }
+
+        BigDecimal amount = MoneyUtils.zeroIfNull(copy.getAmount());
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            logLegacyNegativeAmount(copy);
+            copy.setAmount(amount.abs());
+            if (tx.getUpdatedAt() != null) {
+                copy.setUpdatedAt(tx.getUpdatedAt());
+            }
+        }
+        return copy;
+    }
+
+    private InvestmentTotals aggregateTotals(List<InvestmentTransaction> transactions) {
+        BigDecimal contributions = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal returns = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal withdrawals = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal fees = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal adjustments = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+        for (InvestmentTransaction tx : transactions == null ? List.<InvestmentTransaction>of() : transactions) {
+            if (tx == null || tx.getType() == null) {
+                continue;
+            }
+            BigDecimal amount = normalizedAmountByType(tx);
+            switch (tx.getType()) {
+                case CONTRIBUTION -> contributions = MoneyUtils.normalize(contributions.add(amount));
+                case RETURN -> returns = MoneyUtils.normalize(returns.add(amount));
+                case WITHDRAWAL -> withdrawals = MoneyUtils.normalize(withdrawals.add(amount));
+                case FEE -> fees = MoneyUtils.normalize(fees.add(amount));
+                case ADJUSTMENT -> adjustments = MoneyUtils.normalize(adjustments.add(amount));
+            }
+        }
+        return new InvestmentTotals(contributions, returns, withdrawals, fees, adjustments);
+    }
+
+    private BigDecimal normalizedAmountByType(InvestmentTransaction tx) {
+        BigDecimal amount = MoneyUtils.zeroIfNull(tx.getAmount());
+        if (tx.getType() == InvestmentTransactionType.ADJUSTMENT) {
+            return amount;
+        }
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            logLegacyNegativeAmount(tx);
+            return amount.abs();
+        }
+        return amount;
+    }
+
+    private BigDecimal computeEffectiveInvestedAmount(InvestmentTotals totals) {
+        BigDecimal invested = MoneyUtils.normalize(
+                totals.contributions()
+                        .subtract(totals.withdrawals())
+                        .add(totals.adjustments())
+        );
+        if (invested.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return invested;
+    }
+
+    private void logLegacyNegativeAmount(InvestmentTransaction tx) {
+        String warningKey = tx.getId() + "|" + tx.getType();
+        if (!legacyNegativeAmountWarnings.add(warningKey)) {
+            return;
+        }
+        System.err.println(
+                "Normalized legacy negative investment transaction amount for txId="
+                        + tx.getId()
+                        + ", type="
+                        + tx.getType()
+                        + "."
+        );
     }
 
     private int statusRank(Investment investment) {
@@ -452,9 +548,16 @@ public class InvestmentService {
     private BigDecimal normalizePositive(BigDecimal amount, String fieldName) {
         BigDecimal normalized = normalizeNonZero(amount, fieldName);
         if (normalized.compareTo(BigDecimal.ZERO) < 0) {
-            normalized = normalized.abs();
+            throw new IllegalArgumentException(fieldName + " must be greater than 0.");
         }
         return normalized;
+    }
+
+    private BigDecimal normalizeAmountForStorage(BigDecimal amount, InvestmentTransactionType type) {
+        if (type == InvestmentTransactionType.ADJUSTMENT) {
+            return normalizeNonZero(amount, "Adjustment amount");
+        }
+        return normalizePositive(amount, type.getLabel() + " amount");
     }
 
     private BigDecimal normalizeNonZero(BigDecimal amount, String fieldName) {
@@ -463,6 +566,15 @@ public class InvestmentService {
             throw new IllegalArgumentException(fieldName + " must not be zero.");
         }
         return normalized;
+    }
+
+    private record InvestmentTotals(
+            BigDecimal contributions,
+            BigDecimal returns,
+            BigDecimal withdrawals,
+            BigDecimal fees,
+            BigDecimal adjustments
+    ) {
     }
 
     private record TransactionLocator(String investmentId) {

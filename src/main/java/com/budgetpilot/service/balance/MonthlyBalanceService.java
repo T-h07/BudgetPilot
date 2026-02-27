@@ -3,6 +3,7 @@ package com.budgetpilot.service.balance;
 import com.budgetpilot.service.expenses.ExpenseService;
 import com.budgetpilot.service.goals.GoalService;
 import com.budgetpilot.service.income.IncomeService;
+import com.budgetpilot.service.investments.InvestmentService;
 import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.MoneyUtils;
@@ -19,6 +20,7 @@ public class MonthlyBalanceService {
     private final ExpenseService expenseService;
     private final SavingsService savingsService;
     private final GoalService goalService;
+    private final InvestmentService investmentService;
 
     public MonthlyBalanceService(BudgetStore budgetStore) {
         BudgetStore store = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
@@ -26,10 +28,11 @@ public class MonthlyBalanceService {
         this.expenseService = new ExpenseService(store);
         this.savingsService = new SavingsService(store);
         this.goalService = new GoalService(store);
+        this.investmentService = new InvestmentService(store);
     }
 
     public MonthlyBalanceSnapshot buildSnapshot(YearMonth month) {
-        return buildProjectedSnapshot(month, BigDecimal.ZERO, BigDecimal.ZERO);
+        return buildProjectedSnapshot(month, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     public MonthlyBalanceSnapshot buildProjectedSnapshot(
@@ -37,9 +40,19 @@ public class MonthlyBalanceService {
             BigDecimal additionalSavingsAllocation,
             BigDecimal additionalGoalAllocation
     ) {
+        return buildProjectedSnapshot(month, additionalSavingsAllocation, additionalGoalAllocation, BigDecimal.ZERO);
+    }
+
+    public MonthlyBalanceSnapshot buildProjectedSnapshot(
+            YearMonth month,
+            BigDecimal additionalSavingsAllocation,
+            BigDecimal additionalGoalAllocation,
+            BigDecimal additionalInvestmentAllocation
+    ) {
         YearMonth targetMonth = ValidationUtils.requireNonNull(month, "month");
         BigDecimal additionalSavings = MoneyUtils.zeroIfNull(additionalSavingsAllocation);
         BigDecimal additionalGoals = MoneyUtils.zeroIfNull(additionalGoalAllocation);
+        BigDecimal additionalInvestments = MoneyUtils.zeroIfNull(additionalInvestmentAllocation);
 
         BigDecimal plannedIncome = incomeService.getPlannedIncomeTotal(targetMonth);
         BigDecimal receivedIncome = incomeService.getReceivedIncomeTotal(targetMonth);
@@ -51,12 +64,16 @@ public class MonthlyBalanceService {
         BigDecimal netGoalAllocations = MoneyUtils.normalize(
                 goalService.getMonthlyNetAllocationsTotal(targetMonth).add(additionalGoals)
         );
+        BigDecimal netInvestmentAllocations = MoneyUtils.normalize(
+                investmentService.getMonthlyNetAllocationsTotal(targetMonth).add(additionalInvestments)
+        );
 
         BigDecimal availableBeforeAllocations = MoneyUtils.normalize(plannedIncome.subtract(totalExpenses));
         BigDecimal availableAfterAllocations = MoneyUtils.normalize(
                 availableBeforeAllocations
                         .subtract(netSavingsAllocations)
                         .subtract(netGoalAllocations)
+                        .subtract(netInvestmentAllocations)
         );
 
         MonthlyBalanceWarningLevel warningLevel = resolveWarningLevel(
@@ -72,6 +89,7 @@ public class MonthlyBalanceService {
                 totalExpenses,
                 netSavingsAllocations,
                 netGoalAllocations,
+                netInvestmentAllocations,
                 availableBeforeAllocations,
                 availableAfterAllocations,
                 warningLevel,

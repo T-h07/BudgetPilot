@@ -12,6 +12,7 @@ public class MonthlyBalanceSnapshot {
     private final BigDecimal totalExpenses;
     private final BigDecimal netSavingsAllocationsThisMonth;
     private final BigDecimal netGoalAllocationsThisMonth;
+    private final BigDecimal netInvestmentAllocationsThisMonth;
     private final BigDecimal availableBeforeAllocations;
     private final BigDecimal availableAfterAllocations;
     private final MonthlyBalanceWarningLevel warningLevel;
@@ -24,6 +25,7 @@ public class MonthlyBalanceSnapshot {
             BigDecimal totalExpenses,
             BigDecimal netSavingsAllocationsThisMonth,
             BigDecimal netGoalAllocationsThisMonth,
+            BigDecimal netInvestmentAllocationsThisMonth,
             BigDecimal availableBeforeAllocations,
             BigDecimal availableAfterAllocations,
             MonthlyBalanceWarningLevel warningLevel,
@@ -35,6 +37,7 @@ public class MonthlyBalanceSnapshot {
         this.totalExpenses = ValidationUtils.requireNonNull(totalExpenses, "totalExpenses");
         this.netSavingsAllocationsThisMonth = ValidationUtils.requireNonNull(netSavingsAllocationsThisMonth, "netSavingsAllocationsThisMonth");
         this.netGoalAllocationsThisMonth = ValidationUtils.requireNonNull(netGoalAllocationsThisMonth, "netGoalAllocationsThisMonth");
+        this.netInvestmentAllocationsThisMonth = ValidationUtils.requireNonNull(netInvestmentAllocationsThisMonth, "netInvestmentAllocationsThisMonth");
         this.availableBeforeAllocations = ValidationUtils.requireNonNull(availableBeforeAllocations, "availableBeforeAllocations");
         this.availableAfterAllocations = ValidationUtils.requireNonNull(availableAfterAllocations, "availableAfterAllocations");
         this.warningLevel = ValidationUtils.requireNonNull(warningLevel, "warningLevel");
@@ -71,6 +74,14 @@ public class MonthlyBalanceSnapshot {
 
     public BigDecimal getNetGoalsReservedThisMonth() {
         return netGoalAllocationsThisMonth;
+    }
+
+    public BigDecimal getNetInvestmentAllocationsThisMonth() {
+        return netInvestmentAllocationsThisMonth;
+    }
+
+    public BigDecimal getNetInvestmentsReservedThisMonth() {
+        return netInvestmentAllocationsThisMonth;
     }
 
     public BigDecimal getAvailableBeforeAllocations() {

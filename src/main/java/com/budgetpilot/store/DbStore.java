@@ -681,7 +681,7 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 tx.setMonth(DbUtils.parseYearMonth(rs.getString("month"), MonthUtils.currentMonth(), "investment_transactions.month"));
                 tx.setTransactionDate(DbUtils.parseLocalDate(rs.getString("transaction_date"), LocalDate.now(), "investment_transactions.transaction_date"));
                 tx.setAmount(DbUtils.parseBigDecimal(rs.getString("amount"), "investment_transactions.amount", BigDecimal.ONE));
-                tx.setType(DbUtils.parseEnum(rs.getString("type"), InvestmentTransactionType.class, InvestmentTransactionType.CONTRIBUTION, "investment_transactions.type"));
+                tx.setType(parseInvestmentTransactionType(rs.getString("type")));
                 tx.setNote(rs.getString("note"));
                 tx.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "investment_transactions.created_at"));
                 tx.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "investment_transactions.updated_at"));
@@ -799,6 +799,20 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
             ps.setString(14, profile.getUpdatedAt().toString());
             ps.executeUpdate();
         }
+    }
+
+    private InvestmentTransactionType parseInvestmentTransactionType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return InvestmentTransactionType.CONTRIBUTION;
+        }
+        String normalized = raw.trim();
+        for (InvestmentTransactionType type : InvestmentTransactionType.values()) {
+            if (type.name().equalsIgnoreCase(normalized) || type.getLabel().equalsIgnoreCase(normalized)) {
+                return type;
+            }
+        }
+        System.err.println("Invalid investment transaction type: " + raw + ", using CONTRIBUTION fallback.");
+        return InvestmentTransactionType.CONTRIBUTION;
     }
 
     private void insertMonthlyPlans() throws SQLException {
