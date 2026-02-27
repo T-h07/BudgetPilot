@@ -7,6 +7,8 @@ import com.budgetpilot.service.dashboard.DashboardKpi;
 import com.budgetpilot.service.dashboard.DashboardMetricsService;
 import com.budgetpilot.service.dashboard.DashboardSnapshot;
 import com.budgetpilot.service.dashboard.WeeklySpendPoint;
+import com.budgetpilot.service.insights.InsightItem;
+import com.budgetpilot.service.insights.InsightsService;
 import com.budgetpilot.ui.components.InsightListCard;
 import com.budgetpilot.ui.components.KpiChartTile;
 import com.budgetpilot.ui.components.MetricRow;
@@ -37,7 +39,12 @@ public class DashboardPage extends VBox {
         getStyleClass().addAll("page-root", "page-dashboard");
 
         DashboardMetricsService metricsService = new DashboardMetricsService(appContext.getStore());
+        InsightsService insightsService = new InsightsService(appContext.getStore());
         DashboardSnapshot snapshot = metricsService.buildSnapshot(appContext.getSelectedMonth());
+        List<InsightItem> topInsights = insightsService.buildInsights(appContext.getSelectedMonth())
+                .stream()
+                .limit(5)
+                .toList();
         String currencyCode = resolveCurrencyCode(appContext);
 
         getChildren().add(UiUtils.createPageHeader(
@@ -59,7 +66,7 @@ public class DashboardPage extends VBox {
         );
         lowerGrid.getStyleClass().add("dashboard-lower-grid");
 
-        SectionCard alertsPanel = buildAlertsPanel(snapshot);
+        SectionCard alertsPanel = buildAlertsPanel(appContext, topInsights);
 
         getChildren().addAll(kpiGrid, mainGrid, lowerGrid, alertsPanel);
     }
@@ -314,12 +321,16 @@ public class DashboardPage extends VBox {
         return card;
     }
 
-    private SectionCard buildAlertsPanel(DashboardSnapshot snapshot) {
+    private SectionCard buildAlertsPanel(AppContext appContext, List<InsightItem> topInsights) {
         InsightListCard insightList = new InsightListCard();
-        insightList.setAlerts(snapshot.getAlerts());
+        insightList.setInsights(topInsights, insight -> {
+            if (insight.getActionTarget() != null) {
+                appContext.navigate(insight.getActionTarget());
+            }
+        });
         SectionCard card = new SectionCard(
                 "Alerts & Insights",
-                "Actionable signals generated from planner, expenses, and forecast.",
+                "Top actions generated from planner, expenses, forecast, habits, and recurring templates.",
                 insightList
         );
         card.getStyleClass().addAll("dashboard-panel", "dashboard-alerts-panel");

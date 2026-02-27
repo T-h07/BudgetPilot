@@ -2,6 +2,7 @@ package com.budgetpilot.ui;
 
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
+import com.budgetpilot.service.insights.InsightsService;
 import com.budgetpilot.util.MonthUtils;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -24,12 +25,17 @@ import java.util.List;
 import java.util.Objects;
 
 public class TopBar extends HBox {
+    private final AppContext appContext;
+    private final InsightsService insightsService;
     private final Label pageTitleLabel = new Label();
     private final ComboBox<YearMonth> monthSelector = new ComboBox<>();
+    private final Button insightsButton = new Button();
+    private final Label insightsBadge = new Label();
     private boolean updatingMonthSelector;
 
     public TopBar(AppContext appContext) {
-        Objects.requireNonNull(appContext, "appContext must not be null");
+        this.appContext = Objects.requireNonNull(appContext, "appContext must not be null");
+        this.insightsService = new InsightsService(this.appContext.getStore());
 
         setSpacing(16);
         setAlignment(Pos.CENTER_LEFT);
@@ -71,60 +77,60 @@ public class TopBar extends HBox {
 
         Button prevMonthButton = createMonthNavButton("topbar-arrow-left");
         prevMonthButton.setFocusTraversable(false);
-        prevMonthButton.setOnAction(event -> appContext.setSelectedMonth(appContext.getSelectedMonth().minusMonths(1)));
+        prevMonthButton.setOnAction(event -> this.appContext.setSelectedMonth(this.appContext.getSelectedMonth().minusMonths(1)));
 
         monthSelector.getStyleClass().addAll("combo-box", "form-combo", "topbar-month-selector");
         monthSelector.setVisibleRowCount(12);
         monthSelector.setPrefWidth(190);
         monthSelector.setCellFactory(listView -> createMonthCell());
         monthSelector.setButtonCell(createMonthCell());
-        refreshMonthSelectorOptions(appContext.getSelectedMonth());
-        monthSelector.getSelectionModel().select(appContext.getSelectedMonth());
+        refreshMonthSelectorOptions(this.appContext.getSelectedMonth());
+        monthSelector.getSelectionModel().select(this.appContext.getSelectedMonth());
         monthSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
             if (updatingMonthSelector || newValue == null) {
                 return;
             }
-            appContext.setSelectedMonth(newValue);
+            this.appContext.setSelectedMonth(newValue);
         });
 
         Button nextMonthButton = createMonthNavButton("topbar-arrow-right");
         nextMonthButton.setFocusTraversable(false);
         nextMonthButton.setOnAction(event -> {
-            YearMonth selected = appContext.getSelectedMonth();
+            YearMonth selected = this.appContext.getSelectedMonth();
             YearMonth now = MonthUtils.currentMonth();
             if (selected != null && selected.isBefore(now)) {
-                appContext.setSelectedMonth(selected.plusMonths(1));
+                this.appContext.setSelectedMonth(selected.plusMonths(1));
             }
         });
 
         BooleanBinding canNavigateForward = Bindings.createBooleanBinding(
                 () -> {
-                    YearMonth selected = appContext.getSelectedMonth();
+                    YearMonth selected = this.appContext.getSelectedMonth();
                     return selected != null && selected.isBefore(MonthUtils.currentMonth());
                 },
-                appContext.selectedMonthProperty()
+                this.appContext.selectedMonthProperty()
         );
         nextMonthButton.disableProperty().bind(canNavigateForward.not());
 
         Button currentMonthButton = new Button("Current");
         currentMonthButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         currentMonthButton.setFocusTraversable(false);
-        currentMonthButton.setOnAction(event -> appContext.setSelectedMonth(MonthUtils.currentMonth()));
+        currentMonthButton.setOnAction(event -> this.appContext.setSelectedMonth(MonthUtils.currentMonth()));
 
         Label historyBadge = new Label();
         historyBadge.getStyleClass().addAll("month-pill", "topbar-history-badge");
         historyBadge.textProperty().bind(Bindings.createStringBinding(
                 () -> "Viewing: " + appContext.getCurrentMonthDisplayText() + " (History)",
-                appContext.selectedMonthProperty()
+                this.appContext.selectedMonthProperty()
         ));
         historyBadge.visibleProperty().bind(Bindings.createBooleanBinding(
-                () -> appContext.getSelectedMonth() != null
-                        && appContext.getSelectedMonth().isBefore(MonthUtils.currentMonth()),
-                appContext.selectedMonthProperty()
+                () -> this.appContext.getSelectedMonth() != null
+                        && this.appContext.getSelectedMonth().isBefore(MonthUtils.currentMonth()),
+                this.appContext.selectedMonthProperty()
         ));
         historyBadge.managedProperty().bind(historyBadge.visibleProperty());
 
-        appContext.selectedMonthProperty().addListener((obs, oldMonth, newMonth) -> {
+        this.appContext.selectedMonthProperty().addListener((obs, oldMonth, newMonth) -> {
             if (newMonth == null) {
                 return;
             }
@@ -138,10 +144,12 @@ public class TopBar extends HBox {
         profileInitials.getStyleClass().add("profile-initials");
         profileInitials.textProperty().bind(
                 Bindings.createStringBinding(
-                        appContext::getCurrentUserInitials,
-                        appContext.currentUserProperty()
+                        this.appContext::getCurrentUserInitials,
+                        this.appContext.currentUserProperty()
                 )
         );
+
+        configureInsightsIndicator();
 
         StackPane profileBadge = new StackPane(profileInitials);
         profileBadge.getStyleClass().add("profile-badge");
@@ -155,8 +163,12 @@ public class TopBar extends HBox {
                 nextMonthButton,
                 currentMonthButton,
                 historyBadge,
+                insightsButton,
                 profileBadge
         );
+
+        this.appContext.addChangeListener(this::refreshInsightsIndicator);
+        refreshInsightsIndicator();
     }
 
     public void setActivePage(PageId pageId) {
@@ -211,5 +223,36 @@ public class TopBar extends HBox {
         button.setGraphic(new StackPane(arrow));
         button.setText("");
         return button;
+    }
+
+    private void configureInsightsIndicator() {
+        insightsButton.getStyleClass().addAll("secondary-button", "btn-secondary", "topbar-insights-button");
+        insightsButton.setFocusTraversable(false);
+        insightsButton.setOnAction(event -> appContext.navigate(PageId.INSIGHTS));
+
+        Region bellIcon = new Region();
+        bellIcon.getStyleClass().add("topbar-bell-icon");
+        bellIcon.setMinSize(14, 14);
+        bellIcon.setPrefSize(14, 14);
+        bellIcon.setMaxSize(14, 14);
+
+        insightsBadge.getStyleClass().add("topbar-insights-badge");
+
+        StackPane icon = new StackPane(bellIcon, insightsBadge);
+        icon.getStyleClass().add("topbar-insights-icon");
+        insightsButton.setGraphic(icon);
+    }
+
+    private void refreshInsightsIndicator() {
+        int actionableCount = insightsService.countActionable(appContext.getSelectedMonth());
+        boolean hasActionable = actionableCount > 0;
+        insightsBadge.setText(actionableCount > 99 ? "99+" : String.valueOf(actionableCount));
+        insightsBadge.setVisible(hasActionable);
+        insightsBadge.setManaged(hasActionable);
+
+        insightsButton.getStyleClass().remove("topbar-insights-active");
+        if (hasActionable) {
+            insightsButton.getStyleClass().add("topbar-insights-active");
+        }
     }
 }

@@ -1,0 +1,69 @@
+.page-insights {
+    -fx-spacing: 16;
+}
+
+.insights-month-context {
+    -fx-font-size: 12px;
+}
+
+.insights-filter-bar {
+    -fx-padding: 10;
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.insights-list-card {
+    -fx-min-height: 360;
+}
+
+.insight-card {
+    -fx-padding: 12;
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.insight-level-stripe {
+    -fx-background-radius: 10;
+}
+
+.insight-level-danger {
+    -fx-background-color: -bp-danger;
+}
+
+.insight-level-warning {
+    -fx-background-color: -bp-warning;
+}
+
+.insight-level-info {
+    -fx-background-color: -bp-accent;
+}
+
+.insight-level-success {
+    -fx-background-color: -bp-success;
+}
+
+.insight-card-danger {
+    -fx-border-color: rgba(240, 97, 97, 0.45);
+}
+
+.insight-card-warning {
+    -fx-border-color: rgba(246, 185, 80, 0.45);
+}
+
+.insight-card-info {
+    -fx-border-color: rgba(54, 163, 255, 0.45);
+}
+
+.insight-card-success {
+    -fx-border-color: rgba(86, 196, 130, 0.45);
+}
+
+.insight-source-chip {
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+    -fx-padding: 4 9;
+}
