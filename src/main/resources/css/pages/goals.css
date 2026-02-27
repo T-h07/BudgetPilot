@@ -1,0 +1,91 @@
+.page-goals {
+    -fx-spacing: 16;
+}
+
+.goals-summary-grid {
+    -fx-spacing: 12;
+}
+
+.goals-list-card,
+.goals-details-card {
+    -fx-min-height: 620;
+}
+
+.goals-list {
+    -fx-spacing: 10;
+}
+
+.goal-card {
+    -fx-padding: 12;
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 10;
+}
+
+.goal-card-selected {
+    -fx-background-color: rgba(54, 163, 255, 0.16);
+    -fx-border-color: rgba(54, 163, 255, 0.45);
+}
+
+.goal-priority-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #d8e8ff;
+}
+
+.goal-progress-bar {
+    -fx-accent: -bp-accent;
+}
+
+.goal-progress-bar > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.goal-progress-bar > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 8;
+}
+
+.goal-contribution-table {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.goal-contribution-table .column-header-background {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 10 10 0 0;
+}
+
+.goal-contribution-table .column-header,
+.goal-contribution-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.goal-contribution-table .column-header .label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.goal-contribution-table .table-row-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-border-color: transparent;
+}
+
+.goal-contribution-table .table-row-cell:filled:selected {
+    -fx-background-color: rgba(54, 163, 255, 0.2);
+}
+
+.goal-contribution-table .table-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+}
+
+.goal-contribution-table .placeholder .label {
+    -fx-text-fill: -bp-text-secondary;
+}

@@ -45,7 +45,9 @@ public class Main extends Application {
                 "/css/pages/settings.css",
                 "/css/pages/income.css",
                 "/css/pages/planner.css",
-                "/css/pages/expenses.css"
+                "/css/pages/expenses.css",
+                "/css/pages/savings.css",
+                "/css/pages/goals.css"
         );
         for (String stylesheetPath : stylesheets) {
             URL stylesheet = Main.class.getResource(stylesheetPath);

@@ -14,10 +14,13 @@ import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.PaymentMethod;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.UserProfileType;
+import com.budgetpilot.service.GoalService;
+import com.budgetpilot.service.SavingsService;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 
 public final class DemoDataSeeder {
@@ -37,6 +40,9 @@ public final class DemoDataSeeder {
         profile.setInvestmentsModuleEnabled(true);
         profile.setAchievementsModuleEnabled(true);
         store.saveUserProfile(profile);
+
+        SavingsService savingsService = new SavingsService(store);
+        GoalService goalService = new GoalService(store);
 
         MonthlyPlan plan = new MonthlyPlan(seedMonth);
         plan.setFixedCostsBudget(new BigDecimal("1450"));
@@ -78,21 +84,37 @@ public final class DemoDataSeeder {
         store.saveExpenseEntry(expense(seedMonth, 18, "88.00", ExpenseCategory.CLOTHES, "Jacket", "#clothes", PaymentMethod.CARD));
         store.saveExpenseEntry(expense(seedMonth, 22, "46.50", ExpenseCategory.ENTERTAINMENT, "Cinema + dinner", "#weekend", PaymentMethod.CARD));
 
-        SavingsBucket emergency = new SavingsBucket("Emergency Fund", new BigDecimal("1840"), new BigDecimal("5000"));
+        SavingsBucket emergency = new SavingsBucket("Emergency Fund", BigDecimal.ZERO, new BigDecimal("5000"));
         emergency.setNotes("Priority reserve");
         store.saveSavingsBucket(emergency);
 
-        SavingsBucket tuition = new SavingsBucket("Tuition Reserve", new BigDecimal("920"), new BigDecimal("3500"));
+        SavingsBucket tuition = new SavingsBucket("Tuition Reserve", BigDecimal.ZERO, new BigDecimal("3500"));
         tuition.setNotes("Education savings");
         store.saveSavingsBucket(tuition);
 
-        Goal carGoal = new Goal("Car Down Payment", GoalType.CAR, new BigDecimal("6000"), new BigDecimal("2250"), 2);
+        savingsService.addContribution(emergency.getId(), new BigDecimal("1200"), dateAt(seedMonth, 4), "Initial emergency allocation");
+        savingsService.addContribution(emergency.getId(), new BigDecimal("750"), dateAt(seedMonth, 13), "Salary cycle contribution");
+        savingsService.withdraw(emergency.getId(), new BigDecimal("110"), dateAt(seedMonth, 21), "Unexpected car maintenance");
+
+        savingsService.addContribution(tuition.getId(), new BigDecimal("600"), dateAt(seedMonth, 6), "Tuition reserve contribution");
+        savingsService.addContribution(tuition.getId(), new BigDecimal("420"), dateAt(seedMonth, 18), "Side income allocation");
+        savingsService.withdraw(tuition.getId(), new BigDecimal("95"), dateAt(seedMonth, 24), "Books and materials");
+
+        Goal carGoal = new Goal("Car Down Payment", GoalType.CAR, new BigDecimal("6000"), BigDecimal.ZERO, 2);
         carGoal.setNotes("Target by summer");
         store.saveGoal(carGoal);
 
-        Goal laptopGoal = new Goal("New Laptop", GoalType.LAPTOP, new BigDecimal("1800"), new BigDecimal("760"), 3);
+        Goal laptopGoal = new Goal("New Laptop", GoalType.LAPTOP, new BigDecimal("1800"), BigDecimal.ZERO, 3);
         laptopGoal.setNotes("For work and studies");
         store.saveGoal(laptopGoal);
+
+        goalService.contribute(carGoal.getId(), new BigDecimal("950"), dateAt(seedMonth, 5), "Main goal contribution");
+        goalService.contribute(carGoal.getId(), new BigDecimal("700"), dateAt(seedMonth, 16), "Mid-month transfer");
+        goalService.withdraw(carGoal.getId(), new BigDecimal("120"), dateAt(seedMonth, 23), "Temporary reallocation");
+
+        goalService.contribute(laptopGoal.getId(), new BigDecimal("420"), dateAt(seedMonth, 8), "Laptop progress contribution");
+        goalService.contribute(laptopGoal.getId(), new BigDecimal("360"), dateAt(seedMonth, 19), "Freelance contribution");
+        goalService.adjust(laptopGoal.getId(), new BigDecimal("-40"), dateAt(seedMonth, 27), "Price revision adjustment");
 
         FamilyMember mother = new FamilyMember("Mother", RelationshipType.PARENT);
         mother.setMonthlySupportBudget(new BigDecimal("220"));
@@ -131,5 +153,10 @@ public final class DemoDataSeeder {
         entry.setTag(tag);
         entry.setSubcategory(category.getLabel());
         return entry;
+    }
+
+    private static LocalDate dateAt(YearMonth month, int day) {
+        int safeDay = Math.max(1, Math.min(day, month.lengthOfMonth()));
+        return month.atDay(safeDay);
     }
 }
