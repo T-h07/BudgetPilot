@@ -27,6 +27,12 @@ public final class AppPaths {
         return dir;
     }
 
+    public static Path getExportsDir() {
+        Path dir = getAppDataDir().resolve("exports");
+        ensureDirectory(dir);
+        return dir;
+    }
+
     private static void ensureDirectory(Path path) {
         try {
             Files.createDirectories(path);

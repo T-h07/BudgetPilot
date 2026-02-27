@@ -168,6 +168,7 @@ public class Main extends Application {
                 "/css/pages/planner.css",
                 "/css/pages/expenses.css",
                 "/css/pages/templates.css",
+                "/css/pages/export.css",
                 "/css/pages/analytics.css",
                 "/css/pages/insights.css",
                 "/css/pages/savings.css",
