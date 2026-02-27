@@ -1,6 +1,7 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
@@ -72,6 +73,16 @@ public interface BudgetStore {
     void saveFamilyMember(FamilyMember member);
 
     void deleteFamilyMember(String id);
+
+    List<FamilyExpenseEntry> listFamilyExpenseEntries(YearMonth month);
+
+    List<FamilyExpenseEntry> listFamilyExpenseEntriesForMember(String familyMemberId);
+
+    List<FamilyExpenseEntry> listFamilyExpenseEntriesForMember(String familyMemberId, YearMonth month);
+
+    void saveFamilyExpenseEntry(FamilyExpenseEntry entry);
+
+    void deleteFamilyExpenseEntry(String id);
 
     List<HabitRule> listHabitRules();
 
