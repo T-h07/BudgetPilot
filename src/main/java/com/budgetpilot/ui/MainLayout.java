@@ -5,6 +5,7 @@ import com.budgetpilot.core.AppRouter;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.ui.pages.AchievementsPage;
+import com.budgetpilot.ui.pages.AnalyticsPage;
 import com.budgetpilot.ui.pages.DashboardPage;
 import com.budgetpilot.ui.pages.ExpensesPage;
 import com.budgetpilot.ui.pages.FamilyPage;
@@ -92,6 +93,7 @@ public class MainLayout extends BorderPane {
             return;
         }
         if (currentPage == PageId.DASHBOARD
+                || currentPage == PageId.ANALYTICS
                 || currentPage == PageId.INSIGHTS
                 || currentPage == PageId.INCOME
                 || currentPage == PageId.PLANNER
@@ -119,6 +121,7 @@ public class MainLayout extends BorderPane {
 
     private void registerPages(AppContext appContext) {
         registerPage(PageId.DASHBOARD, () -> new DashboardPage(appContext));
+        registerPage(PageId.ANALYTICS, () -> new AnalyticsPage(appContext));
         registerPage(PageId.INSIGHTS, () -> new InsightsPage(appContext));
         registerPage(PageId.EXPENSES, () -> new ExpensesPage(appContext));
         registerPage(PageId.PLANNER, () -> new PlannerPage(appContext));

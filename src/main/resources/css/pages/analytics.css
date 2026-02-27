@@ -1,0 +1,133 @@
+.page-analytics {
+    -fx-spacing: 16;
+}
+
+.analytics-controls-row {
+    -fx-padding: 10;
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.analytics-summary-row {
+    -fx-spacing: 12;
+}
+
+.analytics-panel {
+    -fx-min-height: 320;
+}
+
+.analytics-note {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 12px;
+}
+
+.analytics-inline-warning {
+    -fx-text-fill: -bp-warning;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.analytics-empty-label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 12px;
+}
+
+.analytics-chart {
+    -fx-background-color: -bp-surface-muted;
+    -fx-background-radius: 10;
+    -fx-padding: 8;
+}
+
+.analytics-chart .chart-content {
+    -fx-padding: 8 6 6 6;
+}
+
+.analytics-chart .chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+.analytics-chart .chart-vertical-grid-lines,
+.analytics-chart .chart-horizontal-grid-lines {
+    -fx-stroke: -bp-chart-grid;
+}
+
+.analytics-chart .axis-label,
+.analytics-chart .axis {
+    -fx-tick-label-fill: -bp-text-secondary;
+}
+
+.spend-trend-chart .default-color0.chart-series-line,
+.habit-trend-chart .default-color0.chart-series-line {
+    -fx-stroke: -bp-accent;
+    -fx-stroke-width: 2px;
+}
+
+.spend-trend-chart .default-color0.chart-line-symbol,
+.habit-trend-chart .default-color0.chart-line-symbol {
+    -fx-background-color: -bp-accent, -bp-bg;
+}
+
+.spend-trend-chart .default-color1.chart-series-line,
+.habit-trend-chart .default-color1.chart-series-line {
+    -fx-stroke: -bp-warning;
+    -fx-stroke-width: 2px;
+}
+
+.spend-trend-chart .default-color1.chart-line-symbol,
+.habit-trend-chart .default-color1.chart-line-symbol {
+    -fx-background-color: -bp-warning, -bp-bg;
+}
+
+.plan-vs-actual-chart .default-color0.chart-bar {
+    -fx-bar-fill: -bp-accent;
+}
+
+.plan-vs-actual-chart .default-color1.chart-bar {
+    -fx-bar-fill: -bp-success;
+}
+
+.forecast-accuracy-chart .default-color0.chart-bar {
+    -fx-bar-fill: -bp-warning;
+}
+
+.forecast-accuracy-chart .default-color1.chart-bar {
+    -fx-bar-fill: -bp-accent;
+}
+
+.analytics-category-row {
+    -fx-padding: 10;
+    -fx-background-color: -bp-surface-muted;
+    -fx-background-radius: 10;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+
+.analytics-share-progress {
+    -fx-accent: -bp-accent;
+}
+
+.analytics-share-progress > .bar {
+    -fx-background-color: linear-gradient(to right, -bp-accent, -bp-accent-strong);
+    -fx-background-radius: 8;
+}
+
+.analytics-share-progress > .track {
+    -fx-background-color: -bp-surface-strong;
+    -fx-background-radius: 8;
+}
+
+.analytics-top-row {
+    -fx-padding: 10 12;
+    -fx-background-color: -bp-surface-muted;
+    -fx-background-radius: 10;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+
+.analytics-top-label {
+    -fx-font-size: 13px;
+}
