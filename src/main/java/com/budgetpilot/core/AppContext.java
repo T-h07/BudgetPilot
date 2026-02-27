@@ -1,6 +1,7 @@
 package com.budgetpilot.core;
 
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.service.PersistenceStatus;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -17,6 +18,8 @@ public class AppContext {
             new SimpleObjectProperty<>(this, "selectedMonth", MonthUtils.currentMonth());
     private final ObjectProperty<UserProfile> currentUser =
             new SimpleObjectProperty<>(this, "currentUser");
+    private final ObjectProperty<PersistenceStatus> persistenceStatus =
+            new SimpleObjectProperty<>(this, "persistenceStatus", new PersistenceStatus(false, "Persistence unavailable", null, null));
 
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private BudgetStore store;
@@ -103,6 +106,24 @@ public class AppContext {
         for (Runnable listener : listeners) {
             listener.run();
         }
+    }
+
+    public PersistenceStatus getPersistenceStatus() {
+        return persistenceStatus.get();
+    }
+
+    public void setPersistenceStatus(PersistenceStatus persistenceStatus) {
+        this.persistenceStatus.set(persistenceStatus);
+        notifyContextChanged();
+    }
+
+    public ObjectProperty<PersistenceStatus> persistenceStatusProperty() {
+        return persistenceStatus;
+    }
+
+    public boolean isPersistenceAvailable() {
+        PersistenceStatus status = getPersistenceStatus();
+        return status != null && status.isPersistent();
     }
 
     public String getCurrentMonthDisplayText() {

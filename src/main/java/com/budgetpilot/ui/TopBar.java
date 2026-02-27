@@ -31,7 +31,30 @@ public class TopBar extends HBox {
         Label appTagline = new Label("Monthly financial operating system");
         appTagline.getStyleClass().add("muted-text");
 
-        VBox leftSection = new VBox(4, pageTitleLabel, appTagline);
+        Label persistenceWarning = new Label();
+        persistenceWarning.getStyleClass().addAll("banner-warning", "topbar-persistence-warning");
+        persistenceWarning.textProperty().bind(
+                Bindings.createStringBinding(
+                        () -> {
+                            if (appContext.isPersistenceAvailable()) {
+                                return "";
+                            }
+                            return appContext.getPersistenceStatus() == null
+                                    ? ""
+                                    : appContext.getPersistenceStatus().getMessage();
+                        },
+                        appContext.persistenceStatusProperty()
+                )
+        );
+        persistenceWarning.visibleProperty().bind(
+                Bindings.createBooleanBinding(
+                        () -> !appContext.isPersistenceAvailable(),
+                        appContext.persistenceStatusProperty()
+                )
+        );
+        persistenceWarning.managedProperty().bind(persistenceWarning.visibleProperty());
+
+        VBox leftSection = new VBox(4, pageTitleLabel, appTagline, persistenceWarning);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
