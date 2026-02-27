@@ -249,7 +249,28 @@ public class DashboardPage extends VBox {
             habitBadge.setStatus("good");
         }
 
-        HBox badges = new HBox(8, forecastBadge, plannerBadge, familyBadge, habitBadge);
+        StatusBadge investmentBadge = new StatusBadge();
+        if (snapshot.getActiveInvestmentsCount() <= 0) {
+            investmentBadge.setText("No Investments");
+            investmentBadge.setStatus("info");
+        } else if (snapshot.getPortfolioNetProfit().compareTo(java.math.BigDecimal.ZERO) >= 0) {
+            investmentBadge.setText("Investments Positive");
+            investmentBadge.setStatus("good");
+        } else {
+            investmentBadge.setText("Investments Negative");
+            investmentBadge.setStatus("warn");
+        }
+
+        StatusBadge achievementBadge = new StatusBadge();
+        if (snapshot.getUnlockedAchievementsCount() <= 0) {
+            achievementBadge.setText("No Unlocks Yet");
+            achievementBadge.setStatus("info");
+        } else {
+            achievementBadge.setText(snapshot.getUnlockedAchievementsCount() + " Achievements");
+            achievementBadge.setStatus("good");
+        }
+
+        HBox badges = new HBox(8, forecastBadge, plannerBadge, familyBadge, habitBadge, investmentBadge, achievementBadge);
         content.getChildren().addAll(
                 scoreLabel,
                 healthBadge,
@@ -263,6 +284,12 @@ public class DashboardPage extends VBox {
                 new MetricRow("Habit Tracked Spend", MoneyUtils.format(snapshot.getHabitTrackedSpend(), currencyCode)),
                 new MetricRow("Habit Risk", snapshot.getHabitWarningCount() + " warning / "
                         + snapshot.getHabitExceededCount() + " exceeded"),
+                new MetricRow("Portfolio Value", MoneyUtils.format(snapshot.getPortfolioEstimatedValue(), currencyCode)),
+                new MetricRow("Portfolio Net Profit", MoneyUtils.format(snapshot.getPortfolioNetProfit(), currencyCode)),
+                new MetricRow("Active Investments", String.valueOf(snapshot.getActiveInvestmentsCount())),
+                new MetricRow("Achievements", snapshot.getUnlockedAchievementsCount() + " unlocked / "
+                        + snapshot.getAchievementInProgressCount() + " in progress"),
+                new MetricRow("Achievements Completion", snapshot.getAchievementsCompletionPercent().stripTrailingZeros().toPlainString() + "%"),
                 badges
         );
 

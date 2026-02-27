@@ -3,6 +3,8 @@ package com.budgetpilot.service.dashboard;
 import com.budgetpilot.model.ExpenseEntry;
 import com.budgetpilot.model.IncomeEntry;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.service.AchievementPageSummary;
+import com.budgetpilot.service.AchievementService;
 import com.budgetpilot.service.BudgetSummary;
 import com.budgetpilot.service.ExpenseCategorySummary;
 import com.budgetpilot.service.ExpenseService;
@@ -16,6 +18,8 @@ import com.budgetpilot.service.GoalSummary;
 import com.budgetpilot.service.HabitPageSummary;
 import com.budgetpilot.service.HabitService;
 import com.budgetpilot.service.IncomeService;
+import com.budgetpilot.service.InvestmentPageSummary;
+import com.budgetpilot.service.InvestmentService;
 import com.budgetpilot.service.PlannerService;
 import com.budgetpilot.service.SavingsService;
 import com.budgetpilot.service.SavingsSummary;
@@ -45,6 +49,8 @@ public class DashboardMetricsService {
     private final SavingsService savingsService;
     private final FamilyService familyService;
     private final HabitService habitService;
+    private final InvestmentService investmentService;
+    private final AchievementService achievementService;
 
     public DashboardMetricsService(BudgetStore budgetStore) {
         this.budgetStore = ValidationUtils.requireNonNull(budgetStore, "budgetStore");
@@ -56,6 +62,8 @@ public class DashboardMetricsService {
         this.savingsService = new SavingsService(budgetStore);
         this.familyService = new FamilyService(budgetStore);
         this.habitService = new HabitService(budgetStore);
+        this.investmentService = new InvestmentService(budgetStore);
+        this.achievementService = new AchievementService(budgetStore);
     }
 
     public DashboardSnapshot buildSnapshot(YearMonth month) {
@@ -63,6 +71,8 @@ public class DashboardMetricsService {
         UserProfile profile = budgetStore.getUserProfile();
         String currencyCode = resolveCurrencyCode(profile);
         boolean familyEnabled = profile != null && profile.isFamilyModuleEnabled();
+        boolean investmentsEnabled = profile != null && profile.isInvestmentsModuleEnabled();
+        boolean achievementsEnabled = profile != null && profile.isAchievementsModuleEnabled();
 
         List<IncomeEntry> incomeEntries = incomeService.listForMonth(targetMonth);
         List<ExpenseEntry> expenseEntries = expenseService.listForMonth(targetMonth);
@@ -70,6 +80,8 @@ public class DashboardMetricsService {
         SavingsSummary savingsSummary = savingsService.getSavingsSummary(targetMonth);
         FamilySummary familySummary = familyService.getFamilySummary(targetMonth);
         HabitPageSummary habitPageSummary = habitService.getHabitPageSummary(targetMonth);
+        InvestmentPageSummary investmentSummary = investmentService.getInvestmentPageSummary(targetMonth);
+        AchievementPageSummary achievementSummary = achievementService.getAchievementPageSummary(targetMonth);
 
         BudgetSummary budgetSummary = plannerService.buildBudgetSummary(targetMonth, familyEnabled);
         ForecastSummary forecastSummary = forecastService.buildForecast(targetMonth, familyEnabled);
@@ -114,11 +126,15 @@ public class DashboardMetricsService {
                 hasIncomeData,
                 hasExpenseData,
                 familyEnabled,
+                investmentsEnabled,
+                achievementsEnabled,
                 budgetSummary,
                 forecastSummary,
                 categorySpending,
                 familySummary,
-                habitPageSummary
+                habitPageSummary,
+                investmentSummary,
+                achievementSummary
         );
 
         List<DashboardKpi> kpis = buildKpis(
@@ -172,7 +188,13 @@ public class DashboardMetricsService {
                 familyEnabled ? familySummary.getActiveMembersCount() : 0,
                 habitPageSummary.getWarningCount(),
                 habitPageSummary.getExceededCount(),
-                habitPageSummary.getHabitTrackedSpend()
+                habitPageSummary.getHabitTrackedSpend(),
+                investmentsEnabled ? investmentSummary.getTotalEstimatedValue() : BigDecimal.ZERO.setScale(2),
+                investmentsEnabled ? investmentSummary.getTotalNetProfit() : BigDecimal.ZERO.setScale(2),
+                investmentsEnabled ? investmentSummary.getActiveInvestmentCount() : 0,
+                achievementsEnabled ? achievementSummary.getUnlockedCount() : 0,
+                achievementsEnabled ? achievementSummary.getCompletionPercent() : BigDecimal.ZERO.setScale(2),
+                achievementsEnabled ? achievementSummary.getInProgressCount() : 0
         );
     }
 
@@ -339,11 +361,15 @@ public class DashboardMetricsService {
             boolean hasIncomeData,
             boolean hasExpenseData,
             boolean familyEnabled,
+            boolean investmentsEnabled,
+            boolean achievementsEnabled,
             BudgetSummary budgetSummary,
             ForecastSummary forecastSummary,
             List<CategorySpendPoint> categoryPoints,
             FamilySummary familySummary,
-            HabitPageSummary habitPageSummary
+            HabitPageSummary habitPageSummary,
+            InvestmentPageSummary investmentSummary,
+            AchievementPageSummary achievementSummary
     ) {
         List<DashboardAlert> alerts = new ArrayList<>();
 
@@ -474,6 +500,51 @@ public class DashboardMetricsService {
                     "habits",
                     "Maintain current spending discipline."
             ));
+        }
+
+        if (investmentsEnabled) {
+            if (investmentSummary.getActiveInvestmentCount() == 0) {
+                alerts.add(new DashboardAlert(
+                        "investments-empty",
+                        AlertLevel.INFO,
+                        "No investments added",
+                        "Add your first investment to track growth and ROI.",
+                        "investments",
+                        "Open Investments page and create a position."
+                ));
+            } else if (investmentSummary.getTotalNetProfit().compareTo(BigDecimal.ZERO) > 0) {
+                alerts.add(new DashboardAlert(
+                        "investments-positive-roi",
+                        AlertLevel.INFO,
+                        "Portfolio ROI positive",
+                        "Portfolio net profit is currently positive.",
+                        "investments",
+                        "Keep monitoring returns and contribution cadence."
+                ));
+            }
+        }
+
+        if (achievementsEnabled) {
+            if (achievementSummary.getInProgressCount() > 0) {
+                alerts.add(new DashboardAlert(
+                        "achievements-progress",
+                        AlertLevel.INFO,
+                        "Achievements progressing",
+                        achievementSummary.getInProgressCount() + " achievements are currently in progress.",
+                        "achievements",
+                        "Open Achievements page to view closest unlocks."
+                ));
+            }
+            if (achievementSummary.getUnlockedCount() > 0) {
+                alerts.add(new DashboardAlert(
+                        "achievements-unlocked",
+                        AlertLevel.INFO,
+                        "Achievements unlocked",
+                        "Unlocked achievements: " + achievementSummary.getUnlockedCount() + ".",
+                        "achievements",
+                        "Maintain consistency to unlock higher tiers."
+                ));
+            }
         }
 
         if (alerts.isEmpty()) {

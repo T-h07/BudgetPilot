@@ -48,6 +48,12 @@ public class DashboardSnapshot {
     private final int habitWarningCount;
     private final int habitExceededCount;
     private final BigDecimal habitTrackedSpend;
+    private final BigDecimal portfolioEstimatedValue;
+    private final BigDecimal portfolioNetProfit;
+    private final int activeInvestmentsCount;
+    private final int unlockedAchievementsCount;
+    private final BigDecimal achievementsCompletionPercent;
+    private final int achievementInProgressCount;
 
     public DashboardSnapshot(
             YearMonth month,
@@ -86,7 +92,13 @@ public class DashboardSnapshot {
             int activeFamilyMembersCount,
             int habitWarningCount,
             int habitExceededCount,
-            BigDecimal habitTrackedSpend
+            BigDecimal habitTrackedSpend,
+            BigDecimal portfolioEstimatedValue,
+            BigDecimal portfolioNetProfit,
+            int activeInvestmentsCount,
+            int unlockedAchievementsCount,
+            BigDecimal achievementsCompletionPercent,
+            int achievementInProgressCount
     ) {
         this.month = Objects.requireNonNull(month, "month");
         this.monthDisplayText = Objects.requireNonNull(monthDisplayText, "monthDisplayText");
@@ -125,6 +137,12 @@ public class DashboardSnapshot {
         this.habitWarningCount = habitWarningCount;
         this.habitExceededCount = habitExceededCount;
         this.habitTrackedSpend = Objects.requireNonNull(habitTrackedSpend, "habitTrackedSpend");
+        this.portfolioEstimatedValue = Objects.requireNonNull(portfolioEstimatedValue, "portfolioEstimatedValue");
+        this.portfolioNetProfit = Objects.requireNonNull(portfolioNetProfit, "portfolioNetProfit");
+        this.activeInvestmentsCount = activeInvestmentsCount;
+        this.unlockedAchievementsCount = unlockedAchievementsCount;
+        this.achievementsCompletionPercent = Objects.requireNonNull(achievementsCompletionPercent, "achievementsCompletionPercent");
+        this.achievementInProgressCount = achievementInProgressCount;
     }
 
     public YearMonth getMonth() {
@@ -273,5 +291,29 @@ public class DashboardSnapshot {
 
     public BigDecimal getHabitTrackedSpend() {
         return habitTrackedSpend;
+    }
+
+    public BigDecimal getPortfolioEstimatedValue() {
+        return portfolioEstimatedValue;
+    }
+
+    public BigDecimal getPortfolioNetProfit() {
+        return portfolioNetProfit;
+    }
+
+    public int getActiveInvestmentsCount() {
+        return activeInvestmentsCount;
+    }
+
+    public int getUnlockedAchievementsCount() {
+        return unlockedAchievementsCount;
+    }
+
+    public BigDecimal getAchievementsCompletionPercent() {
+        return achievementsCompletionPercent;
+    }
+
+    public int getAchievementInProgressCount() {
+        return achievementInProgressCount;
     }
 }
