@@ -4,8 +4,8 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.ui.components.NavButton;
-import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -21,6 +21,7 @@ public class Sidebar extends VBox {
     private final AppContext appContext;
     private final Consumer<PageId> onNavigate;
     private final Map<PageId, NavButton> navButtons = new EnumMap<>(PageId.class);
+    private final VBox contentBox = new VBox(14);
     private final VBox mainNav = new VBox(6);
     private final VBox footerNav = new VBox(6);
 
@@ -32,9 +33,8 @@ public class Sidebar extends VBox {
 
         setPrefWidth(250);
         setMinWidth(220);
-        setSpacing(14);
-        setPadding(new Insets(22, 16, 22, 16));
         getStyleClass().add("sidebar");
+        contentBox.getStyleClass().add("sidebar-content");
 
         Label appTitle = new Label("BudgetPilot");
         appTitle.getStyleClass().add("sidebar-title");
@@ -51,7 +51,18 @@ public class Sidebar extends VBox {
         divider.getStyleClass().add("separator");
         divider.setPrefHeight(1);
 
-        getChildren().addAll(brandBox, mainNav, spacer, divider, footerNav);
+        contentBox.getChildren().addAll(brandBox, mainNav, spacer, divider, footerNav);
+
+        ScrollPane scrollPane = new ScrollPane(contentBox);
+        scrollPane.getStyleClass().add("sidebar-scroll");
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setPannable(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+        getChildren().add(scrollPane);
 
         refreshNavigation();
     }

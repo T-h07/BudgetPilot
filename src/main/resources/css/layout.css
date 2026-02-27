@@ -8,6 +8,42 @@
     -fx-border-width: 0 1 0 0;
 }
 
+.sidebar-content {
+    -fx-padding: 22 16 22 16;
+    -fx-spacing: 14;
+}
+
+.sidebar-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.sidebar-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 10;
+}
+
+.sidebar-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: -bp-border-muted;
+    -fx-background-insets: 0;
+    -fx-background-radius: 999;
+}
+
+.sidebar-scroll .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .scroll-bar:vertical .increment-button,
+.sidebar-scroll .scroll-bar:vertical .decrement-button {
+    -fx-padding: 0;
+    -fx-opacity: 0;
+}
+
 .sidebar-title {
     -fx-font-size: 24px;
     -fx-font-weight: 700;
