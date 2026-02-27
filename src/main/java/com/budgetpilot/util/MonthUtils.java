@@ -15,6 +15,19 @@ public final class MonthUtils {
         return YearMonth.now();
     }
 
+    public static YearMonth previousMonth(YearMonth month) {
+        return shift(month, -1);
+    }
+
+    public static YearMonth nextMonth(YearMonth month) {
+        return shift(month, 1);
+    }
+
+    public static YearMonth shift(YearMonth month, int deltaMonths) {
+        YearMonth source = month == null ? currentMonth() : month;
+        return source.plusMonths(deltaMonths);
+    }
+
     public static String format(YearMonth month) {
         if (month == null) {
             return "";
