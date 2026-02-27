@@ -30,6 +30,7 @@ import java.util.Optional;
 public class SettingsPage extends VBox {
     private final AppContext appContext;
     private final SettingsService settingsService;
+    private final Runnable contextListener = this::populateFromContext;
 
     private final Label bannerLabel = new Label();
 
@@ -91,7 +92,12 @@ public class SettingsPage extends VBox {
 
         getChildren().addAll(profileSection, modulesSection, monthSection, developerSection);
 
-        appContext.addChangeListener(this::populateFromContext);
+        appContext.addChangeListener(contextListener);
+        sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene == null) {
+                appContext.removeChangeListener(contextListener);
+            }
+        });
         populateFromContext();
     }
 

@@ -8,6 +8,8 @@ import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.service.BudgetSummary;
+import com.budgetpilot.service.PlannerService;
 import com.budgetpilot.ui.components.KpiTile;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.util.MoneyUtils;
@@ -43,6 +45,10 @@ public class DashboardPage extends VBox {
         List<SavingsBucket> savingsBuckets = store == null ? List.of() : store.listSavingsBuckets();
         int habitRulesCount = store == null ? 0 : store.listHabitRules().size();
         MonthlyPlan plan = store == null ? null : store.getMonthlyPlan(selectedMonth);
+        boolean familyEnabled = appContext.getCurrentUser() != null && appContext.getCurrentUser().isFamilyModuleEnabled();
+        BudgetSummary budgetSummary = store == null
+                ? null
+                : new PlannerService(store).buildBudgetSummary(selectedMonth, familyEnabled);
 
         BigDecimal totalIncome = incomes.stream()
                 .map(IncomeEntry::getAmount)
@@ -83,9 +89,11 @@ public class DashboardPage extends VBox {
         ), 2, 0);
 
         kpiGrid.add(new KpiTile(
-                "Active Goals",
-                String.valueOf(activeGoalsCount),
-                goals.size() + " total goals in workspace"
+                "Planned Remaining",
+                budgetSummary == null
+                        ? MoneyUtils.format(BigDecimal.ZERO, currencyCode)
+                        : MoneyUtils.format(budgetSummary.getRemainingPlanned(), currencyCode),
+                budgetSummary == null ? "Planner summary unavailable" : budgetSummary.getStatusMessage()
         ), 3, 0);
 
         for (int i = 0; i < 4; i++) {
@@ -134,7 +142,9 @@ public class DashboardPage extends VBox {
                 createSummaryRows(new String[][]{
                         {"Expense Entries", String.valueOf(expenses.size())},
                         {"Savings Buckets", String.valueOf(savingsBuckets.size())},
-                        {"Habit Rules", String.valueOf(habitRulesCount)}
+                        {"Habit Rules", String.valueOf(habitRulesCount)},
+                        {"Active Goals", String.valueOf(activeGoalsCount)},
+                        {"Total Goals", String.valueOf(goals.size())}
                 })
         );
 

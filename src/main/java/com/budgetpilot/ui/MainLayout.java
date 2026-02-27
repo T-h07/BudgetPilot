@@ -78,8 +78,19 @@ public class MainLayout extends BorderPane {
         appContext.addChangeListener(() -> {
             sidebar.refreshNavigation();
             ensureCurrentPageAllowed();
+            refreshActiveDataPage();
             refreshChrome();
         });
+    }
+
+    private void refreshActiveDataPage() {
+        PageId currentPage = router.getCurrentPageId();
+        if (currentPage == null) {
+            return;
+        }
+        if (currentPage == PageId.DASHBOARD || currentPage == PageId.INCOME || currentPage == PageId.PLANNER) {
+            navigateTo(currentPage);
+        }
     }
 
     private void refreshChrome() {
