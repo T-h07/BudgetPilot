@@ -3,8 +3,8 @@
 }
 
 .wizard-header {
-    -fx-background-color: rgba(255, 255, 255, 0.04);
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-subtle;
+    -fx-border-color: -bp-border-soft;
     -fx-border-width: 1;
     -fx-background-radius: 12;
     -fx-border-radius: 12;
@@ -26,19 +26,19 @@
     -fx-padding: 16;
 }
 
-.wizard-container .list-view {
-    -fx-background-color: rgba(255, 255, 255, 0.04);
+.wizard-container .onboarding-income-list {
+    -fx-background-color: -bp-surface-subtle;
     -fx-background-radius: 10;
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: -bp-border-muted;
     -fx-border-radius: 10;
 }
 
-.wizard-container .list-view .list-cell {
+.wizard-container .onboarding-income-list .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -bp-text-primary;
 }
 
-.wizard-container .list-view .list-cell:filled:selected {
+.wizard-container .onboarding-income-list .list-cell:filled:selected {
     -fx-background-color: rgba(54, 163, 255, 0.24);
 }
 

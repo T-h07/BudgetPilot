@@ -6,12 +6,16 @@ import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.SavingsEntryType;
-import com.budgetpilot.service.BudgetSummary;
-import com.budgetpilot.service.PlannerService;
-import com.budgetpilot.service.SavingsBucketSummary;
-import com.budgetpilot.service.SavingsService;
-import com.budgetpilot.service.SavingsSummary;
+import com.budgetpilot.service.balance.MonthlyBalanceService;
+import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
+import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
+import com.budgetpilot.service.planner.BudgetSummary;
+import com.budgetpilot.service.planner.PlannerService;
+import com.budgetpilot.service.savings.SavingsBucketSummary;
+import com.budgetpilot.service.savings.SavingsService;
+import com.budgetpilot.service.savings.SavingsSummary;
 import com.budgetpilot.ui.components.DataEmptyState;
+import com.budgetpilot.ui.components.MetricRow;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.SummaryStatCard;
@@ -26,6 +30,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -54,6 +59,7 @@ public class SavingsPage extends VBox {
     private final AppContext appContext;
     private final SavingsService savingsService;
     private final PlannerService plannerService;
+    private final MonthlyBalanceService monthlyBalanceService;
     private final Runnable contextListener = this::refreshAll;
 
     private final Label bannerLabel = new Label();
@@ -63,6 +69,8 @@ public class SavingsPage extends VBox {
     private final SummaryStatCard monthlyWithdrawalCard = new SummaryStatCard();
     private final SummaryStatCard activeBucketsCard = new SummaryStatCard();
     private final SummaryStatCard plannedVsActualCard = new SummaryStatCard();
+    private final VBox cashFlowMetricsBox = new VBox(6);
+    private final Label cashFlowWarningLabel = new Label();
 
     private final TextField bucketNameField = textField("Bucket name");
     private final MoneyField bucketTargetField = new MoneyField("Target Amount", "Target amount (optional)");
@@ -96,6 +104,7 @@ public class SavingsPage extends VBox {
         this.appContext = ValidationUtils.requireNonNull(appContext, "appContext");
         this.savingsService = new SavingsService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
         this.plannerService = new PlannerService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.monthlyBalanceService = new MonthlyBalanceService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -113,9 +122,15 @@ public class SavingsPage extends VBox {
         setupActions();
 
         HBox summaryRow = buildSummaryRow();
+        SectionCard cashFlowCard = new SectionCard(
+                "Month Cash Flow",
+                "Income, expenses, and active allocations for the selected month.",
+                buildCashFlowBody()
+        );
+        cashFlowCard.getStyleClass().add("cash-flow-card");
         HBox mainRow = buildMainRow();
 
-        getChildren().addAll(summaryRow, bannerLabel, mainRow);
+        getChildren().addAll(summaryRow, cashFlowCard, bannerLabel, mainRow);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -137,7 +152,7 @@ public class SavingsPage extends VBox {
         bucketActiveCheck.setSelected(true);
         bucketNotesArea.setPromptText("Optional notes");
         bucketNotesArea.setPrefRowCount(3);
-        bucketNotesArea.getStyleClass().add("text-input");
+        bucketNotesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         bucketListBox.getStyleClass().add("savings-bucket-list");
     }
@@ -145,9 +160,9 @@ public class SavingsPage extends VBox {
     private void setupTransactionForm() {
         transactionTypeCombo.getItems().setAll(SavingsEntryType.values());
         transactionTypeCombo.getSelectionModel().select(SavingsEntryType.CONTRIBUTION);
-        transactionTypeCombo.getStyleClass().add("combo-box");
+        transactionTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
         transactionDatePicker.setValue(defaultDateForSelectedMonth());
-        transactionDatePicker.getStyleClass().add("date-picker");
+        transactionDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
 
         selectedBucketTitleLabel.getStyleClass().add("card-title");
         selectedBucketBalanceLabel.getStyleClass().add("kpi-value");
@@ -182,7 +197,12 @@ public class SavingsPage extends VBox {
                     getStyleClass().removeAll("status-good", "status-danger");
                     return;
                 }
-                SavingsEntry entry = getTableView().getItems().get(getIndex());
+                int rowIndex = getIndex();
+                if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                    getStyleClass().removeAll("status-good", "status-danger");
+                    return;
+                }
+                SavingsEntry entry = getTableView().getItems().get(rowIndex);
                 getStyleClass().removeAll("status-good", "status-danger");
                 if (entry.getAmount().compareTo(BigDecimal.ZERO) >= 0) {
                     getStyleClass().add("status-good");
@@ -200,8 +220,14 @@ public class SavingsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().add("danger-button");
-                deleteButton.setOnAction(event -> onDeleteTransaction(getTableView().getItems().get(getIndex())));
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteTransaction(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -215,14 +241,16 @@ public class SavingsPage extends VBox {
     }
 
     private void setupActions() {
-        saveBucketButton.getStyleClass().add("quick-add-button");
+        saveBucketButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveBucketButton.setOnAction(event -> onSaveBucket());
 
+        clearBucketButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearBucketButton.setOnAction(event -> clearBucketForm());
 
-        addTransactionButton.getStyleClass().add("quick-add-button");
+        addTransactionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addTransactionButton.setOnAction(event -> onAddTransaction());
 
+        clearTransactionButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearTransactionButton.setOnAction(event -> clearTransactionForm());
     }
 
@@ -267,6 +295,13 @@ public class SavingsPage extends VBox {
         leftCard.setMaxWidth(Double.MAX_VALUE);
         rightCard.setMaxWidth(Double.MAX_VALUE);
         return row;
+    }
+
+    private Node buildCashFlowBody() {
+        cashFlowMetricsBox.getStyleClass().add("cash-flow-metrics");
+        cashFlowWarningLabel.getStyleClass().add("cash-flow-warning");
+        cashFlowWarningLabel.setWrapText(true);
+        return new VBox(8, cashFlowMetricsBox, cashFlowWarningLabel);
     }
 
     private Node buildBucketManagerBody() {
@@ -381,6 +416,18 @@ public class SavingsPage extends VBox {
             BigDecimal amount = type == SavingsEntryType.ADJUSTMENT
                     ? parseSignedAmount(transactionAmountField.getText(), "Adjustment amount")
                     : transactionAmountField.parseRequiredPositive();
+
+            if (type == SavingsEntryType.CONTRIBUTION) {
+                MonthlyBalanceSnapshot projected = monthlyBalanceService.buildProjectedSnapshot(
+                        appContext.getSelectedMonth(),
+                        amount,
+                        BigDecimal.ZERO
+                );
+                if (projected.getWarningLevel() != MonthlyBalanceWarningLevel.OK
+                        && !confirmLowBalance(projected, amount, "savings contribution")) {
+                    return;
+                }
+            }
 
             switch (type) {
                 case CONTRIBUTION -> savingsService.addContribution(selectedBucketId, amount, entryDate, transactionNoteField.getText());
@@ -509,6 +556,33 @@ public class SavingsPage extends VBox {
                     "Plan " + MoneyUtils.format(planned, currencyCode) + " | Delta " + deltaText
             );
         }
+
+        refreshCashFlowCard(month, currencyCode);
+    }
+
+    private void refreshCashFlowCard(YearMonth month, String currencyCode) {
+        MonthlyBalanceSnapshot snapshot = monthlyBalanceService.buildSnapshot(month);
+        cashFlowMetricsBox.getChildren().setAll(
+                new MetricRow("Planned Income", MoneyUtils.format(snapshot.getPlannedIncome(), currencyCode)),
+                new MetricRow("Spent So Far", MoneyUtils.format(snapshot.getTotalExpenses(), currencyCode)),
+                new MetricRow("Allocated to Savings (Net)", MoneyUtils.format(snapshot.getNetSavingsAllocationsThisMonth(), currencyCode)),
+                new MetricRow("Allocated to Goals (Net)", MoneyUtils.format(snapshot.getNetGoalAllocationsThisMonth(), currencyCode)),
+                new MetricRow("Available After Allocations", MoneyUtils.format(snapshot.getAvailableAfterAllocations(), currencyCode))
+        );
+
+        cashFlowWarningLabel.getStyleClass().removeAll(
+                "cash-flow-warning-ok",
+                "cash-flow-warning-low",
+                "cash-flow-warning-negative"
+        );
+        if (snapshot.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE) {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-negative");
+        } else if (snapshot.getWarningLevel() == MonthlyBalanceWarningLevel.LOW) {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-low");
+        } else {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-ok");
+        }
+        cashFlowWarningLabel.setText(snapshot.getWarningMessage());
     }
 
     private void refreshBucketList() {
@@ -551,16 +625,18 @@ public class SavingsPage extends VBox {
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedBucketId = bucket.getId();
             refreshAll();
         });
 
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadBucketForEdit(bucket));
 
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteBucket(bucket));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -692,6 +768,27 @@ public class SavingsPage extends VBox {
         return result.isPresent() && result.get() == ButtonType.OK;
     }
 
+    private boolean confirmLowBalance(MonthlyBalanceSnapshot projected, BigDecimal amount, String actionLabel) {
+        String currencyCode = resolveCurrencyCode();
+        String header = projected.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE
+                ? "Negative available balance"
+                : "Low available balance";
+        String message = "This " + actionLabel + " of " + MoneyUtils.format(amount, currencyCode)
+                + " will reduce your available monthly balance to "
+                + MoneyUtils.format(projected.getAvailableAfterAllocations(), currencyCode) + ".\n\n"
+                + "You are allocating more money than your month currently supports (income - expenses).";
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Low available balance");
+        alert.setHeaderText(header);
+        alert.setContentText(message);
+        ButtonType proceed = new ButtonType("Proceed anyway");
+        ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(proceed, cancel);
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == proceed;
+    }
+
     private void addFormRow(GridPane grid, int rowIndex, String labelText, Node field) {
         Label label = new Label(labelText);
         label.getStyleClass().add("form-label");
@@ -754,7 +851,7 @@ public class SavingsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

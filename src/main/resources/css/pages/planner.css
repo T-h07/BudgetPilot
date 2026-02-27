@@ -15,15 +15,19 @@
     -fx-min-height: 330;
 }
 
+.planner-plan-actual-card {
+    -fx-min-height: 340;
+}
+
 .planner-weekly-table {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
 
 .planner-weekly-table .column-header-background {
-    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-color: -bp-surface-soft;
     -fx-background-radius: 10 10 0 0;
 }
 
@@ -40,12 +44,12 @@
 }
 
 .planner-weekly-table .table-row-cell {
-    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-background-color: -bp-surface-muted;
     -fx-border-color: transparent;
 }
 
 .planner-weekly-table .table-row-cell:filled:selected {
-    -fx-background-color: rgba(54, 163, 255, 0.2);
+    -fx-background-color: -bp-surface-selected;
 }
 
 .planner-weekly-table .table-cell {
@@ -53,13 +57,72 @@
     -fx-border-color: transparent;
 }
 
+.planner-plan-actual-table {
+    -fx-background-color: transparent;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.planner-plan-actual-table .column-header-background {
+    -fx-background-color: -bp-surface-soft;
+    -fx-background-radius: 10 10 0 0;
+}
+
+.planner-plan-actual-table .column-header,
+.planner-plan-actual-table .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.planner-plan-actual-table .column-header .label {
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.planner-plan-actual-table .table-row-cell {
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: transparent;
+}
+
+.planner-plan-actual-table .table-row-cell:filled:selected {
+    -fx-background-color: -bp-surface-selected;
+}
+
+.planner-plan-actual-table .table-cell {
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+}
+
+.planner-unplanned-highlight {
+    -fx-padding: 10 12;
+    -fx-background-color: -bp-surface-subtle;
+    -fx-border-color: -bp-border-muted;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.planner-unplanned-value {
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+}
+
+.planner-unplanned-ok {
+    -fx-text-fill: -bp-success;
+}
+
+.planner-unplanned-warn {
+    -fx-text-fill: -bp-warning;
+}
+
 .planner-status-healthy {
-    -fx-text-fill: #8cf5ba;
+    -fx-text-fill: -bp-success;
     -fx-font-weight: 700;
 }
 
 .planner-status-warning {
-    -fx-text-fill: #ffc99b;
+    -fx-text-fill: -bp-warning;
     -fx-font-weight: 700;
 }
 

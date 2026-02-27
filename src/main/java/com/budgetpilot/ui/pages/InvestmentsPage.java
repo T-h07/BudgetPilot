@@ -8,9 +8,9 @@ import com.budgetpilot.model.enums.InvestmentKind;
 import com.budgetpilot.model.enums.InvestmentStatus;
 import com.budgetpilot.model.enums.InvestmentTransactionType;
 import com.budgetpilot.model.enums.InvestmentType;
-import com.budgetpilot.service.InvestmentPageSummary;
-import com.budgetpilot.service.InvestmentPositionSummary;
-import com.budgetpilot.service.InvestmentService;
+import com.budgetpilot.service.investments.InvestmentPageSummary;
+import com.budgetpilot.service.investments.InvestmentPositionSummary;
+import com.budgetpilot.service.investments.InvestmentService;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
@@ -146,31 +146,31 @@ public class InvestmentsPage extends VBox {
     private void setupInvestmentForm() {
         typeCombo.getItems().setAll(InvestmentType.values());
         typeCombo.getSelectionModel().select(InvestmentType.OTHER);
-        typeCombo.getStyleClass().add("combo-box");
+        typeCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         kindCombo.getItems().setAll(InvestmentKind.values());
         kindCombo.getSelectionModel().select(InvestmentKind.MONEY);
-        kindCombo.getStyleClass().add("combo-box");
+        kindCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         statusCombo.getItems().setAll(InvestmentStatus.values());
         statusCombo.getSelectionModel().select(InvestmentStatus.PLANNED);
-        statusCombo.getStyleClass().add("combo-box");
+        statusCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         priorityCombo.getItems().setAll(1, 2, 3, 4, 5);
         priorityCombo.getSelectionModel().select(Integer.valueOf(3));
-        priorityCombo.getStyleClass().add("combo-box");
+        priorityCombo.getStyleClass().addAll("combo-box", "form-combo");
 
-        startDatePicker.getStyleClass().add("date-picker");
+        startDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         startDatePicker.setValue(defaultDateForSelectedMonth());
 
-        expectedReturnDatePicker.getStyleClass().add("date-picker");
+        expectedReturnDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         expectedReturnDatePicker.setPromptText("Optional");
 
         activeCheck.setSelected(true);
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().add("text-input");
+        notesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         investmentsListBox.getStyleClass().add("investment-list");
     }
@@ -181,12 +181,12 @@ public class InvestmentsPage extends VBox {
         selectedInvestmentMeta.getStyleClass().add("muted-text");
         selectedInvestmentProgress.getStyleClass().add("investment-progress-bar");
 
-        transactionDatePicker.getStyleClass().add("date-picker");
+        transactionDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         transactionDatePicker.setValue(defaultDateForSelectedMonth());
 
         transactionTypeCombo.getItems().setAll(InvestmentTransactionType.values());
         transactionTypeCombo.getSelectionModel().select(InvestmentTransactionType.CONTRIBUTION);
-        transactionTypeCombo.getStyleClass().add("combo-box");
+        transactionTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
     }
 
     private void setupTransactionTable() {
@@ -216,7 +216,12 @@ public class InvestmentsPage extends VBox {
                     getStyleClass().removeAll("status-good", "status-danger");
                     return;
                 }
-                InvestmentTransaction tx = getTableView().getItems().get(getIndex());
+                int rowIndex = getIndex();
+                if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                    getStyleClass().removeAll("status-good", "status-danger");
+                    return;
+                }
+                InvestmentTransaction tx = getTableView().getItems().get(rowIndex);
                 getStyleClass().removeAll("status-good", "status-danger");
                 if (isPositiveTransaction(tx)) {
                     getStyleClass().add("status-good");
@@ -234,8 +239,14 @@ public class InvestmentsPage extends VBox {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().add("danger-button");
-                deleteButton.setOnAction(event -> onDeleteTransaction(getTableView().getItems().get(getIndex())));
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteTransaction(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -249,12 +260,14 @@ public class InvestmentsPage extends VBox {
     }
 
     private void setupActions() {
-        saveInvestmentButton.getStyleClass().add("quick-add-button");
+        saveInvestmentButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveInvestmentButton.setOnAction(event -> onSaveInvestment());
+        clearInvestmentButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearInvestmentButton.setOnAction(event -> clearInvestmentForm());
 
-        addTransactionButton.getStyleClass().add("quick-add-button");
+        addTransactionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addTransactionButton.setOnAction(event -> onAddTransaction());
+        clearTransactionButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearTransactionButton.setOnAction(event -> clearTransactionForm());
     }
 
@@ -584,14 +597,16 @@ public class InvestmentsPage extends VBox {
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedInvestmentId = investment.getId();
             refreshAll();
         });
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadInvestmentForEdit(investment));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteInvestment(investment));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -808,7 +823,7 @@ public class InvestmentsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

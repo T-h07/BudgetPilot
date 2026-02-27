@@ -1,0 +1,128 @@
+.date-picker,
+.form-datepicker {
+    -fx-background-color: -bp-control-bg;
+    -fx-control-inner-background: -bp-control-inner;
+    -fx-border-color: -bp-border-strong;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.date-picker > .text-field,
+.form-datepicker > .text-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -bp-text-primary;
+    -fx-prompt-text-fill: -bp-text-muted;
+}
+
+.date-picker > .arrow-button,
+.form-datepicker > .arrow-button {
+    -fx-background-color: -bp-control-bg-strong;
+    -fx-background-radius: 0 10 10 0;
+    -fx-border-color: -bp-border-strong;
+    -fx-border-width: 0 0 0 1;
+    -fx-border-radius: 0 10 10 0;
+}
+
+.date-picker > .arrow-button:hover,
+.form-datepicker > .arrow-button:hover {
+    -fx-background-color: -bp-accent-soft;
+}
+
+.date-picker .arrow,
+.form-datepicker .arrow {
+    -fx-background-color: -bp-text-secondary;
+}
+
+.date-picker:focused,
+.form-datepicker:focused {
+    -fx-border-color: -bp-accent;
+    -fx-effect: dropshadow(gaussian, rgba(54, 163, 255, 0.18), 8, 0.2, 0, 2);
+}
+
+.date-picker-popup {
+    -fx-background-color: -bp-surface-alt;
+    -fx-border-color: -bp-border-strong;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 8;
+    -fx-effect: dropshadow(gaussian, -bp-shadow-color, 18, 0.25, 0, 6);
+}
+
+.date-picker-popup > * {
+    -fx-background-color: transparent;
+}
+
+.date-picker-popup .month-year-pane {
+    -fx-background-color: -bp-surface-subtle;
+    -fx-border-color: -bp-border-muted;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8 10;
+}
+
+.date-picker-popup .month-year-pane .label {
+    -fx-text-fill: -bp-text-primary;
+    -fx-font-weight: 700;
+}
+
+.date-picker-popup .spinner .button {
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-strong;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.date-picker-popup .spinner .button:hover {
+    -fx-background-color: rgba(54, 163, 255, 0.2);
+}
+
+.date-picker-popup .spinner .left-arrow,
+.date-picker-popup .spinner .right-arrow {
+    -fx-background-color: -bp-text-secondary;
+}
+
+.date-picker-popup .calendar-grid {
+    -fx-background-color: transparent;
+    -fx-padding: 8 6 6 6;
+}
+
+.date-picker-popup .day-name-cell,
+.date-picker-popup .week-number-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -bp-text-secondary;
+    -fx-font-weight: 600;
+}
+
+.date-picker-popup .day-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -bp-text-primary;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6;
+}
+
+.date-picker-popup .day-cell:hover {
+    -fx-background-color: -bp-accent-soft;
+}
+
+.date-picker-popup .day-cell:focused {
+    -fx-border-color: -bp-accent;
+}
+
+.date-picker-popup .day-cell:selected {
+    -fx-background-color: -bp-accent;
+    -fx-text-fill: -bp-text-inverse;
+}
+
+.date-picker-popup .day-cell.today {
+    -fx-border-color: -bp-accent;
+    -fx-border-width: 1;
+    -fx-background-color: rgba(54, 163, 255, 0.14);
+}
+
+.date-picker-popup .day-cell:disabled {
+    -fx-text-fill: -bp-text-muted;
+}

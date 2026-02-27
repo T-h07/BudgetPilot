@@ -5,11 +5,11 @@ import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.HabitSeverity;
-import com.budgetpilot.service.HabitInsight;
-import com.budgetpilot.service.HabitPageSummary;
-import com.budgetpilot.service.HabitService;
-import com.budgetpilot.service.HabitSpendSummary;
-import com.budgetpilot.service.HabitStatus;
+import com.budgetpilot.service.habits.HabitInsight;
+import com.budgetpilot.service.habits.HabitPageSummary;
+import com.budgetpilot.service.habits.HabitService;
+import com.budgetpilot.service.habits.HabitSpendSummary;
+import com.budgetpilot.service.habits.HabitStatus;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
@@ -125,7 +125,7 @@ public class HabitsPage extends VBox {
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().add("text-input");
+        notesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         ruleListBox.getStyleClass().add("habit-rule-list");
         evaluationListBox.getStyleClass().add("habit-evaluation-list");
@@ -133,8 +133,9 @@ public class HabitsPage extends VBox {
     }
 
     private void setupActions() {
-        saveRuleButton.getStyleClass().add("quick-add-button");
+        saveRuleButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveRuleButton.setOnAction(event -> onSaveRule());
+        clearRuleButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearRuleButton.setOnAction(event -> clearRuleForm());
     }
 
@@ -359,14 +360,16 @@ public class HabitsPage extends VBox {
         spendLabel.getStyleClass().add(statusStyleClass(status));
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedRuleId = rule.getId();
             refreshAll();
         });
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadRuleForEdit(rule));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteRule(rule));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -542,7 +545,7 @@ public class HabitsPage extends VBox {
     }
 
     private void configureCategoryCombo(ComboBox<ExpenseCategory> comboBox) {
-        comboBox.getStyleClass().add("combo-box");
+        comboBox.getStyleClass().addAll("combo-box", "form-combo");
         comboBox.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(ExpenseCategory item, boolean empty) {
@@ -616,7 +619,7 @@ public class HabitsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

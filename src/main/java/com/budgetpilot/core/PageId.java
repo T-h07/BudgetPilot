@@ -1,6 +1,7 @@
 package com.budgetpilot.core;
 
 public enum PageId {
+    LOGIN("Login"),
     DASHBOARD("Dashboard"),
     EXPENSES("Expenses"),
     PLANNER("Planner"),

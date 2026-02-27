@@ -2,13 +2,22 @@ package com.budgetpilot.ui.pages;
 
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.core.PageId;
+import com.budgetpilot.core.Theme;
+import com.budgetpilot.core.ThemeManager;
 import com.budgetpilot.model.UserProfile;
-import com.budgetpilot.service.BackupService;
+import com.budgetpilot.service.backup.BackupService;
 import com.budgetpilot.service.PersistenceStatus;
+import com.budgetpilot.service.month.ExpenseTemplateCandidate;
+import com.budgetpilot.service.month.MonthRolloverService;
 import com.budgetpilot.model.enums.UserProfileType;
-import com.budgetpilot.service.SettingsService;
+import com.budgetpilot.service.retention.DataRetentionService;
+import com.budgetpilot.service.settings.SettingsService;
+import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.store.DbStore;
+import com.budgetpilot.ui.components.MonthRolloverDialog;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.ToggleCard;
+import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.UiUtils;
 import com.budgetpilot.util.ValidationUtils;
 import javafx.stage.FileChooser;
@@ -32,12 +41,17 @@ import javafx.stage.Window;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 
 public class SettingsPage extends VBox {
     private final AppContext appContext;
     private final SettingsService settingsService;
     private final BackupService backupService;
+    private final MonthRolloverService rolloverService;
+    private final DataRetentionService dataRetentionService;
     private final Runnable contextListener = this::populateFromContext;
 
     private final Label bannerLabel = new Label();
@@ -48,10 +62,12 @@ public class SettingsPage extends VBox {
     private final TextField ageField = textField("Age");
     private final TextField currencyField = textField("Currency");
     private final ComboBox<UserProfileType> profileTypeCombo = new ComboBox<>();
+    private final ComboBox<Theme> themeCombo = new ComboBox<>();
 
     private final ToggleCard familyModuleToggle = new ToggleCard("Family Module", "Enable dependent and family budgeting pages.");
     private final ToggleCard investmentsModuleToggle = new ToggleCard("Investments Module", "Enable investment tracking and allocation workspace.");
     private final ToggleCard achievementsModuleToggle = new ToggleCard("Achievements Module", "Enable habit streaks and achievement milestones.");
+    private boolean populatingForm;
 
     private final Label persistenceStatusLabel = new Label();
     private final Label databasePathLabel = new Label();
@@ -61,6 +77,8 @@ public class SettingsPage extends VBox {
         this.appContext = appContext;
         this.settingsService = new SettingsService(appContext);
         this.backupService = new BackupService(appContext);
+        this.rolloverService = new MonthRolloverService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.dataRetentionService = new DataRetentionService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -89,6 +107,13 @@ public class SettingsPage extends VBox {
         );
         modulesSection.getStyleClass().add("settings-section");
 
+        SectionCard appearanceSection = new SectionCard(
+                "Appearance",
+                "Switch between dark and light theme palettes. Changes apply instantly.",
+                buildAppearanceSectionBody()
+        );
+        appearanceSection.getStyleClass().add("settings-section");
+
         SectionCard monthSection = new SectionCard(
                 "Month & Session",
                 "Move between months and optionally initialize a fresh plan.",
@@ -110,7 +135,7 @@ public class SettingsPage extends VBox {
         );
         developerSection.getStyleClass().add("settings-section");
 
-        getChildren().addAll(profileSection, modulesSection, monthSection, persistenceSection, developerSection);
+        getChildren().addAll(profileSection, modulesSection, appearanceSection, monthSection, persistenceSection, developerSection);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -123,7 +148,7 @@ public class SettingsPage extends VBox {
 
     private Node buildProfileSectionBody() {
         profileTypeCombo.getItems().setAll(UserProfileType.values());
-        profileTypeCombo.getStyleClass().add("combo-box");
+        profileTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         GridPane form = createFormGrid();
         addFormRow(form, 0, "First Name", firstNameField);
@@ -134,19 +159,27 @@ public class SettingsPage extends VBox {
         addFormRow(form, 5, "Profile Type", profileTypeCombo);
 
         Button saveButton = new Button("Save Profile");
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> saveProfile());
 
         Button resetButton = new Button("Reset");
+        resetButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         resetButton.setOnAction(event -> populateFromContext());
 
-        HBox actions = new HBox(10, saveButton, resetButton);
+        Button signOutButton = new Button("Sign Out");
+        signOutButton.getStyleClass().addAll("secondary-button", "btn-secondary");
+        signOutButton.setOnAction(event -> {
+            appContext.signOut();
+            appContext.navigate(PageId.LOGIN);
+        });
+
+        HBox actions = new HBox(10, saveButton, resetButton, signOutButton);
         return new VBox(12, form, actions);
     }
 
     private Node buildModuleSectionBody() {
         Button saveModulesButton = new Button("Save Module Preferences");
-        saveModulesButton.getStyleClass().add("quick-add-button");
+        saveModulesButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveModulesButton.setOnAction(event -> saveModules());
 
         return new VBox(
@@ -169,22 +202,18 @@ public class SettingsPage extends VBox {
         );
 
         Button prevButton = new Button("Previous Month");
+        prevButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         prevButton.setOnAction(event -> settingsService.shiftSelectedMonth(-1));
 
         Button nextButton = new Button("Next Month");
+        nextButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         nextButton.setOnAction(event -> settingsService.shiftSelectedMonth(1));
 
-        Button currentButton = new Button("Current Month");
-        currentButton.setOnAction(event -> settingsService.jumpToCurrentMonth());
-
         Button newMonthButton = new Button("Start New Month");
-        newMonthButton.getStyleClass().add("quick-add-button");
-        newMonthButton.setOnAction(event -> {
-            settingsService.startNewMonth();
-            showSuccess("Moved to a new month and ensured a monthly plan exists.");
-        });
+        newMonthButton.getStyleClass().addAll("quick-add-button", "btn-primary");
+        newMonthButton.setOnAction(event -> startNewMonthFromSettings());
 
-        HBox controls = new HBox(10, prevButton, nextButton, currentButton, newMonthButton);
+        HBox controls = new HBox(10, prevButton, nextButton, newMonthButton);
         controls.setAlignment(Pos.CENTER_LEFT);
 
         return new VBox(12, monthLabel, controls);
@@ -192,7 +221,7 @@ public class SettingsPage extends VBox {
 
     private Node buildDeveloperSectionBody() {
         Button clearAllButton = new Button("Clear All Data");
-        clearAllButton.getStyleClass().add("danger-button");
+        clearAllButton.getStyleClass().addAll("danger-button", "btn-danger");
         clearAllButton.setOnAction(event -> {
             if (confirm("Clear all BudgetPilot data? This action cannot be undone.")) {
                 settingsService.clearAllData();
@@ -202,6 +231,7 @@ public class SettingsPage extends VBox {
         });
 
         Button seedDemoButton = new Button("Seed Demo Data (Selected Month)");
+        seedDemoButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         seedDemoButton.setOnAction(event -> {
             settingsService.seedDemoDataForSelectedMonth();
             populateFromContext();
@@ -209,7 +239,7 @@ public class SettingsPage extends VBox {
         });
 
         Button freshOnboardingButton = new Button("Reset to Fresh Onboarding");
-        freshOnboardingButton.getStyleClass().add("danger-button");
+        freshOnboardingButton.getStyleClass().addAll("danger-button", "btn-danger");
         freshOnboardingButton.setOnAction(event -> {
             if (confirm("Reset app to fresh onboarding state? This clears all current data.")) {
                 settingsService.resetToFreshOnboarding();
@@ -227,7 +257,7 @@ public class SettingsPage extends VBox {
         backupsPathLabel.getStyleClass().addAll("muted-text", "settings-data-path");
 
         Button exportBackupButton = new Button("Export Backup");
-        exportBackupButton.getStyleClass().add("quick-add-button");
+        exportBackupButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         exportBackupButton.setOnAction(event -> {
             clearBanner();
             try {
@@ -239,6 +269,7 @@ public class SettingsPage extends VBox {
         });
 
         Button importBackupButton = new Button("Import Backup");
+        importBackupButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         importBackupButton.setOnAction(event -> {
             clearBanner();
             if (!confirm("Import backup and replace current data?")) {
@@ -263,6 +294,7 @@ public class SettingsPage extends VBox {
         });
 
         Button openDataFolderButton = new Button("Open Data Folder");
+        openDataFolderButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         openDataFolderButton.setOnAction(event -> {
             clearBanner();
             PersistenceStatus status = appContext.getPersistenceStatus();
@@ -287,15 +319,47 @@ public class SettingsPage extends VBox {
         actions.getStyleClass().add("backup-actions-row");
         actions.setAlignment(Pos.CENTER_LEFT);
 
+        Label retentionInfo = new Label("Old monthly data older than 12 months is automatically removed.");
+        retentionInfo.getStyleClass().addAll("banner-info", "muted-text");
+        retentionInfo.setWrapText(true);
+
         VBox box = new VBox(10,
                 persistenceStatusLabel,
                 new Label("Database Path:"),
                 databasePathLabel,
                 new Label("Backups Folder:"),
                 backupsPathLabel,
+                retentionInfo,
                 actions
         );
         return box;
+    }
+
+    private Node buildAppearanceSectionBody() {
+        themeCombo.getItems().setAll(Theme.values());
+        themeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        themeCombo.valueProperty().addListener((obs, oldTheme, newTheme) -> {
+            if (populatingForm || newTheme == null || newTheme == oldTheme) {
+                return;
+            }
+            clearBanner();
+            try {
+                settingsService.updateTheme(newTheme);
+                if (getScene() != null) {
+                    ThemeManager.apply(getScene(), newTheme);
+                }
+                showSuccess("Theme applied: " + newTheme.getLabel() + ".");
+            } catch (RuntimeException ex) {
+                showError("Unable to apply theme: " + ex.getMessage());
+            }
+        });
+
+        GridPane form = createFormGrid();
+        addFormRow(form, 0, "Theme", themeCombo);
+
+        Label helper = new Label("Applied instantly and remembered for next startup.");
+        helper.getStyleClass().add("muted-text");
+        return new VBox(10, form, helper);
     }
 
     private void saveProfile() {
@@ -330,31 +394,84 @@ public class SettingsPage extends VBox {
         }
     }
 
-    private void populateFromContext() {
-        updatePersistenceStatus();
-        UserProfile profile = appContext.getCurrentUser();
-        if (profile == null) {
-            firstNameField.setText("");
-            lastNameField.setText("");
-            emailField.setText("");
-            ageField.setText("");
-            currencyField.setText("EUR");
-            profileTypeCombo.getSelectionModel().select(UserProfileType.PERSONAL_USE);
-            familyModuleToggle.getToggle().setSelected(false);
-            investmentsModuleToggle.getToggle().setSelected(true);
-            achievementsModuleToggle.getToggle().setSelected(true);
+    private void startNewMonthFromSettings() {
+        clearBanner();
+        YearMonth sourceMonth = appContext.getSelectedMonth();
+        YearMonth targetMonth = sourceMonth.plusMonths(1);
+
+        if (sourceMonth.equals(MonthUtils.currentMonth())) {
+            int todayDay = LocalDate.now().getDayOfMonth();
+            if (todayDay < sourceMonth.lengthOfMonth()) {
+                boolean confirmed = confirm("This month is not finished yet. Are you sure you want to start a new month?");
+                if (!confirmed) {
+                    return;
+                }
+            }
+        }
+
+        String currencyCode = appContext.getCurrentUser() == null ? "EUR" : appContext.getCurrentUser().getCurrencyCode();
+        List<ExpenseTemplateCandidate> candidates = rolloverService.buildExpenseTemplateCandidates(sourceMonth);
+        MonthRolloverDialog.Result wizardResult = MonthRolloverDialog.show(
+                getScene() == null ? null : getScene().getWindow(),
+                targetMonth,
+                candidates,
+                currencyCode
+        );
+        if (!wizardResult.isStartNewMonth()) {
             return;
         }
 
-        firstNameField.setText(profile.getFirstName());
-        lastNameField.setText(profile.getLastName());
-        emailField.setText(profile.getEmail());
-        ageField.setText(profile.getAge() == null ? "" : String.valueOf(profile.getAge()));
-        currencyField.setText(profile.getCurrencyCode());
-        profileTypeCombo.getSelectionModel().select(profile.getProfileType());
-        familyModuleToggle.getToggle().setSelected(profile.isFamilyModuleEnabled());
-        investmentsModuleToggle.getToggle().setSelected(profile.isInvestmentsModuleEnabled());
-        achievementsModuleToggle.getToggle().setSelected(profile.isAchievementsModuleEnabled());
+        try {
+            BudgetStore store = ValidationUtils.requireNonNull(appContext.getStore(), "store");
+            if (store instanceof DbStore dbStore) {
+                dbStore.runBulkUpdate(() -> {
+                    rolloverService.startNewMonth(targetMonth, wizardResult.getOptions());
+                    dataRetentionService.purgeOldMonthData();
+                });
+            } else {
+                rolloverService.startNewMonth(targetMonth, wizardResult.getOptions());
+                dataRetentionService.purgeOldMonthData();
+            }
+            appContext.setSelectedMonth(targetMonth);
+            appContext.notifyContextChanged();
+            showSuccess("Started " + MonthUtils.format(targetMonth) + " successfully.");
+        } catch (RuntimeException ex) {
+            showError("Unable to start new month: " + ex.getMessage());
+        }
+    }
+
+    private void populateFromContext() {
+        populatingForm = true;
+        try {
+            updatePersistenceStatus();
+            UserProfile profile = appContext.getCurrentUser();
+            if (profile == null) {
+                firstNameField.setText("");
+                lastNameField.setText("");
+                emailField.setText("");
+                ageField.setText("");
+                currencyField.setText("EUR");
+                profileTypeCombo.getSelectionModel().select(UserProfileType.PERSONAL_USE);
+                familyModuleToggle.getToggle().setSelected(false);
+                investmentsModuleToggle.getToggle().setSelected(true);
+                achievementsModuleToggle.getToggle().setSelected(true);
+                themeCombo.getSelectionModel().select(appContext.getTheme());
+                return;
+            }
+
+            firstNameField.setText(profile.getFirstName());
+            lastNameField.setText(profile.getLastName());
+            emailField.setText(profile.getEmail());
+            ageField.setText(profile.getAge() == null ? "" : String.valueOf(profile.getAge()));
+            currencyField.setText(profile.getCurrencyCode());
+            profileTypeCombo.getSelectionModel().select(profile.getProfileType());
+            familyModuleToggle.getToggle().setSelected(profile.isFamilyModuleEnabled());
+            investmentsModuleToggle.getToggle().setSelected(profile.isInvestmentsModuleEnabled());
+            achievementsModuleToggle.getToggle().setSelected(profile.isAchievementsModuleEnabled());
+            themeCombo.getSelectionModel().select(appContext.getTheme());
+        } finally {
+            populatingForm = false;
+        }
     }
 
     private void updatePersistenceStatus() {
@@ -434,7 +551,7 @@ public class SettingsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

@@ -3,7 +3,7 @@
 }
 
 .settings-section .toggle-row {
-    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-color: -bp-surface-soft;
 }
 
 .settings-section .button {
@@ -18,17 +18,17 @@
 }
 
 .persistence-status-ok {
-    -fx-background-color: rgba(86, 196, 130, 0.17);
-    -fx-border-color: rgba(86, 196, 130, 0.45);
+    -fx-background-color: -bp-success-soft;
+    -fx-border-color: -bp-success;
     -fx-border-width: 1;
-    -fx-text-fill: #d7ffea;
+    -fx-text-fill: -bp-success-text;
 }
 
 .persistence-status-fallback {
-    -fx-background-color: rgba(246, 185, 80, 0.2);
-    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-background-color: -bp-warning-soft;
+    -fx-border-color: -bp-warning;
     -fx-border-width: 1;
-    -fx-text-fill: #ffe8b6;
+    -fx-text-fill: -bp-warning-text;
 }
 
 .settings-data-path {

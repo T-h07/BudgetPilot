@@ -1,0 +1,44 @@
+.root {
+    -bp-bg: #0b1220;
+    -bp-bg-gradient-start: #0b1220;
+    -bp-bg-gradient-end: #09101d;
+    -bp-surface: #131c2e;
+    -bp-surface-elevated: #182339;
+    -bp-surface-alt: #152038;
+    -bp-surface-muted: rgba(255, 255, 255, 0.03);
+    -bp-surface-subtle: rgba(255, 255, 255, 0.04);
+    -bp-surface-soft: rgba(255, 255, 255, 0.05);
+    -bp-surface-strong: rgba(255, 255, 255, 0.08);
+    -bp-surface-hover: rgba(255, 255, 255, 0.12);
+    -bp-surface-selected: rgba(54, 163, 255, 0.2);
+    -bp-control-bg: rgba(255, 255, 255, 0.06);
+    -bp-control-bg-strong: rgba(255, 255, 255, 0.08);
+    -bp-control-hover: rgba(255, 255, 255, 0.12);
+    -bp-control-inner: rgba(255, 255, 255, 0.06);
+    -bp-border: #243451;
+    -bp-border-soft: rgba(255, 255, 255, 0.08);
+    -bp-border-muted: rgba(255, 255, 255, 0.1);
+    -bp-border-strong: rgba(255, 255, 255, 0.16);
+    -bp-text-primary: #eef2ff;
+    -bp-text-secondary: #9fb0d3;
+    -bp-text-muted: rgba(159, 176, 211, 0.78);
+    -bp-text-inverse: #ffffff;
+    -bp-overlay: rgba(10, 17, 31, 0.88);
+    -bp-shadow-color: rgba(0, 0, 0, 0.38);
+    -bp-chart-grid: rgba(255, 255, 255, 0.08);
+
+    -bp-accent: #36a3ff;
+    -bp-accent-strong: #1e84de;
+    -bp-accent-soft: rgba(54, 163, 255, 0.16);
+    -bp-success: #57c678;
+    -bp-warning: #f6b950;
+    -bp-danger: #ef6666;
+    -bp-success-soft: rgba(86, 196, 130, 0.2);
+    -bp-warning-soft: rgba(246, 185, 80, 0.2);
+    -bp-danger-soft: rgba(240, 97, 97, 0.2);
+
+    -bp-success-text: #d7ffe7;
+    -bp-warning-text: #ffe8b6;
+    -bp-danger-text: #ffd7d7;
+    -bp-info-text: #d7ebff;
+}

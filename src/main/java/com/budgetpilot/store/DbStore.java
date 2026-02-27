@@ -16,6 +16,7 @@ import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.FamilyExpenseType;
 import com.budgetpilot.model.enums.GoalContributionType;
+import com.budgetpilot.model.enums.GoalFundingSource;
 import com.budgetpilot.model.enums.GoalType;
 import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.InvestmentKind;
@@ -23,6 +24,7 @@ import com.budgetpilot.model.enums.InvestmentStatus;
 import com.budgetpilot.model.enums.InvestmentTransactionType;
 import com.budgetpilot.model.enums.InvestmentType;
 import com.budgetpilot.model.enums.PaymentMethod;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.SavingsEntryType;
 import com.budgetpilot.model.enums.UserProfileType;
@@ -180,6 +182,11 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     }
 
     @Override
+    public synchronized void purgeMonthsBefore(YearMonth cutoff) {
+        persistWith(() -> super.purgeMonthsBefore(cutoff));
+    }
+
+    @Override
     public synchronized void saveAppSetting(String key, String value) {
         persistWith(() -> super.saveAppSetting(key, value));
     }
@@ -237,6 +244,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 profile.setFirstName(rs.getString("first_name"));
                 profile.setLastName(rs.getString("last_name"));
                 profile.setEmail(rs.getString("email"));
+                profile.setPasswordHash(rs.getString("password_hash"));
+                profile.setActive(DbUtils.fromIntBoolean(rs.getInt("active")));
                 Object ageObject = rs.getObject("age");
                 profile.setAge(ageObject == null ? null : rs.getInt("age"));
                 profile.setProfileType(DbUtils.parseEnum(rs.getString("profile_type"), UserProfileType.class, UserProfileType.PERSONAL_USE, "user_profile.profile_type"));
@@ -327,6 +336,14 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setSubcategory(rs.getString("subcategory"));
                 entry.setNote(rs.getString("note"));
                 entry.setPaymentMethod(DbUtils.parseEnum(rs.getString("payment_method"), PaymentMethod.class, PaymentMethod.CARD, "expense_entries.payment_method"));
+                PlannerBucket plannerBucket = DbUtils.parseEnum(
+                        rs.getString("planner_bucket"),
+                        PlannerBucket.class,
+                        PlannerBucket.inferFromCategory(entry.getCategory()),
+                        "expense_entries.planner_bucket"
+                );
+                entry.setPlannerBucket(plannerBucket);
+                entry.setRecurring(DbUtils.fromIntBoolean(rs.getInt("recurring")));
                 entry.setTag(rs.getString("tag"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "expense_entries.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "expense_entries.updated_at"));
@@ -368,6 +385,7 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setEntryDate(DbUtils.parseLocalDate(rs.getString("entry_date"), LocalDate.now(), "savings_entries.entry_date"));
                 entry.setAmount(DbUtils.parseBigDecimal(rs.getString("amount"), "savings_entries.amount", BigDecimal.ONE));
                 entry.setEntryType(DbUtils.parseEnum(rs.getString("entry_type"), SavingsEntryType.class, SavingsEntryType.CONTRIBUTION, "savings_entries.entry_type"));
+                entry.setRelatedGoalId(rs.getString("related_goal_id"));
                 entry.setNote(rs.getString("note"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "savings_entries.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "savings_entries.updated_at"));
@@ -412,6 +430,13 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 entry.setContributionDate(DbUtils.parseLocalDate(rs.getString("contribution_date"), LocalDate.now(), "goal_contributions.contribution_date"));
                 entry.setAmount(DbUtils.parseBigDecimal(rs.getString("amount"), "goal_contributions.amount", BigDecimal.ONE));
                 entry.setType(DbUtils.parseEnum(rs.getString("type"), GoalContributionType.class, GoalContributionType.CONTRIBUTION, "goal_contributions.type"));
+                entry.setSourceType(DbUtils.parseEnum(
+                        rs.getString("source_type"),
+                        GoalFundingSource.class,
+                        GoalFundingSource.FREE_MONEY,
+                        "goal_contributions.source_type"
+                ));
+                entry.setSourceRefId(rs.getString("source_ref_id"));
                 entry.setNote(rs.getString("note"));
                 entry.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "goal_contributions.created_at"));
                 entry.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "goal_contributions.updated_at"));
@@ -559,6 +584,12 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
 
     private void clearTables() throws SQLException {
         try (Statement statement = connection.createStatement()) {
+            // Child tables first keeps cleanup resilient even if foreign key constraints change.
+            statement.executeUpdate("DELETE FROM savings_entries");
+            statement.executeUpdate("DELETE FROM goal_contributions");
+            statement.executeUpdate("DELETE FROM family_expense_entries");
+            statement.executeUpdate("DELETE FROM investment_transactions");
+
             statement.executeUpdate("DELETE FROM user_profile");
             statement.executeUpdate("DELETE FROM monthly_plans");
             statement.executeUpdate("DELETE FROM income_entries");
@@ -611,8 +642,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 INSERT INTO user_profile (
                     singleton_key, id, first_name, last_name, email, age, profile_type, currency_code,
                     family_module_enabled, investments_module_enabled, achievements_module_enabled,
-                    created_at, updated_at
-                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    password_hash, active, created_at, updated_at
+                ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, profile.getId());
@@ -629,8 +660,10 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
             ps.setInt(8, DbUtils.toIntBoolean(profile.isFamilyModuleEnabled()));
             ps.setInt(9, DbUtils.toIntBoolean(profile.isInvestmentsModuleEnabled()));
             ps.setInt(10, DbUtils.toIntBoolean(profile.isAchievementsModuleEnabled()));
-            ps.setString(11, profile.getCreatedAt().toString());
-            ps.setString(12, profile.getUpdatedAt().toString());
+            ps.setString(11, profile.getPasswordHash());
+            ps.setInt(12, DbUtils.toIntBoolean(profile.isActive()));
+            ps.setString(13, profile.getCreatedAt().toString());
+            ps.setString(14, profile.getUpdatedAt().toString());
             ps.executeUpdate();
         }
     }
@@ -693,23 +726,28 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertExpenseEntries() throws SQLException {
         String sql = """
                 INSERT INTO expense_entries (
-                    id, month, expense_date, amount, category, subcategory, note, payment_method, tag,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, month, expense_date, amount, category, planner_bucket, recurring,
+                    subcategory, note, payment_method, tag, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (ExpenseEntry entry : listAllExpenseEntries()) {
+                PlannerBucket plannerBucket = entry.getPlannerBucket() == null
+                        ? PlannerBucket.inferFromCategory(entry.getCategory())
+                        : entry.getPlannerBucket();
                 ps.setString(1, entry.getId());
                 ps.setString(2, entry.getMonth().toString());
                 ps.setString(3, entry.getExpenseDate().toString());
                 ps.setString(4, entry.getAmount().toPlainString());
                 ps.setString(5, entry.getCategory().name());
-                DbUtils.setNullableString(ps, 6, entry.getSubcategory());
-                DbUtils.setNullableString(ps, 7, entry.getNote());
-                ps.setString(8, entry.getPaymentMethod().name());
-                DbUtils.setNullableString(ps, 9, entry.getTag());
-                ps.setString(10, entry.getCreatedAt().toString());
-                ps.setString(11, entry.getUpdatedAt().toString());
+                ps.setString(6, plannerBucket.name());
+                ps.setInt(7, DbUtils.toIntBoolean(entry.isRecurring()));
+                DbUtils.setNullableString(ps, 8, entry.getSubcategory());
+                DbUtils.setNullableString(ps, 9, entry.getNote());
+                ps.setString(10, entry.getPaymentMethod().name());
+                DbUtils.setNullableString(ps, 11, entry.getTag());
+                ps.setString(12, entry.getCreatedAt().toString());
+                ps.setString(13, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -741,8 +779,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertSavingsEntries() throws SQLException {
         String sql = """
                 INSERT INTO savings_entries (
-                    id, bucket_id, month, entry_date, amount, entry_type, note, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, bucket_id, month, entry_date, amount, entry_type, related_goal_id, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (SavingsEntry entry : listAllSavingsEntries()) {
@@ -752,9 +790,10 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(4, entry.getEntryDate().toString());
                 ps.setString(5, entry.getAmount().toPlainString());
                 ps.setString(6, entry.getEntryType().name());
-                DbUtils.setNullableString(ps, 7, entry.getNote());
-                ps.setString(8, entry.getCreatedAt().toString());
-                ps.setString(9, entry.getUpdatedAt().toString());
+                DbUtils.setNullableString(ps, 7, entry.getRelatedGoalId());
+                DbUtils.setNullableString(ps, 8, entry.getNote());
+                ps.setString(9, entry.getCreatedAt().toString());
+                ps.setString(10, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -790,8 +829,8 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertGoalContributions() throws SQLException {
         String sql = """
                 INSERT INTO goal_contributions (
-                    id, goal_id, month, contribution_date, amount, type, note, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, goal_id, month, contribution_date, amount, type, source_type, source_ref_id, note, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (GoalContribution entry : listAllGoalContributions()) {
@@ -801,9 +840,11 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(4, entry.getContributionDate().toString());
                 ps.setString(5, entry.getAmount().toPlainString());
                 ps.setString(6, entry.getType().name());
-                DbUtils.setNullableString(ps, 7, entry.getNote());
-                ps.setString(8, entry.getCreatedAt().toString());
-                ps.setString(9, entry.getUpdatedAt().toString());
+                ps.setString(7, entry.getSourceType().name());
+                DbUtils.setNullableString(ps, 8, entry.getSourceRefId());
+                DbUtils.setNullableString(ps, 9, entry.getNote());
+                ps.setString(10, entry.getCreatedAt().toString());
+                ps.setString(11, entry.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();

@@ -5,6 +5,7 @@ import com.budgetpilot.service.PersistenceStatus;
 import com.budgetpilot.store.BudgetStore;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.ValidationUtils;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
@@ -18,8 +19,14 @@ public class AppContext {
             new SimpleObjectProperty<>(this, "selectedMonth", MonthUtils.currentMonth());
     private final ObjectProperty<UserProfile> currentUser =
             new SimpleObjectProperty<>(this, "currentUser");
+    private final ObjectProperty<Boolean> authenticated =
+            new SimpleObjectProperty<>(this, "authenticated", false);
+    private final ObjectProperty<String> authenticatedUserId =
+            new SimpleObjectProperty<>(this, "authenticatedUserId", null);
     private final ObjectProperty<PersistenceStatus> persistenceStatus =
             new SimpleObjectProperty<>(this, "persistenceStatus", new PersistenceStatus(false, "Persistence unavailable", null, null));
+    private final ObjectProperty<Theme> theme =
+            new SimpleObjectProperty<>(this, "theme", Theme.DARK);
 
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
     private BudgetStore store;
@@ -39,12 +46,24 @@ public class AppContext {
     }
 
     public void setSelectedMonth(YearMonth selectedMonth) {
-        this.selectedMonth.set(ValidationUtils.requireNonNull(selectedMonth, "selectedMonth"));
+        YearMonth validatedMonth = ValidationUtils.requireNonNull(selectedMonth, "selectedMonth");
+        if (validatedMonth.equals(this.selectedMonth.get())) {
+            return;
+        }
+        this.selectedMonth.set(validatedMonth);
         notifyContextChanged();
     }
 
     public ObjectProperty<YearMonth> selectedMonthProperty() {
         return selectedMonth;
+    }
+
+    public void addSelectedMonthListener(ChangeListener<? super YearMonth> listener) {
+        selectedMonth.addListener(listener);
+    }
+
+    public void removeSelectedMonthListener(ChangeListener<? super YearMonth> listener) {
+        selectedMonth.removeListener(listener);
     }
 
     public BudgetStore getStore() {
@@ -62,6 +81,15 @@ public class AppContext {
 
     public void setCurrentUser(UserProfile currentUser) {
         this.currentUser.set(currentUser);
+        if (currentUser == null) {
+            authenticated.set(false);
+            authenticatedUserId.set(null);
+        } else if (Boolean.TRUE.equals(authenticated.get())
+                && authenticatedUserId.get() != null
+                && !authenticatedUserId.get().equals(currentUser.getId())) {
+            authenticated.set(false);
+            authenticatedUserId.set(null);
+        }
         notifyContextChanged();
     }
 
@@ -70,15 +98,57 @@ public class AppContext {
     }
 
     public boolean onboardingCompleted() {
-        return getCurrentUser() != null;
+        UserProfile profile = getCurrentUser();
+        return profile != null && profile.getPasswordHash() != null && !profile.getPasswordHash().isBlank();
     }
 
     public void reloadCurrentUserFromStore() {
+        UserProfile loaded;
         if (store == null) {
-            currentUser.set(null);
+            loaded = null;
         } else {
-            currentUser.set(store.getUserProfile());
+            loaded = store.getUserProfile();
         }
+        currentUser.set(loaded);
+        if (loaded == null) {
+            authenticated.set(false);
+            authenticatedUserId.set(null);
+        } else if (Boolean.TRUE.equals(authenticated.get())) {
+            String sessionUser = authenticatedUserId.get();
+            if (sessionUser == null || !sessionUser.equals(loaded.getId())) {
+                authenticated.set(false);
+                authenticatedUserId.set(null);
+            }
+        }
+        notifyContextChanged();
+    }
+
+    public boolean isAuthenticated() {
+        return Boolean.TRUE.equals(authenticated.get());
+    }
+
+    public ObjectProperty<Boolean> authenticatedProperty() {
+        return authenticated;
+    }
+
+    public String getAuthenticatedUserId() {
+        return authenticatedUserId.get();
+    }
+
+    public ObjectProperty<String> authenticatedUserIdProperty() {
+        return authenticatedUserId;
+    }
+
+    public void signIn(String userId) {
+        String normalizedUserId = ValidationUtils.requireNonBlank(userId, "userId");
+        authenticated.set(true);
+        authenticatedUserId.set(normalizedUserId);
+        notifyContextChanged();
+    }
+
+    public void signOut() {
+        authenticated.set(false);
+        authenticatedUserId.set(null);
         notifyContextChanged();
     }
 
@@ -93,7 +163,7 @@ public class AppContext {
     }
 
     public void addChangeListener(Runnable listener) {
-        if (listener != null) {
+        if (listener != null && !listeners.contains(listener)) {
             listeners.add(listener);
         }
     }
@@ -104,7 +174,11 @@ public class AppContext {
 
     public void notifyContextChanged() {
         for (Runnable listener : listeners) {
-            listener.run();
+            try {
+                listener.run();
+            } catch (RuntimeException ex) {
+                System.err.println("AppContext listener failed: " + ex.getMessage());
+            }
         }
     }
 
@@ -119,6 +193,24 @@ public class AppContext {
 
     public ObjectProperty<PersistenceStatus> persistenceStatusProperty() {
         return persistenceStatus;
+    }
+
+    public Theme getTheme() {
+        Theme value = theme.get();
+        return value == null ? Theme.DARK : value;
+    }
+
+    public void setTheme(Theme theme) {
+        Theme normalized = theme == null ? Theme.DARK : theme;
+        if (normalized == getTheme()) {
+            return;
+        }
+        this.theme.set(normalized);
+        notifyContextChanged();
+    }
+
+    public ObjectProperty<Theme> themeProperty() {
+        return theme;
     }
 
     public boolean isPersistenceAvailable() {

@@ -5,12 +5,13 @@ import com.budgetpilot.model.ExpenseEntry;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.PaymentMethod;
-import com.budgetpilot.service.ExpenseCategorySummary;
-import com.budgetpilot.service.ExpenseFilter;
-import com.budgetpilot.service.ExpenseService;
-import com.budgetpilot.service.ExpenseSummary;
-import com.budgetpilot.service.ForecastService;
-import com.budgetpilot.service.ForecastSummary;
+import com.budgetpilot.model.enums.PlannerBucket;
+import com.budgetpilot.service.expenses.ExpenseCategorySummary;
+import com.budgetpilot.service.expenses.ExpenseFilter;
+import com.budgetpilot.service.expenses.ExpenseService;
+import com.budgetpilot.service.expenses.ExpenseSummary;
+import com.budgetpilot.service.forecast.ForecastService;
+import com.budgetpilot.service.forecast.ForecastSummary;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
@@ -61,6 +62,9 @@ public class ExpensesPage extends VBox {
     private final MoneyField amountField = new MoneyField("Amount", "Amount");
     private final DatePicker datePicker = new DatePicker(LocalDate.now());
     private final ComboBox<ExpenseCategory> categoryCombo = new ComboBox<>();
+    private final ComboBox<PlannerBucket> plannerBucketCombo = new ComboBox<>();
+    private final CheckBox oneTimeCheck = new CheckBox("One-time (Unplanned)");
+    private final CheckBox recurringCheck = new CheckBox("Recurring");
     private final TextField subcategoryField = textField("Subcategory");
     private final ComboBox<PaymentMethod> paymentMethodCombo = new ComboBox<>();
     private final TextField tagField = textField("Tag (e.g. #snacks)");
@@ -72,6 +76,7 @@ public class ExpensesPage extends VBox {
 
     private final TextField searchFilterField = textField("Search note, subcategory, category...");
     private final ComboBox<ExpenseCategory> categoryFilterCombo = new ComboBox<>();
+    private final ComboBox<PlannerBucket> plannerBucketFilterCombo = new ComboBox<>();
     private final ComboBox<PaymentMethod> paymentMethodFilterCombo = new ComboBox<>();
     private final TextField tagFilterField = textField("Tag filter");
     private final CheckBox onlyTaggedCheck = new CheckBox("Only tagged");
@@ -134,16 +139,40 @@ public class ExpensesPage extends VBox {
     }
 
     private void setupFormDefaults() {
+        datePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         categoryCombo.getItems().setAll(ExpenseCategory.values());
         categoryCombo.getSelectionModel().select(ExpenseCategory.OTHER);
-        categoryCombo.getStyleClass().add("combo-box");
+        categoryCombo.getStyleClass().addAll("combo-box", "form-combo");
+
+        plannerBucketCombo.getItems().setAll(PlannerBucket.values());
+        plannerBucketCombo.getSelectionModel().select(PlannerBucket.DISCRETIONARY);
+        plannerBucketCombo.getStyleClass().addAll("combo-box", "form-combo");
+        configureValueCombo(plannerBucketCombo, PlannerBucket::getDisplayName);
 
         paymentMethodCombo.getItems().setAll(PaymentMethod.values());
         paymentMethodCombo.getSelectionModel().select(PaymentMethod.CARD);
-        paymentMethodCombo.getStyleClass().add("combo-box");
+        paymentMethodCombo.getStyleClass().addAll("combo-box", "form-combo");
+
+        oneTimeCheck.setSelected(false);
+        oneTimeCheck.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+            plannerBucketCombo.setDisable(isSelected);
+            if (isSelected) {
+                plannerBucketCombo.getSelectionModel().select(PlannerBucket.UNPLANNED);
+            } else {
+                plannerBucketCombo.getSelectionModel().select(expenseService.inferDefaultBucket(categoryCombo.getValue()));
+            }
+        });
+        recurringCheck.setSelected(false);
+
+        categoryCombo.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (oneTimeCheck.isSelected()) {
+                return;
+            }
+            plannerBucketCombo.getSelectionModel().select(expenseService.inferDefaultBucket(newValue));
+        });
 
         noteArea.setPromptText("Note or merchant");
-        noteArea.getStyleClass().add("text-input");
+        noteArea.getStyleClass().addAll("text-area", "form-textarea");
         noteArea.setPrefRowCount(3);
     }
 
@@ -153,6 +182,11 @@ public class ExpensesPage extends VBox {
         categoryFilterCombo.getItems().addAll(ExpenseCategory.values());
         categoryFilterCombo.getSelectionModel().selectFirst();
 
+        configureFilterCombo(plannerBucketFilterCombo, "All Buckets", PlannerBucket::getDisplayName);
+        plannerBucketFilterCombo.getItems().add(null);
+        plannerBucketFilterCombo.getItems().addAll(PlannerBucket.values());
+        plannerBucketFilterCombo.getSelectionModel().selectFirst();
+
         configureFilterCombo(paymentMethodFilterCombo, "All Payment Methods", PaymentMethod::getLabel);
         paymentMethodFilterCombo.getItems().add(null);
         paymentMethodFilterCombo.getItems().addAll(PaymentMethod.values());
@@ -161,15 +195,18 @@ public class ExpensesPage extends VBox {
         searchFilterField.textProperty().addListener((obs, oldText, newText) -> refreshFilteredTable());
         tagFilterField.textProperty().addListener((obs, oldText, newText) -> refreshFilteredTable());
         categoryFilterCombo.valueProperty().addListener((obs, oldValue, newValue) -> refreshFilteredTable());
+        plannerBucketFilterCombo.valueProperty().addListener((obs, oldValue, newValue) -> refreshFilteredTable());
         paymentMethodFilterCombo.valueProperty().addListener((obs, oldValue, newValue) -> refreshFilteredTable());
         onlyTaggedCheck.selectedProperty().addListener((obs, oldValue, newValue) -> refreshFilteredTable());
     }
 
     private void setupActions() {
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSaveExpense());
 
+        clearButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearButton.setOnAction(event -> clearForm());
+        clearFiltersButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearFiltersButton.setOnAction(event -> clearFilters());
     }
 
@@ -193,6 +230,11 @@ public class ExpensesPage extends VBox {
 
         TableColumn<ExpenseEntry, String> categoryCol = new TableColumn<>("Category");
         categoryCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCategory().getLabel()));
+
+        TableColumn<ExpenseEntry, String> bucketCol = new TableColumn<>("Bucket");
+        bucketCol.setCellValueFactory(data -> new SimpleStringProperty(
+                resolveBucket(data.getValue()).getDisplayName()
+        ));
 
         TableColumn<ExpenseEntry, String> subcategoryCol = new TableColumn<>("Subcategory");
         subcategoryCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getSubcategory()));
@@ -235,15 +277,24 @@ public class ExpensesPage extends VBox {
 
             {
                 actions.setAlignment(Pos.CENTER_LEFT);
-                deleteBtn.getStyleClass().add("danger-button");
+                editBtn.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
 
                 editBtn.setOnAction(event -> {
-                    ExpenseEntry entry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    ExpenseEntry entry = getTableView().getItems().get(rowIndex);
                     loadForEdit(entry);
                 });
 
                 deleteBtn.setOnAction(event -> {
-                    ExpenseEntry entry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    ExpenseEntry entry = getTableView().getItems().get(rowIndex);
                     if (confirmDelete(entry)) {
                         expenseService.deleteExpense(entry.getId());
                         if (editingEntry != null && editingEntry.getId().equals(entry.getId())) {
@@ -267,6 +318,7 @@ public class ExpensesPage extends VBox {
                 dateCol,
                 amountCol,
                 categoryCol,
+                bucketCol,
                 subcategoryCol,
                 paymentCol,
                 tagCol,
@@ -291,6 +343,7 @@ public class ExpensesPage extends VBox {
         HBox bar = new HBox(10,
                 searchFilterField,
                 categoryFilterCombo,
+                plannerBucketFilterCombo,
                 paymentMethodFilterCombo,
                 tagFilterField,
                 onlyTaggedCheck,
@@ -365,10 +418,14 @@ public class ExpensesPage extends VBox {
         addFormRow(grid, 0, "Amount", amountField);
         addFormRow(grid, 1, "Date", datePicker);
         addFormRow(grid, 2, "Category", categoryCombo);
-        addFormRow(grid, 3, "Subcategory", subcategoryField);
-        addFormRow(grid, 4, "Payment Method", paymentMethodCombo);
-        addFormRow(grid, 5, "Tag", tagField);
-        addFormRow(grid, 6, "Note", noteArea);
+        addFormRow(grid, 3, "Budget Bucket", plannerBucketCombo);
+        HBox optionsRow = new HBox(14, oneTimeCheck, recurringCheck);
+        optionsRow.getStyleClass().add("expenses-form-options");
+        addFormRow(grid, 4, "Options", optionsRow);
+        addFormRow(grid, 5, "Subcategory", subcategoryField);
+        addFormRow(grid, 6, "Payment Method", paymentMethodCombo);
+        addFormRow(grid, 7, "Tag", tagField);
+        addFormRow(grid, 8, "Note", noteArea);
 
         HBox actions = new HBox(10, saveButton, clearButton);
         actions.setPadding(new Insets(10, 0, 0, 0));
@@ -391,6 +448,8 @@ public class ExpensesPage extends VBox {
             target.setExpenseDate(expenseDate);
             target.setAmount(amountField.parseRequiredPositive());
             target.setCategory(ValidationUtils.requireNonNull(categoryCombo.getValue(), "Category"));
+            target.setPlannerBucket(resolveSelectedPlannerBucket());
+            target.setRecurring(recurringCheck.isSelected());
             target.setSubcategory(subcategoryField.getText());
             target.setPaymentMethod(ValidationUtils.requireNonNull(paymentMethodCombo.getValue(), "Payment method"));
             target.setTag(tagField.getText());
@@ -411,6 +470,10 @@ public class ExpensesPage extends VBox {
         amountField.setMoneyValue(entry.getAmount());
         datePicker.setValue(entry.getExpenseDate());
         categoryCombo.getSelectionModel().select(entry.getCategory());
+        PlannerBucket bucket = resolveBucket(entry);
+        oneTimeCheck.setSelected(bucket == PlannerBucket.UNPLANNED);
+        plannerBucketCombo.getSelectionModel().select(bucket);
+        recurringCheck.setSelected(entry.isRecurring());
         subcategoryField.setText(entry.getSubcategory());
         paymentMethodCombo.getSelectionModel().select(entry.getPaymentMethod());
         tagField.setText(entry.getTag());
@@ -425,6 +488,9 @@ public class ExpensesPage extends VBox {
         amountField.clear();
         datePicker.setValue(defaultDateForSelectedMonth());
         categoryCombo.getSelectionModel().select(ExpenseCategory.OTHER);
+        oneTimeCheck.setSelected(false);
+        plannerBucketCombo.getSelectionModel().select(expenseService.inferDefaultBucket(categoryCombo.getValue()));
+        recurringCheck.setSelected(false);
         subcategoryField.clear();
         paymentMethodCombo.getSelectionModel().select(PaymentMethod.CARD);
         tagField.clear();
@@ -436,6 +502,7 @@ public class ExpensesPage extends VBox {
     private void clearFilters() {
         searchFilterField.clear();
         categoryFilterCombo.getSelectionModel().selectFirst();
+        plannerBucketFilterCombo.getSelectionModel().selectFirst();
         paymentMethodFilterCombo.getSelectionModel().selectFirst();
         tagFilterField.clear();
         onlyTaggedCheck.setSelected(false);
@@ -461,6 +528,7 @@ public class ExpensesPage extends VBox {
         ExpenseFilter filter = new ExpenseFilter();
         filter.setSearchText(searchFilterField.getText());
         filter.setCategory(categoryFilterCombo.getValue());
+        filter.setPlannerBucket(plannerBucketFilterCombo.getValue());
         filter.setPaymentMethod(paymentMethodFilterCombo.getValue());
         filter.setTagText(tagFilterField.getText());
         filter.setOnlyTagged(onlyTaggedCheck.isSelected());
@@ -592,6 +660,27 @@ public class ExpensesPage extends VBox {
         return profile != null && profile.isFamilyModuleEnabled();
     }
 
+    private PlannerBucket resolveSelectedPlannerBucket() {
+        if (oneTimeCheck.isSelected()) {
+            return PlannerBucket.UNPLANNED;
+        }
+        PlannerBucket selected = plannerBucketCombo.getValue();
+        if (selected != null && selected != PlannerBucket.UNPLANNED) {
+            return selected;
+        }
+        return expenseService.inferDefaultBucket(categoryCombo.getValue());
+    }
+
+    private PlannerBucket resolveBucket(ExpenseEntry entry) {
+        if (entry == null) {
+            return PlannerBucket.DISCRETIONARY;
+        }
+        if (entry.getPlannerBucket() != null) {
+            return entry.getPlannerBucket();
+        }
+        return expenseService.inferDefaultBucket(entry.getCategory());
+    }
+
     private LocalDate defaultDateForSelectedMonth() {
         YearMonth selectedMonth = appContext.getSelectedMonth();
         YearMonth currentMonth = YearMonth.now();
@@ -617,7 +706,7 @@ public class ExpensesPage extends VBox {
             String allText,
             java.util.function.Function<T, String> itemLabelProvider
     ) {
-        comboBox.getStyleClass().add("combo-box");
+        comboBox.getStyleClass().addAll("combo-box", "form-combo");
         comboBox.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(T item, boolean empty) {
@@ -639,6 +728,34 @@ public class ExpensesPage extends VBox {
                     setText(null);
                 } else if (item == null) {
                     setText(allText);
+                } else {
+                    setText(itemLabelProvider.apply(item));
+                }
+            }
+        });
+    }
+
+    private <T> void configureValueCombo(
+            ComboBox<T> comboBox,
+            java.util.function.Function<T, String> itemLabelProvider
+    ) {
+        comboBox.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(itemLabelProvider.apply(item));
+                }
+            }
+        });
+        comboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
                 } else {
                     setText(itemLabelProvider.apply(item));
                 }
@@ -675,7 +792,7 @@ public class ExpensesPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

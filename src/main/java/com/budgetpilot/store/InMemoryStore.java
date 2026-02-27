@@ -13,6 +13,7 @@ import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsEntry;
 import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.util.ValidationUtils;
 
 import java.time.YearMonth;
@@ -124,7 +125,7 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     @Override
     public synchronized void saveExpenseEntry(ExpenseEntry entry) {
         ValidationUtils.requireNonNull(entry, "entry");
-        ExpenseEntry copy = entry.copy();
+        ExpenseEntry copy = normalizeExpenseEntry(entry.copy());
         expenses.put(copy.getId(), copy);
     }
 
@@ -427,6 +428,18 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     }
 
     @Override
+    public synchronized void purgeMonthsBefore(YearMonth cutoff) {
+        YearMonth normalizedCutoff = ValidationUtils.requireNonNull(cutoff, "cutoff");
+
+        incomes.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        expenses.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        savingsEntries.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        goalContributions.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        familyExpenses.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+        investmentTransactions.values().removeIf(entry -> isOlderThanCutoff(entry.getMonth(), normalizedCutoff));
+    }
+
+    @Override
     public synchronized void clearAll() {
         userProfile = null;
         monthlyPlans.clear();
@@ -468,6 +481,13 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
                 .map(ExpenseEntry::copy)
                 .toList();
         return List.copyOf(results);
+    }
+
+    private ExpenseEntry normalizeExpenseEntry(ExpenseEntry entry) {
+        if (entry.getPlannerBucket() == null) {
+            entry.setPlannerBucket(PlannerBucket.inferFromCategory(entry.getCategory()));
+        }
+        return entry;
     }
 
     @Override
@@ -527,5 +547,9 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     @Override
     public synchronized void deleteAppSetting(String key) {
         appSettings.remove(ValidationUtils.requireNonBlank(key, "key"));
+    }
+
+    private boolean isOlderThanCutoff(YearMonth month, YearMonth cutoff) {
+        return month != null && month.isBefore(cutoff);
     }
 }

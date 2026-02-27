@@ -1,6 +1,7 @@
 package com.budgetpilot.model;
 
 import com.budgetpilot.model.enums.GoalContributionType;
+import com.budgetpilot.model.enums.GoalFundingSource;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -18,6 +19,8 @@ public class GoalContribution {
     private LocalDate contributionDate;
     private BigDecimal amount;
     private GoalContributionType type;
+    private GoalFundingSource sourceType;
+    private String sourceRefId;
     private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -30,6 +33,8 @@ public class GoalContribution {
         this.contributionDate = LocalDate.now();
         this.amount = new BigDecimal("1.00");
         this.type = GoalContributionType.CONTRIBUTION;
+        this.sourceType = GoalFundingSource.FREE_MONEY;
+        this.sourceRefId = "";
         this.note = "";
         this.createdAt = now;
         this.updatedAt = now;
@@ -58,6 +63,8 @@ public class GoalContribution {
         this.contributionDate = other.contributionDate;
         this.amount = other.amount;
         this.type = other.type;
+        this.sourceType = other.sourceType == null ? GoalFundingSource.FREE_MONEY : other.sourceType;
+        this.sourceRefId = other.sourceRefId == null ? "" : other.sourceRefId;
         this.note = other.note;
         this.createdAt = other.createdAt;
         this.updatedAt = other.updatedAt;
@@ -125,6 +132,24 @@ public class GoalContribution {
         touch();
     }
 
+    public GoalFundingSource getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(GoalFundingSource sourceType) {
+        this.sourceType = ValidationUtils.requireNonNull(sourceType, "sourceType");
+        touch();
+    }
+
+    public String getSourceRefId() {
+        return sourceRefId;
+    }
+
+    public void setSourceRefId(String sourceRefId) {
+        this.sourceRefId = sourceRefId == null ? "" : sourceRefId.trim();
+        touch();
+    }
+
     public String getNote() {
         return note;
     }
@@ -163,6 +188,8 @@ public class GoalContribution {
                 ", contributionDate=" + contributionDate +
                 ", amount=" + amount +
                 ", type=" + type +
+                ", sourceType=" + sourceType +
+                ", sourceRefId='" + sourceRefId + '\'' +
                 '}';
     }
 }

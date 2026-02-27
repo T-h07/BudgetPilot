@@ -4,18 +4,25 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.MonthlyPlan;
+import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.GoalContributionType;
+import com.budgetpilot.model.enums.GoalFundingSource;
 import com.budgetpilot.model.enums.GoalType;
-import com.budgetpilot.service.BudgetSummary;
-import com.budgetpilot.service.GoalProgressSummary;
-import com.budgetpilot.service.GoalService;
-import com.budgetpilot.service.GoalSummary;
-import com.budgetpilot.service.PlannerService;
+import com.budgetpilot.service.balance.MonthlyBalanceService;
+import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
+import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
+import com.budgetpilot.service.planner.BudgetSummary;
+import com.budgetpilot.service.goals.GoalProgressSummary;
+import com.budgetpilot.service.goals.GoalService;
+import com.budgetpilot.service.goals.GoalSummary;
+import com.budgetpilot.service.planner.PlannerService;
 import com.budgetpilot.ui.components.DataEmptyState;
+import com.budgetpilot.ui.components.MetricRow;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
 import com.budgetpilot.ui.components.SummaryStatCard;
+import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.UiUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -27,6 +34,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -55,7 +63,9 @@ import java.util.stream.Collectors;
 public class GoalsPage extends VBox {
     private final AppContext appContext;
     private final GoalService goalService;
+    private final SavingsService savingsService;
     private final PlannerService plannerService;
+    private final MonthlyBalanceService monthlyBalanceService;
     private final Runnable contextListener = this::refreshAll;
 
     private final Label bannerLabel = new Label();
@@ -65,6 +75,8 @@ public class GoalsPage extends VBox {
     private final SummaryStatCard totalTargetsCard = new SummaryStatCard();
     private final SummaryStatCard monthlyContributionCard = new SummaryStatCard();
     private final SummaryStatCard plannedVsActualCard = new SummaryStatCard();
+    private final VBox cashFlowMetricsBox = new VBox(6);
+    private final Label cashFlowWarningLabel = new Label();
 
     private final TextField goalNameField = textField("Goal name");
     private final ComboBox<GoalType> goalTypeCombo = new ComboBox<>();
@@ -87,6 +99,9 @@ public class GoalsPage extends VBox {
     private final MoneyField contributionAmountField = new MoneyField("Amount", "Amount");
     private final DatePicker contributionDatePicker = new DatePicker();
     private final ComboBox<GoalContributionType> contributionTypeCombo = new ComboBox<>();
+    private final ComboBox<GoalFundingSource> contributionFundingSourceCombo = new ComboBox<>();
+    private final ComboBox<SavingsBucket> contributionSourceBucketCombo = new ComboBox<>();
+    private final Label contributionSourceBucketLabel = new Label("Savings Bucket");
     private final TextField contributionNoteField = textField("Note (optional)");
     private final Button addContributionButton = new Button("Add Contribution");
     private final Button clearContributionButton = new Button("Clear");
@@ -95,6 +110,7 @@ public class GoalsPage extends VBox {
     private final TableView<GoalContribution> contributionTable = new TableView<>(contributionRows);
 
     private List<Goal> goals = List.of();
+    private List<SavingsBucket> sourceBuckets = List.of();
     private Map<String, GoalProgressSummary> progressByGoalId = Map.of();
     private String selectedGoalId;
     private String editingGoalId;
@@ -102,7 +118,9 @@ public class GoalsPage extends VBox {
     public GoalsPage(AppContext appContext) {
         this.appContext = ValidationUtils.requireNonNull(appContext, "appContext");
         this.goalService = new GoalService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.savingsService = new SavingsService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
         this.plannerService = new PlannerService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
+        this.monthlyBalanceService = new MonthlyBalanceService(ValidationUtils.requireNonNull(appContext.getStore(), "store"));
 
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
@@ -120,9 +138,15 @@ public class GoalsPage extends VBox {
         setupActions();
 
         HBox summaryRow = buildSummaryRow();
+        SectionCard cashFlowCard = new SectionCard(
+                "Month Cash Flow",
+                "Income, spending, and net allocations impacting available monthly money.",
+                buildCashFlowBody()
+        );
+        cashFlowCard.getStyleClass().add("cash-flow-card");
         HBox mainRow = buildMainRow();
 
-        getChildren().addAll(summaryRow, bannerLabel, mainRow);
+        getChildren().addAll(summaryRow, cashFlowCard, bannerLabel, mainRow);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -143,20 +167,20 @@ public class GoalsPage extends VBox {
     private void setupGoalForm() {
         goalTypeCombo.getItems().setAll(GoalType.values());
         goalTypeCombo.getSelectionModel().select(GoalType.CUSTOM);
-        goalTypeCombo.getStyleClass().add("combo-box");
+        goalTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         priorityCombo.getItems().setAll(1, 2, 3, 4, 5);
         priorityCombo.getSelectionModel().select(Integer.valueOf(3));
-        priorityCombo.getStyleClass().add("combo-box");
+        priorityCombo.getStyleClass().addAll("combo-box", "form-combo");
 
-        goalTargetDatePicker.getStyleClass().add("date-picker");
+        goalTargetDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         goalTargetDatePicker.setPromptText("Optional");
 
         goalActiveCheck.setSelected(true);
 
         goalNotesArea.setPromptText("Optional notes");
         goalNotesArea.setPrefRowCount(3);
-        goalNotesArea.getStyleClass().add("text-input");
+        goalNotesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         goalsListBox.getStyleClass().add("goals-list");
     }
@@ -167,12 +191,38 @@ public class GoalsPage extends VBox {
         selectedGoalMetaLabel.getStyleClass().add("muted-text");
         selectedGoalProgress.getStyleClass().add("goal-progress-bar");
 
-        contributionDatePicker.getStyleClass().add("date-picker");
+        contributionDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
         contributionDatePicker.setValue(defaultDateForSelectedMonth());
 
         contributionTypeCombo.getItems().setAll(GoalContributionType.values());
         contributionTypeCombo.getSelectionModel().select(GoalContributionType.CONTRIBUTION);
-        contributionTypeCombo.getStyleClass().add("combo-box");
+        contributionTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        contributionTypeCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateFundingControls());
+
+        contributionFundingSourceCombo.getItems().setAll(GoalFundingSource.values());
+        contributionFundingSourceCombo.getSelectionModel().select(GoalFundingSource.FREE_MONEY);
+        contributionFundingSourceCombo.getStyleClass().addAll("combo-box", "form-combo");
+        contributionFundingSourceCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateFundingControls());
+
+        contributionSourceBucketLabel.getStyleClass().add("form-label");
+        contributionSourceBucketCombo.getStyleClass().addAll("combo-box", "form-combo");
+        contributionSourceBucketCombo.setPromptText("Select savings bucket");
+        contributionSourceBucketCombo.setCellFactory(listView -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(SavingsBucket item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+        contributionSourceBucketCombo.setButtonCell(new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(SavingsBucket item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.getName());
+            }
+        });
+
+        updateFundingControls();
     }
 
     private void setupContributionTable() {
@@ -202,7 +252,12 @@ public class GoalsPage extends VBox {
                     getStyleClass().removeAll("status-good", "status-danger");
                     return;
                 }
-                GoalContribution entry = getTableView().getItems().get(getIndex());
+                int rowIndex = getIndex();
+                if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                    getStyleClass().removeAll("status-good", "status-danger");
+                    return;
+                }
+                GoalContribution entry = getTableView().getItems().get(rowIndex);
                 getStyleClass().removeAll("status-good", "status-danger");
                 if (entry.getAmount().compareTo(BigDecimal.ZERO) >= 0) {
                     getStyleClass().add("status-good");
@@ -215,13 +270,26 @@ public class GoalsPage extends VBox {
         TableColumn<GoalContribution, String> noteColumn = new TableColumn<>("Note");
         noteColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getNote()));
 
+        TableColumn<GoalContribution, String> sourceColumn = new TableColumn<>("Source");
+        sourceColumn.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getSourceType() == null
+                        ? "-"
+                        : data.getValue().getSourceType().getLabel()
+        ));
+
         TableColumn<GoalContribution, Void> actionsColumn = new TableColumn<>("Actions");
         actionsColumn.setCellFactory(col -> new TableCell<>() {
             private final Button deleteButton = new Button("Delete");
 
             {
-                deleteButton.getStyleClass().add("danger-button");
-                deleteButton.setOnAction(event -> onDeleteContribution(getTableView().getItems().get(getIndex())));
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteContribution(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -231,18 +299,20 @@ public class GoalsPage extends VBox {
             }
         });
 
-        contributionTable.getColumns().setAll(dateColumn, typeColumn, amountColumn, noteColumn, actionsColumn);
+        contributionTable.getColumns().setAll(dateColumn, typeColumn, sourceColumn, amountColumn, noteColumn, actionsColumn);
     }
 
     private void setupActions() {
-        saveGoalButton.getStyleClass().add("quick-add-button");
+        saveGoalButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveGoalButton.setOnAction(event -> onSaveGoal());
 
+        clearGoalButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearGoalButton.setOnAction(event -> clearGoalForm());
 
-        addContributionButton.getStyleClass().add("quick-add-button");
+        addContributionButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         addContributionButton.setOnAction(event -> onAddContribution());
 
+        clearContributionButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearContributionButton.setOnAction(event -> clearContributionForm());
     }
 
@@ -288,6 +358,14 @@ public class GoalsPage extends VBox {
         rightCard.setMaxWidth(Double.MAX_VALUE);
         return row;
     }
+
+    private Node buildCashFlowBody() {
+        cashFlowMetricsBox.getStyleClass().add("cash-flow-metrics");
+        cashFlowWarningLabel.getStyleClass().add("cash-flow-warning");
+        cashFlowWarningLabel.setWrapText(true);
+        return new VBox(8, cashFlowMetricsBox, cashFlowWarningLabel);
+    }
+
     private Node buildGoalManagerBody() {
         VBox section = new VBox(12, buildGoalForm(), new Label("Goals"), goalsListBox);
         section.getChildren().get(1).getStyleClass().add("form-label");
@@ -345,7 +423,12 @@ public class GoalsPage extends VBox {
         addFormRow(grid, 0, "Amount", contributionAmountField);
         addFormRow(grid, 1, "Date", contributionDatePicker);
         addFormRow(grid, 2, "Type", contributionTypeCombo);
-        addFormRow(grid, 3, "Note", contributionNoteField);
+        addFormRow(grid, 3, "Funding Source", contributionFundingSourceCombo);
+        grid.add(contributionSourceBucketLabel, 0, 4);
+        grid.add(contributionSourceBucketCombo, 1, 4);
+        contributionSourceBucketCombo.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setHgrow(contributionSourceBucketCombo, Priority.ALWAYS);
+        addFormRow(grid, 5, "Note", contributionNoteField);
 
         HBox actions = new HBox(10, addContributionButton, clearContributionButton);
         actions.setAlignment(Pos.CENTER_LEFT);
@@ -408,7 +491,43 @@ public class GoalsPage extends VBox {
                     : contributionAmountField.parseRequiredPositive();
 
             switch (type) {
-                case CONTRIBUTION -> goalService.contribute(selectedGoalId, amount, contributionDate, contributionNoteField.getText());
+                case CONTRIBUTION -> {
+                    GoalFundingSource source = ValidationUtils.requireNonNull(
+                            contributionFundingSourceCombo.getValue(),
+                            "Funding source"
+                    );
+                    if (source == GoalFundingSource.SAVINGS_BUCKET) {
+                        SavingsBucket selectedBucket = contributionSourceBucketCombo.getValue();
+                        if (selectedBucket == null) {
+                            throw new IllegalArgumentException("Select a savings bucket for transfer funding.");
+                        }
+                        goalService.contributeFromSavingsBucket(
+                                selectedGoalId,
+                                selectedBucket.getId(),
+                                amount,
+                                contributionDate,
+                                contributionNoteField.getText()
+                        );
+                    } else {
+                        MonthlyBalanceSnapshot projected = monthlyBalanceService.buildProjectedSnapshot(
+                                appContext.getSelectedMonth(),
+                                BigDecimal.ZERO,
+                                amount
+                        );
+                        if (projected.getWarningLevel() != MonthlyBalanceWarningLevel.OK
+                                && !confirmLowBalance(projected, amount, "goal contribution")) {
+                            return;
+                        }
+                        goalService.contributeWithFunding(
+                                selectedGoalId,
+                                amount,
+                                contributionDate,
+                                contributionNoteField.getText(),
+                                source,
+                                null
+                        );
+                    }
+                }
                 case WITHDRAWAL -> goalService.withdraw(selectedGoalId, amount, contributionDate, contributionNoteField.getText());
                 case ADJUSTMENT -> goalService.adjust(selectedGoalId, amount, contributionDate, contributionNoteField.getText());
             }
@@ -467,6 +586,10 @@ public class GoalsPage extends VBox {
     private void refreshAll() {
         YearMonth month = appContext.getSelectedMonth();
         goals = goalService.listGoals();
+        sourceBuckets = savingsService.listBuckets().stream()
+                .filter(SavingsBucket::isActive)
+                .toList();
+        refreshSourceBuckets();
         progressByGoalId = goalService.listGoalProgressSummaries(month).stream()
                 .collect(Collectors.toMap(GoalProgressSummary::getGoalId, summary -> summary));
 
@@ -535,7 +658,74 @@ public class GoalsPage extends VBox {
                     "Plan " + MoneyUtils.format(planned, currencyCode) + " | Delta " + deltaText
             );
         }
+
+        refreshCashFlowCard(month, currencyCode);
     }
+
+    private void refreshSourceBuckets() {
+        String previousBucketId = contributionSourceBucketCombo.getValue() == null
+                ? null
+                : contributionSourceBucketCombo.getValue().getId();
+
+        contributionSourceBucketCombo.getItems().setAll(sourceBuckets);
+        if (sourceBuckets.isEmpty()) {
+            contributionSourceBucketCombo.getSelectionModel().clearSelection();
+            return;
+        }
+
+        if (previousBucketId != null) {
+            sourceBuckets.stream()
+                    .filter(bucket -> previousBucketId.equals(bucket.getId()))
+                    .findFirst()
+                    .ifPresent(bucket -> contributionSourceBucketCombo.getSelectionModel().select(bucket));
+        }
+
+        if (contributionSourceBucketCombo.getValue() == null) {
+            contributionSourceBucketCombo.getSelectionModel().selectFirst();
+        }
+    }
+
+    private void updateFundingControls() {
+        GoalContributionType type = contributionTypeCombo.getValue();
+        GoalFundingSource source = contributionFundingSourceCombo.getValue();
+        boolean formEnabled = !addContributionButton.isDisabled();
+
+        boolean isContribution = type == GoalContributionType.CONTRIBUTION;
+        boolean savingsBucketSource = isContribution && source == GoalFundingSource.SAVINGS_BUCKET;
+
+        contributionFundingSourceCombo.setDisable(!formEnabled || !isContribution);
+        contributionSourceBucketLabel.setManaged(savingsBucketSource);
+        contributionSourceBucketLabel.setVisible(savingsBucketSource);
+        contributionSourceBucketCombo.setManaged(savingsBucketSource);
+        contributionSourceBucketCombo.setVisible(savingsBucketSource);
+        contributionSourceBucketCombo.setDisable(!formEnabled || !savingsBucketSource);
+    }
+
+    private void refreshCashFlowCard(YearMonth month, String currencyCode) {
+        MonthlyBalanceSnapshot snapshot = monthlyBalanceService.buildSnapshot(month);
+        cashFlowMetricsBox.getChildren().setAll(
+                new MetricRow("Planned Income", MoneyUtils.format(snapshot.getPlannedIncome(), currencyCode)),
+                new MetricRow("Spent So Far", MoneyUtils.format(snapshot.getTotalExpenses(), currencyCode)),
+                new MetricRow("Allocated to Savings (Net)", MoneyUtils.format(snapshot.getNetSavingsAllocationsThisMonth(), currencyCode)),
+                new MetricRow("Allocated to Goals (Net)", MoneyUtils.format(snapshot.getNetGoalAllocationsThisMonth(), currencyCode)),
+                new MetricRow("Available After Allocations", MoneyUtils.format(snapshot.getAvailableAfterAllocations(), currencyCode))
+        );
+
+        cashFlowWarningLabel.getStyleClass().removeAll(
+                "cash-flow-warning-ok",
+                "cash-flow-warning-low",
+                "cash-flow-warning-negative"
+        );
+        if (snapshot.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE) {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-negative");
+        } else if (snapshot.getWarningLevel() == MonthlyBalanceWarningLevel.LOW) {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-low");
+        } else {
+            cashFlowWarningLabel.getStyleClass().add("cash-flow-warning-ok");
+        }
+        cashFlowWarningLabel.setText(snapshot.getWarningMessage());
+    }
+
     private void refreshGoalsList() {
         goalsListBox.getChildren().clear();
         if (goals.isEmpty()) {
@@ -582,16 +772,18 @@ public class GoalsPage extends VBox {
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedGoalId = goal.getId();
             refreshAll();
         });
 
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadGoalForEdit(goal));
 
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteGoal(goal));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -672,7 +864,14 @@ public class GoalsPage extends VBox {
         contributionAmountField.clear();
         contributionDatePicker.setValue(defaultDateForSelectedMonth());
         contributionTypeCombo.getSelectionModel().select(GoalContributionType.CONTRIBUTION);
+        contributionFundingSourceCombo.getSelectionModel().select(GoalFundingSource.FREE_MONEY);
+        if (!contributionSourceBucketCombo.getItems().isEmpty()) {
+            contributionSourceBucketCombo.getSelectionModel().selectFirst();
+        } else {
+            contributionSourceBucketCombo.getSelectionModel().clearSelection();
+        }
         contributionNoteField.clear();
+        updateFundingControls();
     }
 
     private void setContributionControlsEnabled(boolean enabled) {
@@ -683,6 +882,7 @@ public class GoalsPage extends VBox {
         addContributionButton.setDisable(!enabled);
         clearContributionButton.setDisable(!enabled);
         contributionTable.setDisable(!enabled);
+        updateFundingControls();
     }
 
     private Goal findGoalOrThrow(String goalId) {
@@ -721,6 +921,27 @@ public class GoalsPage extends VBox {
         alert.setContentText(message);
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;
+    }
+
+    private boolean confirmLowBalance(MonthlyBalanceSnapshot projected, BigDecimal amount, String actionLabel) {
+        String currencyCode = resolveCurrencyCode();
+        String header = projected.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE
+                ? "Negative available balance"
+                : "Low available balance";
+        String message = "This " + actionLabel + " of " + MoneyUtils.format(amount, currencyCode)
+                + " will reduce your available monthly balance to "
+                + MoneyUtils.format(projected.getAvailableAfterAllocations(), currencyCode) + ".\n\n"
+                + "You are allocating more money than your month currently supports (income - expenses).";
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Low available balance");
+        alert.setHeaderText(header);
+        alert.setContentText(message);
+        ButtonType proceed = new ButtonType("Proceed anyway");
+        ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(proceed, cancel);
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == proceed;
     }
 
     private void addFormRow(GridPane grid, int rowIndex, String labelText, Node field) {
@@ -785,7 +1006,7 @@ public class GoalsPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

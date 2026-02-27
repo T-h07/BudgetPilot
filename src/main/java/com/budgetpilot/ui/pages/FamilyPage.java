@@ -6,10 +6,10 @@ import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.FamilyExpenseType;
 import com.budgetpilot.model.enums.RelationshipType;
-import com.budgetpilot.service.FamilyExpenseSummary;
-import com.budgetpilot.service.FamilyMemberSummary;
-import com.budgetpilot.service.FamilyService;
-import com.budgetpilot.service.FamilySummary;
+import com.budgetpilot.service.family.FamilyExpenseSummary;
+import com.budgetpilot.service.family.FamilyMemberSummary;
+import com.budgetpilot.service.family.FamilyService;
+import com.budgetpilot.service.family.FamilySummary;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
@@ -141,12 +141,12 @@ public class FamilyPage extends VBox {
     private void setupMemberForm() {
         relationshipCombo.getItems().setAll(RelationshipType.values());
         relationshipCombo.getSelectionModel().select(RelationshipType.OTHER);
-        relationshipCombo.getStyleClass().add("combo-box");
+        relationshipCombo.getStyleClass().addAll("combo-box", "form-combo");
 
         memberActiveCheck.setSelected(true);
         memberNotesArea.setPromptText("Optional notes");
         memberNotesArea.setPrefRowCount(3);
-        memberNotesArea.getStyleClass().add("text-input");
+        memberNotesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         memberListBox.getStyleClass().add("family-member-list");
     }
@@ -157,11 +157,11 @@ public class FamilyPage extends VBox {
         selectedMemberTotals.getStyleClass().add("kpi-value");
 
         expenseDatePicker.setValue(defaultDateForSelectedMonth());
-        expenseDatePicker.getStyleClass().add("date-picker");
+        expenseDatePicker.getStyleClass().addAll("date-picker", "form-datepicker");
 
         expenseTypeCombo.getItems().setAll(FamilyExpenseType.values());
         expenseTypeCombo.getSelectionModel().select(FamilyExpenseType.SUPPORT);
-        expenseTypeCombo.getStyleClass().add("combo-box");
+        expenseTypeCombo.getStyleClass().addAll("combo-box", "form-combo");
     }
 
     private void setupExpenseTable() {
@@ -195,10 +195,23 @@ public class FamilyPage extends VBox {
             private final HBox actions = new HBox(6, editButton, deleteButton);
 
             {
-                deleteButton.getStyleClass().add("danger-button");
+                editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+                deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
                 actions.setAlignment(Pos.CENTER_LEFT);
-                editButton.setOnAction(event -> loadExpenseForEdit(getTableView().getItems().get(getIndex())));
-                deleteButton.setOnAction(event -> onDeleteExpense(getTableView().getItems().get(getIndex())));
+                editButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    loadExpenseForEdit(getTableView().getItems().get(rowIndex));
+                });
+                deleteButton.setOnAction(event -> {
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    onDeleteExpense(getTableView().getItems().get(rowIndex));
+                });
             }
 
             @Override
@@ -212,12 +225,14 @@ public class FamilyPage extends VBox {
     }
 
     private void setupActions() {
-        saveMemberButton.getStyleClass().add("quick-add-button");
+        saveMemberButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveMemberButton.setOnAction(event -> onSaveMember());
+        clearMemberButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearMemberButton.setOnAction(event -> clearMemberForm());
 
-        saveExpenseButton.getStyleClass().add("quick-add-button");
+        saveExpenseButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveExpenseButton.setOnAction(event -> onSaveExpense());
+        clearExpenseButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearExpenseButton.setOnAction(event -> clearExpenseForm());
     }
 
@@ -530,14 +545,16 @@ public class FamilyPage extends VBox {
         Label spentLabel = UiUtils.createMutedLabel("Spent this month: " + MoneyUtils.format(spent, resolveCurrencyCode()));
 
         Button selectButton = new Button("Select");
+        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         selectButton.setOnAction(event -> {
             selectedMemberId = member.getId();
             refreshAll();
         });
         Button editButton = new Button("Edit");
+        editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadMemberForEdit(member));
         Button deleteButton = new Button("Delete");
-        deleteButton.getStyleClass().add("danger-button");
+        deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteMember(member));
 
         HBox actions = new HBox(8, selectButton, editButton, deleteButton);
@@ -771,7 +788,7 @@ public class FamilyPage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

@@ -8,16 +8,16 @@
 
 .achievements-filter-bar {
     -fx-padding: 10;
-    -fx-background-color: rgba(255, 255, 255, 0.03);
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
 
 .achievement-card {
     -fx-padding: 12;
-    -fx-background-color: rgba(255, 255, 255, 0.03);
-    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
@@ -37,12 +37,12 @@
 }
 
 .achievement-card-progress > .track {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-strong;
     -fx-background-radius: 8;
 }
 
 .achievement-category-badge {
-    -fx-text-fill: #dbe8ff;
+    -fx-text-fill: -bp-info-text;
 }
 
 .achievement-tier-bronze {
@@ -64,29 +64,29 @@
 }
 
 .achievement-status-locked {
-    -fx-text-fill: #c7d4ef;
+    -fx-text-fill: -bp-text-secondary;
 }
 
 .achievement-status-progress {
-    -fx-text-fill: #ffd486;
-    -fx-border-color: rgba(246, 185, 80, 0.45);
-    -fx-background-color: rgba(246, 185, 80, 0.2);
+    -fx-text-fill: -bp-warning-text;
+    -fx-border-color: -bp-warning;
+    -fx-background-color: -bp-warning-soft;
 }
 
 .achievement-status-unlocked {
-    -fx-text-fill: #cbffdc;
-    -fx-border-color: rgba(87, 198, 120, 0.45);
-    -fx-background-color: rgba(87, 198, 120, 0.2);
+    -fx-text-fill: -bp-success-text;
+    -fx-border-color: -bp-success;
+    -fx-background-color: -bp-success-soft;
 }
 
 .alert-info {
-    -fx-text-fill: #d7ebff;
+    -fx-text-fill: -bp-info-text;
 }
 
 .alert-warning {
-    -fx-text-fill: #ffe8b6;
+    -fx-text-fill: -bp-warning-text;
 }
 
 .alert-success {
-    -fx-text-fill: #d7ffe7;
+    -fx-text-fill: -bp-success-text;
 }

@@ -4,11 +4,11 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.enums.AchievementCategory;
 import com.budgetpilot.model.enums.AchievementStatus;
 import com.budgetpilot.model.enums.AchievementTier;
-import com.budgetpilot.service.AchievementInsight;
-import com.budgetpilot.service.AchievementPageSummary;
-import com.budgetpilot.service.AchievementProgress;
-import com.budgetpilot.service.AchievementService;
-import com.budgetpilot.service.InsightLevel;
+import com.budgetpilot.service.achievements.AchievementInsight;
+import com.budgetpilot.service.achievements.AchievementPageSummary;
+import com.budgetpilot.service.achievements.AchievementProgress;
+import com.budgetpilot.service.achievements.AchievementService;
+import com.budgetpilot.service.achievements.InsightLevel;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MetricRow;
 import com.budgetpilot.ui.components.SectionCard;
@@ -89,7 +89,8 @@ public class AchievementsPage extends VBox {
 
     private void setupFilters() {
         searchField.setPromptText("Search achievements...");
-        searchField.getStyleClass().add("text-input");
+        searchField.getStyleClass().addAll("text-input", "form-input");
+        clearFiltersButton.getStyleClass().addAll("secondary-button", "btn-secondary");
 
         configureCategoryFilter();
         configureStatusFilter();
@@ -334,7 +335,7 @@ public class AchievementsPage extends VBox {
         categoryFilter.getItems().setAll((AchievementCategory) null);
         categoryFilter.getItems().addAll(AchievementCategory.values());
         categoryFilter.getSelectionModel().selectFirst();
-        categoryFilter.getStyleClass().add("combo-box");
+        categoryFilter.getStyleClass().addAll("combo-box", "form-combo");
         categoryFilter.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(AchievementCategory item, boolean empty) {
@@ -355,7 +356,7 @@ public class AchievementsPage extends VBox {
         statusFilter.getItems().setAll((AchievementStatus) null);
         statusFilter.getItems().addAll(AchievementStatus.values());
         statusFilter.getSelectionModel().selectFirst();
-        statusFilter.getStyleClass().add("combo-box");
+        statusFilter.getStyleClass().addAll("combo-box", "form-combo");
         statusFilter.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(AchievementStatus item, boolean empty) {

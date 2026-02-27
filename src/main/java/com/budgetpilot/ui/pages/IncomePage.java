@@ -4,7 +4,7 @@ import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.IncomeEntry;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.IncomeType;
-import com.budgetpilot.service.IncomeService;
+import com.budgetpilot.service.income.IncomeService;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
 import com.budgetpilot.ui.components.SectionCard;
@@ -110,18 +110,20 @@ public class IncomePage extends VBox {
     private void setupFormDefaults() {
         typeCombo.getItems().setAll(IncomeType.values());
         typeCombo.getSelectionModel().select(IncomeType.SALARY);
-        typeCombo.getStyleClass().add("combo-box");
+        typeCombo.getStyleClass().addAll("combo-box", "form-combo");
+        datePicker.getStyleClass().addAll("date-picker", "form-datepicker");
 
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
-        notesArea.getStyleClass().add("text-input");
+        notesArea.getStyleClass().addAll("text-area", "form-textarea");
 
         receivedCheck.setSelected(true);
     }
 
     private void setupActions() {
-        saveButton.getStyleClass().add("quick-add-button");
+        saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
         saveButton.setOnAction(event -> onSave());
+        clearButton.getStyleClass().addAll("secondary-button", "btn-secondary");
         clearButton.setOnAction(event -> clearForm());
     }
 
@@ -163,13 +165,22 @@ public class IncomePage extends VBox {
 
             {
                 actionBox.setAlignment(Pos.CENTER_LEFT);
+                editBtn.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
                 editBtn.setOnAction(event -> {
-                    IncomeEntry rowEntry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    IncomeEntry rowEntry = getTableView().getItems().get(rowIndex);
                     loadForEdit(rowEntry);
                 });
-                deleteBtn.getStyleClass().add("danger-button");
+                deleteBtn.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
                 deleteBtn.setOnAction(event -> {
-                    IncomeEntry rowEntry = getTableView().getItems().get(getIndex());
+                    int rowIndex = getIndex();
+                    if (rowIndex < 0 || rowIndex >= getTableView().getItems().size()) {
+                        return;
+                    }
+                    IncomeEntry rowEntry = getTableView().getItems().get(rowIndex);
                     incomeService.deleteIncome(rowEntry.getId());
                     if (editingEntry != null && editingEntry.getId().equals(rowEntry.getId())) {
                         clearForm();
@@ -370,7 +381,7 @@ public class IncomePage extends VBox {
     private TextField textField(String prompt) {
         TextField field = new TextField();
         field.setPromptText(prompt);
-        field.getStyleClass().add("text-input");
+        field.getStyleClass().addAll("text-input", "form-input");
         return field;
     }
 }

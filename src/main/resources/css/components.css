@@ -2,7 +2,7 @@
     -fx-background-color: linear-gradient(to bottom, -bp-surface, -bp-surface-elevated);
     -fx-background-radius: 14;
     -fx-border-radius: 14;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: -bp-border-soft;
     -fx-border-width: 1;
 }
 
@@ -23,20 +23,20 @@
 }
 
 .nav-button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -bp-surface-subtle;
     -fx-text-fill: -bp-text-primary;
 }
 
 .nav-button-active {
     -fx-background-color: -bp-accent-soft;
-    -fx-border-color: rgba(54, 163, 255, 0.35);
+    -fx-border-color: -bp-accent;
     -fx-border-width: 1;
-    -fx-text-fill: #f5f8ff;
+    -fx-text-fill: -bp-text-primary;
 }
 
 .quick-add-button {
     -fx-background-color: linear-gradient(to bottom, -bp-accent, -bp-accent-strong);
-    -fx-text-fill: white;
+    -fx-text-fill: -bp-text-inverse;
     -fx-font-size: 12px;
     -fx-font-weight: 700;
     -fx-padding: 8 16;
@@ -52,19 +52,36 @@
     -fx-opacity: 0.9;
 }
 
-.danger-button {
-    -fx-background-color: rgba(240, 97, 97, 0.18);
-    -fx-border-color: rgba(240, 97, 97, 0.45);
+.secondary-button {
+    -fx-background-color: -bp-surface-strong;
+    -fx-border-color: -bp-border-strong;
     -fx-border-width: 1;
     -fx-background-radius: 10;
     -fx-border-radius: 10;
-    -fx-text-fill: #ffd7d7;
+    -fx-text-fill: -bp-text-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 14;
+}
+
+.secondary-button:hover {
+    -fx-background-color: -bp-control-hover;
+}
+
+.danger-button {
+    -fx-background-color: -bp-danger-soft;
+    -fx-border-color: -bp-danger;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-text-fill: -bp-danger-text;
     -fx-font-weight: 700;
     -fx-padding: 8 14;
 }
 
 .danger-button:hover {
-    -fx-background-color: rgba(240, 97, 97, 0.25);
+    -fx-background-color: -bp-danger-soft;
+    -fx-opacity: 0.9;
 }
 
 .kpi-title {
@@ -74,9 +91,63 @@
 }
 
 .kpi-value {
-    -fx-font-size: 27px;
+    -fx-font-size: 28px;
     -fx-font-weight: 800;
     -fx-text-fill: -bp-text-primary;
+    -fx-padding: 0 0 1 0;
+}
+
+.kpi-subtext {
+    -fx-font-size: 11px;
+    -fx-text-fill: -bp-text-secondary;
+    -fx-padding: 1 0 0 0;
+}
+
+.kpi-secondary {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -bp-text-secondary;
+    -fx-padding: 0;
+}
+
+.kpi-status-dot {
+    -fx-stroke: -bp-border-muted;
+    -fx-stroke-width: 1;
+}
+
+.kpi-good {
+    -fx-text-fill: -bp-success;
+}
+
+.kpi-warn {
+    -fx-text-fill: -bp-warning;
+}
+
+.kpi-danger {
+    -fx-text-fill: -bp-danger;
+}
+
+.kpi-chart-tile {
+    -fx-min-height: 154;
+    -fx-pref-height: 154;
+    -fx-max-height: 154;
+    -fx-padding: 12 14 12 14;
+}
+
+.kpi-visual-host {
+    -fx-alignment: center;
+    -fx-min-width: 84;
+    -fx-pref-width: 84;
+    -fx-max-width: 84;
+    -fx-min-height: 52;
+    -fx-pref-height: 52;
+    -fx-max-height: 52;
+}
+
+.kpi-micro-label {
+    -fx-font-size: 9px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -bp-text-secondary;
 }
 
 .kpi-tile {
@@ -90,7 +161,7 @@
 .info-row-value {
     -fx-font-size: 12px;
     -fx-font-weight: 700;
-    -fx-text-fill: #dce6ff;
+    -fx-text-fill: -bp-text-primary;
 }
 
 .empty-state {
@@ -99,72 +170,72 @@
 }
 
 .chip {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -bp-surface-subtle;
     -fx-text-fill: -bp-text-secondary;
     -fx-font-size: 12px;
     -fx-font-weight: 600;
     -fx-padding: 7 12;
     -fx-background-radius: 999;
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: -bp-border-muted;
     -fx-border-radius: 999;
 }
 
 .chip:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-background-color: -bp-surface-hover;
 }
 
 .chip-selected {
     -fx-background-color: -bp-accent-soft;
-    -fx-border-color: rgba(54, 163, 255, 0.5);
+    -fx-border-color: -bp-accent;
     -fx-text-fill: -bp-text-primary;
 }
 
 .toggle-row {
     -fx-padding: 12;
-    -fx-background-color: rgba(255, 255, 255, 0.04);
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: -bp-surface-subtle;
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
 
 .success-banner {
     -fx-background-color: -bp-success-soft;
-    -fx-border-color: rgba(86, 196, 130, 0.5);
+    -fx-border-color: -bp-success;
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 8 12;
-    -fx-text-fill: #d7ffea;
+    -fx-text-fill: -bp-success-text;
 }
 
 .error-banner {
     -fx-background-color: -bp-danger-soft;
-    -fx-border-color: rgba(240, 97, 97, 0.5);
+    -fx-border-color: -bp-danger;
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 8 12;
-    -fx-text-fill: #ffd7d7;
+    -fx-text-fill: -bp-danger-text;
 }
 
 .banner-warning {
-    -fx-background-color: rgba(246, 185, 80, 0.2);
-    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-background-color: -bp-warning-soft;
+    -fx-border-color: -bp-warning;
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 8 12;
-    -fx-text-fill: #ffe8b6;
+    -fx-text-fill: -bp-warning-text;
 }
 
 .banner-info {
-    -fx-background-color: rgba(87, 163, 250, 0.2);
-    -fx-border-color: rgba(87, 163, 250, 0.45);
+    -fx-background-color: -bp-accent-soft;
+    -fx-border-color: -bp-accent;
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 8 12;
-    -fx-text-fill: #d7ebff;
+    -fx-text-fill: -bp-info-text;
 }
 
 .status-badge {
@@ -176,30 +247,146 @@
 }
 
 .badge-info {
-    -fx-text-fill: #d7ebff;
-    -fx-background-color: rgba(87, 163, 250, 0.18);
-    -fx-border-color: rgba(87, 163, 250, 0.4);
+    -fx-text-fill: -bp-info-text;
+    -fx-background-color: -bp-accent-soft;
+    -fx-border-color: -bp-accent;
     -fx-border-width: 1;
 }
 
 .badge-warn {
-    -fx-text-fill: #ffe8b6;
-    -fx-background-color: rgba(246, 185, 80, 0.2);
-    -fx-border-color: rgba(246, 185, 80, 0.45);
+    -fx-text-fill: -bp-warning-text;
+    -fx-background-color: -bp-warning-soft;
+    -fx-border-color: -bp-warning;
     -fx-border-width: 1;
 }
 
 .badge-danger {
-    -fx-text-fill: #ffd3d3;
-    -fx-background-color: rgba(239, 102, 102, 0.2);
-    -fx-border-color: rgba(239, 102, 102, 0.45);
+    -fx-text-fill: -bp-danger-text;
+    -fx-background-color: -bp-danger-soft;
+    -fx-border-color: -bp-danger;
     -fx-border-width: 1;
 }
 
 .badge-good {
-    -fx-text-fill: #d7ffe7;
-    -fx-background-color: rgba(87, 198, 120, 0.2);
-    -fx-border-color: rgba(87, 198, 120, 0.45);
+    -fx-text-fill: -bp-success-text;
+    -fx-background-color: -bp-success-soft;
+    -fx-border-color: -bp-success;
     -fx-border-width: 1;
 }
 
+.cash-flow-card {
+    -fx-border-color: -bp-accent;
+}
+
+.cash-flow-metrics {
+    -fx-spacing: 6;
+}
+
+.cash-flow-warning {
+    -fx-padding: 8 10;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.cash-flow-warning-ok {
+    -fx-background-color: -bp-success-soft;
+    -fx-border-color: -bp-success;
+    -fx-text-fill: -bp-success-text;
+}
+
+.cash-flow-warning-low {
+    -fx-background-color: -bp-warning-soft;
+    -fx-border-color: -bp-warning;
+    -fx-text-fill: -bp-warning-text;
+}
+
+.cash-flow-warning-negative {
+    -fx-background-color: -bp-danger-soft;
+    -fx-border-color: -bp-danger;
+    -fx-text-fill: -bp-danger-text;
+}
+
+.mini-sparkline,
+.mini-bars,
+.mini-density,
+.mini-gauge,
+.mini-ring,
+.mini-arrows,
+.mini-battery,
+.mini-income-stack {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-dialog {
+    -fx-background-color: linear-gradient(to bottom, -bp-surface, -bp-surface-elevated);
+    -fx-border-color: -bp-border-soft;
+    -fx-border-width: 1;
+}
+
+.month-rollover-dialog .header-panel {
+    -fx-background-color: -bp-surface;
+    -fx-border-color: transparent transparent -bp-border-soft transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 16 10 16;
+}
+
+.month-rollover-dialog:header .header-panel .label,
+.month-rollover-dialog .header-panel .label {
+    -fx-text-fill: -bp-text-primary;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+}
+
+.month-rollover-dialog > .content.label {
+    -fx-text-fill: -bp-text-secondary;
+}
+
+.month-rollover-dialog .content {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-dialog .button-bar {
+    -fx-background-color: -bp-surface;
+    -fx-padding: 12 14;
+    -fx-border-color: -bp-border-soft transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.month-rollover-body {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.month-rollover-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-scroll .content {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-sections {
+    -fx-background-color: transparent;
+}
+
+.month-rollover-bucket-section {
+    -fx-padding: 2 0 6 0;
+}
+
+.month-rollover-template-row {
+    -fx-background-color: linear-gradient(to bottom, -bp-surface, -bp-surface-elevated);
+}

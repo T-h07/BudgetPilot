@@ -17,26 +17,26 @@
 
 .family-member-card {
     -fx-padding: 12;
-    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-color: -bp-surface-muted;
     -fx-background-radius: 10;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
 }
 
 .family-member-card-selected {
     -fx-background-color: rgba(54, 163, 255, 0.16);
-    -fx-border-color: rgba(54, 163, 255, 0.45);
+    -fx-border-color: -bp-accent;
 }
 
 .family-expense-table {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: -bp-border-soft;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
 }
 
 .family-expense-table .column-header-background {
-    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-color: -bp-surface-soft;
     -fx-background-radius: 10 10 0 0;
 }
 
@@ -53,12 +53,12 @@
 }
 
 .family-expense-table .table-row-cell {
-    -fx-background-color: rgba(255, 255, 255, 0.01);
+    -fx-background-color: -bp-surface-muted;
     -fx-border-color: transparent;
 }
 
 .family-expense-table .table-row-cell:filled:selected {
-    -fx-background-color: rgba(54, 163, 255, 0.2);
+    -fx-background-color: -bp-surface-selected;
 }
 
 .family-expense-table .table-cell {
@@ -75,16 +75,16 @@
 }
 
 .variance-good {
-    -fx-text-fill: #8cf5ba;
+    -fx-text-fill: -bp-success;
     -fx-font-weight: 700;
 }
 
 .variance-warn {
-    -fx-text-fill: #ffd486;
+    -fx-text-fill: -bp-warning;
     -fx-font-weight: 700;
 }
 
 .variance-danger {
-    -fx-text-fill: #ffb5b5;
+    -fx-text-fill: -bp-danger;
     -fx-font-weight: 700;
 }
