@@ -20,6 +20,7 @@ import com.budgetpilot.model.enums.FamilyExpenseType;
 import com.budgetpilot.model.enums.GoalContributionType;
 import com.budgetpilot.model.enums.GoalFundingSource;
 import com.budgetpilot.model.enums.GoalType;
+import com.budgetpilot.model.enums.HabitAllowanceMode;
 import com.budgetpilot.model.enums.IncomeType;
 import com.budgetpilot.model.enums.InvestmentKind;
 import com.budgetpilot.model.enums.InvestmentStatus;
@@ -314,6 +315,13 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 plan.setDiscretionaryBudget(DbUtils.parseBigDecimal(rs.getString("discretionary_budget"), "monthly_plans.discretionary_budget", BigDecimal.ZERO));
                 plan.setSavingsPercent(DbUtils.parseBigDecimal(rs.getString("savings_percent"), "monthly_plans.savings_percent", BigDecimal.ZERO));
                 plan.setGoalsPercent(DbUtils.parseBigDecimal(rs.getString("goals_percent"), "monthly_plans.goals_percent", BigDecimal.ZERO));
+                plan.setHabitPercent(DbUtils.parseBigDecimal(rs.getString("habit_percent"), "monthly_plans.habit_percent", new BigDecimal("10.00")));
+                plan.setHabitMode(DbUtils.parseEnum(
+                        rs.getString("habit_mode"),
+                        HabitAllowanceMode.class,
+                        HabitAllowanceMode.DYNAMIC,
+                        "monthly_plans.habit_mode"
+                ));
                 plan.setSafetyBufferAmount(DbUtils.parseBigDecimal(rs.getString("safety_buffer_amount"), "monthly_plans.safety_buffer_amount", BigDecimal.ZERO));
                 plan.setNotes(rs.getString("notes"));
                 plan.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "monthly_plans.created_at"));
@@ -528,8 +536,13 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 rule.setDisplayName(rs.getString("display_name"));
                 rule.setLinkedCategory(DbUtils.parseEnum(rs.getString("linked_category"), ExpenseCategory.class, null, "habit_rules.linked_category"));
                 rule.setMonthlyLimit(DbUtils.parseBigDecimal(rs.getString("monthly_limit"), "habit_rules.monthly_limit", BigDecimal.ZERO));
+                rule.setBaselineAmount(DbUtils.parseBigDecimal(rs.getString("baseline_amount"), "habit_rules.baseline_amount", BigDecimal.ZERO));
                 rule.setWarningThresholdPercent(DbUtils.parseBigDecimal(rs.getString("warning_threshold_percent"), "habit_rules.warning_threshold_percent", BigDecimal.ZERO));
                 rule.setActive(DbUtils.fromIntBoolean(rs.getInt("active")));
+                rule.setEnabledThisMonth(DbUtils.fromIntBoolean(rs.getInt("enabled_this_month")));
+                Object weightObject = rs.getObject("weight");
+                int weight = weightObject == null ? 1 : rs.getInt("weight");
+                rule.setWeight(Math.max(1, Math.min(10, weight)));
                 rule.setNotes(rs.getString("notes"));
                 rule.setCreatedAt(DbUtils.parseLocalDateTime(rs.getString("created_at"), LocalDateTime.now(), "habit_rules.created_at"));
                 rule.setUpdatedAt(DbUtils.parseLocalDateTime(rs.getString("updated_at"), LocalDateTime.now(), "habit_rules.updated_at"));
@@ -819,9 +832,9 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
         String sql = """
                 INSERT INTO monthly_plans (
                     month, id, fixed_costs_budget, food_budget, transport_budget, family_budget,
-                    discretionary_budget, savings_percent, goals_percent, safety_buffer_amount,
-                    notes, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    discretionary_budget, savings_percent, goals_percent, habit_percent, habit_mode,
+                    safety_buffer_amount, notes, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (MonthlyPlan plan : listMonthlyPlans()) {
@@ -834,10 +847,12 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(7, plan.getDiscretionaryBudget().toPlainString());
                 ps.setString(8, plan.getSavingsPercent().toPlainString());
                 ps.setString(9, plan.getGoalsPercent().toPlainString());
-                ps.setString(10, plan.getSafetyBufferAmount().toPlainString());
-                DbUtils.setNullableString(ps, 11, plan.getNotes());
-                ps.setString(12, plan.getCreatedAt().toString());
-                ps.setString(13, plan.getUpdatedAt().toString());
+                ps.setString(10, plan.getHabitPercent().toPlainString());
+                ps.setString(11, plan.getHabitMode().name());
+                ps.setString(12, plan.getSafetyBufferAmount().toPlainString());
+                DbUtils.setNullableString(ps, 13, plan.getNotes());
+                ps.setString(14, plan.getCreatedAt().toString());
+                ps.setString(15, plan.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -1107,9 +1122,9 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
     private void insertHabitRules() throws SQLException {
         String sql = """
                 INSERT INTO habit_rules (
-                    id, tag, display_name, linked_category, monthly_limit, warning_threshold_percent,
-                    active, notes, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, tag, display_name, linked_category, monthly_limit, baseline_amount,
+                    warning_threshold_percent, active, enabled_this_month, weight, notes, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (HabitRule rule : listHabitRules()) {
@@ -1118,11 +1133,14 @@ public class DbStore extends InMemoryStore implements AutoCloseable {
                 ps.setString(3, rule.getDisplayName());
                 DbUtils.setNullableString(ps, 4, rule.getLinkedCategory() == null ? null : rule.getLinkedCategory().name());
                 ps.setString(5, rule.getMonthlyLimit().toPlainString());
-                ps.setString(6, rule.getWarningThresholdPercent().toPlainString());
-                ps.setInt(7, DbUtils.toIntBoolean(rule.isActive()));
-                DbUtils.setNullableString(ps, 8, rule.getNotes());
-                ps.setString(9, rule.getCreatedAt().toString());
-                ps.setString(10, rule.getUpdatedAt().toString());
+                ps.setString(6, rule.getBaselineAmount().toPlainString());
+                ps.setString(7, rule.getWarningThresholdPercent().toPlainString());
+                ps.setInt(8, DbUtils.toIntBoolean(rule.isActive()));
+                ps.setInt(9, DbUtils.toIntBoolean(rule.isEnabledThisMonth()));
+                ps.setInt(10, rule.getWeight());
+                DbUtils.setNullableString(ps, 11, rule.getNotes());
+                ps.setString(12, rule.getCreatedAt().toString());
+                ps.setString(13, rule.getUpdatedAt().toString());
                 ps.addBatch();
             }
             ps.executeBatch();

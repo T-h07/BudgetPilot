@@ -11,8 +11,11 @@ public class HabitSpendSummary {
     private final String displayName;
     private final ExpenseCategory linkedCategory;
     private final BigDecimal monthlyLimit;
+    private final BigDecimal baselineAmount;
     private final BigDecimal warningThresholdPercent;
     private final BigDecimal actualSpend;
+    private final BigDecimal excessSpent;
+    private final BigDecimal capToDateAmount;
     private final BigDecimal remainingBeforeLimit;
     private final BigDecimal usagePercent;
     private final HabitStatus status;
@@ -25,8 +28,11 @@ public class HabitSpendSummary {
             String displayName,
             ExpenseCategory linkedCategory,
             BigDecimal monthlyLimit,
+            BigDecimal baselineAmount,
             BigDecimal warningThresholdPercent,
             BigDecimal actualSpend,
+            BigDecimal excessSpent,
+            BigDecimal capToDateAmount,
             BigDecimal remainingBeforeLimit,
             BigDecimal usagePercent,
             HabitStatus status,
@@ -38,8 +44,11 @@ public class HabitSpendSummary {
         this.displayName = Objects.requireNonNull(displayName, "displayName");
         this.linkedCategory = linkedCategory;
         this.monthlyLimit = Objects.requireNonNull(monthlyLimit, "monthlyLimit");
+        this.baselineAmount = Objects.requireNonNull(baselineAmount, "baselineAmount");
         this.warningThresholdPercent = Objects.requireNonNull(warningThresholdPercent, "warningThresholdPercent");
         this.actualSpend = Objects.requireNonNull(actualSpend, "actualSpend");
+        this.excessSpent = Objects.requireNonNull(excessSpent, "excessSpent");
+        this.capToDateAmount = Objects.requireNonNull(capToDateAmount, "capToDateAmount");
         this.remainingBeforeLimit = Objects.requireNonNull(remainingBeforeLimit, "remainingBeforeLimit");
         this.usagePercent = Objects.requireNonNull(usagePercent, "usagePercent");
         this.status = Objects.requireNonNull(status, "status");
@@ -67,12 +76,24 @@ public class HabitSpendSummary {
         return monthlyLimit;
     }
 
+    public BigDecimal getBaselineAmount() {
+        return baselineAmount;
+    }
+
     public BigDecimal getWarningThresholdPercent() {
         return warningThresholdPercent;
     }
 
     public BigDecimal getActualSpend() {
         return actualSpend;
+    }
+
+    public BigDecimal getExcessSpent() {
+        return excessSpent;
+    }
+
+    public BigDecimal getCapToDateAmount() {
+        return capToDateAmount;
     }
 
     public BigDecimal getRemainingBeforeLimit() {

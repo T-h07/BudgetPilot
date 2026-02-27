@@ -72,6 +72,10 @@ public class PlannerService {
         validateNonNegative(result, plan.getSafetyBufferAmount(), "Safety buffer amount");
         validatePercent(result, plan.getSavingsPercent(), "Savings percent");
         validatePercent(result, plan.getGoalsPercent(), "Goals percent");
+        validatePercent(result, plan.getHabitPercent(), "Habits percent");
+        if (plan.getHabitMode() == null) {
+            result.addError("Habit allowance mode is required.");
+        }
         return result;
     }
 

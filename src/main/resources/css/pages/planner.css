@@ -126,3 +126,7 @@
     -fx-font-weight: 700;
 }
 
+.planner-habit-hint {
+    -fx-wrap-text: true;
+}
+

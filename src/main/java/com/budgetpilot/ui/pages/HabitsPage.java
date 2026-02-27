@@ -5,10 +5,12 @@ import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.UserProfile;
 import com.budgetpilot.model.enums.ExpenseCategory;
 import com.budgetpilot.model.enums.HabitSeverity;
+import com.budgetpilot.model.enums.HabitAllowanceMode;
+import com.budgetpilot.service.habits.HabitAllowanceRow;
+import com.budgetpilot.service.habits.HabitAllowanceSnapshot;
 import com.budgetpilot.service.habits.HabitInsight;
 import com.budgetpilot.service.habits.HabitPageSummary;
 import com.budgetpilot.service.habits.HabitService;
-import com.budgetpilot.service.habits.HabitSpendSummary;
 import com.budgetpilot.service.habits.HabitStatus;
 import com.budgetpilot.ui.components.DataEmptyState;
 import com.budgetpilot.ui.components.MoneyField;
@@ -37,12 +39,14 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class HabitsPage extends VBox {
     private final AppContext appContext;
@@ -50,19 +54,27 @@ public class HabitsPage extends VBox {
     private final Runnable contextListener = this::refreshAll;
 
     private final Label bannerLabel = new Label();
+    private final Label poolWarningLabel = new Label();
+    private final Label allowanceMetaLabel = UiUtils.createMutedLabel("");
+    private final Label baselineHintLabel = UiUtils.createMutedLabel(
+            "Only spending above baseline counts against your habit allowance."
+    );
 
-    private final SummaryStatCard trackedSpendCard = new SummaryStatCard();
-    private final SummaryStatCard activeRulesCard = new SummaryStatCard();
-    private final SummaryStatCard warningRulesCard = new SummaryStatCard();
-    private final SummaryStatCard exceededRulesCard = new SummaryStatCard();
-    private final SummaryStatCard onTrackCard = new SummaryStatCard();
+    private final SummaryStatCard totalHabitSpentCard = new SummaryStatCard();
+    private final SummaryStatCard totalHabitExcessCard = new SummaryStatCard();
+    private final SummaryStatCard habitPoolCard = new SummaryStatCard();
+    private final SummaryStatCard remainingCard = new SummaryStatCard();
+    private final SummaryStatCard habitConfigCard = new SummaryStatCard();
+
+    private final CheckBox discretionaryOnlyCheck = new CheckBox("Only count discretionary/unplanned");
 
     private final TextField displayNameField = textField("Display name");
     private final TextField tagField = textField("Tag (e.g. #snacks)");
     private final ComboBox<ExpenseCategory> linkedCategoryCombo = new ComboBox<>();
-    private final MoneyField monthlyLimitField = new MoneyField("Monthly Limit", "Monthly limit");
+    private final MoneyField monthlyLimitField = new MoneyField("Hard Limit (optional)", "0");
+    private final MoneyField baselineAmountField = new MoneyField("Baseline", "0");
     private final TextField warningThresholdField = textField("Warning threshold %");
-    private final CheckBox activeCheck = new CheckBox("Active");
+    private final CheckBox activeCheck = new CheckBox("Active rule");
     private final TextArea notesArea = new TextArea();
     private final Button saveRuleButton = new Button("Add Rule");
     private final Button clearRuleButton = new Button("Clear Form");
@@ -72,8 +84,7 @@ public class HabitsPage extends VBox {
     private final VBox insightsBox = new VBox(10);
 
     private List<HabitRule> rules = List.of();
-    private Map<String, HabitSpendSummary> evaluationMap = new HashMap<>();
-    private String selectedRuleId;
+    private Map<String, HabitAllowanceRow> allowanceRowsByRuleId = new HashMap<>();
     private String editingRuleId;
 
     public HabitsPage(AppContext appContext) {
@@ -86,17 +97,17 @@ public class HabitsPage extends VBox {
 
         getChildren().add(UiUtils.createPageHeader(
                 "Habits",
-                "Control spending behavior with monthly limits, warning thresholds, and actionable coaching insights."
+                "Behavior allowance that automatically scales with your real monthly availability."
         ));
 
-        setupBanner();
+        setupBanners();
         setupRuleForm();
         setupActions();
 
-        HBox summaryRow = buildSummaryRow();
+        HBox allowanceRow = buildAllowanceRow();
         HBox mainRow = buildMainRow();
 
-        getChildren().addAll(summaryRow, bannerLabel, mainRow);
+        getChildren().addAll(allowanceRow, allowanceMetaLabel, poolWarningLabel, bannerLabel, mainRow);
 
         appContext.addChangeListener(contextListener);
         sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -108,10 +119,14 @@ public class HabitsPage extends VBox {
         refreshAll();
     }
 
-    private void setupBanner() {
+    private void setupBanners() {
         bannerLabel.setManaged(false);
         bannerLabel.setVisible(false);
         bannerLabel.getStyleClass().add("error-banner");
+
+        poolWarningLabel.setManaged(false);
+        poolWarningLabel.setVisible(false);
+        poolWarningLabel.getStyleClass().add("habit-pool-warning-banner");
     }
 
     private void setupRuleForm() {
@@ -123,6 +138,10 @@ public class HabitsPage extends VBox {
         warningThresholdField.setText("70");
         activeCheck.setSelected(true);
 
+        discretionaryOnlyCheck.setSelected(true);
+        discretionaryOnlyCheck.getStyleClass().add("habit-discretionary-toggle");
+        discretionaryOnlyCheck.setOnAction(event -> refreshAll());
+
         notesArea.setPromptText("Optional notes");
         notesArea.setPrefRowCount(3);
         notesArea.getStyleClass().addAll("text-area", "form-textarea");
@@ -130,6 +149,8 @@ public class HabitsPage extends VBox {
         ruleListBox.getStyleClass().add("habit-rule-list");
         evaluationListBox.getStyleClass().add("habit-evaluation-list");
         insightsBox.getStyleClass().add("habit-insights-panel");
+        allowanceMetaLabel.getStyleClass().add("habit-allowance-meta");
+        baselineHintLabel.getStyleClass().add("habit-baseline-hint");
     }
 
     private void setupActions() {
@@ -139,14 +160,14 @@ public class HabitsPage extends VBox {
         clearRuleButton.setOnAction(event -> clearRuleForm());
     }
 
-    private HBox buildSummaryRow() {
+    private HBox buildAllowanceRow() {
         HBox row = new HBox(
                 UiUtils.CARD_GAP,
-                trackedSpendCard,
-                activeRulesCard,
-                warningRulesCard,
-                exceededRulesCard,
-                onTrackCard
+                totalHabitSpentCard,
+                totalHabitExcessCard,
+                habitPoolCard,
+                remainingCard,
+                habitConfigCard
         );
         row.getStyleClass().add("habits-summary-grid");
         for (Node node : row.getChildren()) {
@@ -161,13 +182,13 @@ public class HabitsPage extends VBox {
     private HBox buildMainRow() {
         SectionCard leftCard = new SectionCard(
                 "Habit Rules",
-                "Create and manage spending habit controls by tag and category.",
+                "Create rules, then tune month-level enablement and weights.",
                 buildRulesBody()
         );
 
         SectionCard rightCard = new SectionCard(
-                "Evaluations & Insights",
-                "Live month-to-date behavior analysis powered by your expense data.",
+                "Allowance Evaluations",
+                "Live cap allocation and status based on current month cashflow.",
                 buildEvaluationsBody()
         );
 
@@ -196,15 +217,17 @@ public class HabitsPage extends VBox {
         addFormRow(grid, 0, "Display Name", displayNameField);
         addFormRow(grid, 1, "Tag", tagField);
         addFormRow(grid, 2, "Linked Category", linkedCategoryCombo);
-        addFormRow(grid, 3, "Monthly Limit", monthlyLimitField);
-        addFormRow(grid, 4, "Warning Threshold %", warningThresholdField);
+        addFormRow(grid, 3, "Hard Limit", monthlyLimitField);
+        addFormRow(grid, 4, "Baseline (tolerance) per month", baselineAmountField);
+        addFormRow(grid, 5, "Warning Threshold %", warningThresholdField);
+        grid.add(baselineHintLabel, 1, 6);
 
         Label activeLabel = new Label("Status");
         activeLabel.getStyleClass().add("form-label");
-        grid.add(activeLabel, 0, 5);
-        grid.add(activeCheck, 1, 5);
+        grid.add(activeLabel, 0, 7);
+        grid.add(activeCheck, 1, 7);
 
-        addFormRow(grid, 6, "Notes", notesArea);
+        addFormRow(grid, 8, "Notes", notesArea);
 
         HBox actions = new HBox(10, saveRuleButton, clearRuleButton);
         actions.setPadding(new Insets(8, 0, 0, 0));
@@ -215,15 +238,17 @@ public class HabitsPage extends VBox {
 
     private Node buildEvaluationsBody() {
         VBox section = new VBox(14,
-                new Label("Habit Evaluations"),
+                discretionaryOnlyCheck,
+                new Label("Habit Allowance Cards"),
                 evaluationListBox,
                 new Label("Insights"),
                 insightsBox
         );
-        section.getChildren().get(0).getStyleClass().add("form-label");
-        section.getChildren().get(2).getStyleClass().add("form-label");
+        section.getChildren().get(1).getStyleClass().add("form-label");
+        section.getChildren().get(3).getStyleClass().add("form-label");
         return section;
     }
+
     private void onSaveRule() {
         clearBanner();
         try {
@@ -234,13 +259,13 @@ public class HabitsPage extends VBox {
             target.setDisplayName(ValidationUtils.requireNonBlank(displayNameField.getText(), "Habit name"));
             target.setTag(normalizeTag(tagField.getText()));
             target.setLinkedCategory(linkedCategoryCombo.getValue());
-            target.setMonthlyLimit(monthlyLimitField.parseRequiredPositive());
+            target.setMonthlyLimit(monthlyLimitField.parseNonNegativeOrZero());
+            target.setBaselineAmount(baselineAmountField.parseNonNegativeOrZero());
             target.setWarningThresholdPercent(parseThreshold(warningThresholdField.getText()));
             target.setActive(activeCheck.isSelected());
             target.setNotes(notesArea.getText());
 
             habitService.saveRule(target);
-            selectedRuleId = target.getId();
             appContext.notifyContextChanged();
             showSuccess(editingRuleId == null ? "Habit rule added." : "Habit rule updated.");
             clearRuleForm();
@@ -255,9 +280,6 @@ public class HabitsPage extends VBox {
             return;
         }
         habitService.deleteRule(rule.getId());
-        if (rule.getId().equals(selectedRuleId)) {
-            selectedRuleId = null;
-        }
         if (rule.getId().equals(editingRuleId)) {
             clearRuleForm();
         }
@@ -266,59 +288,108 @@ public class HabitsPage extends VBox {
         refreshAll();
     }
 
+    private void onToggleEnabled(HabitRule rule, boolean enabled) {
+        try {
+            HabitRule updated = rule.copy();
+            updated.setEnabledThisMonth(enabled);
+            habitService.saveRule(updated);
+            appContext.notifyContextChanged();
+            refreshAll();
+        } catch (IllegalArgumentException ex) {
+            showError(ex.getMessage());
+        }
+    }
+
+    private void onWeightChanged(HabitRule rule, int weight) {
+        try {
+            HabitRule updated = rule.copy();
+            updated.setWeight(weight);
+            habitService.saveRule(updated);
+            appContext.notifyContextChanged();
+            refreshAll();
+        } catch (IllegalArgumentException ex) {
+            showError(ex.getMessage());
+        }
+    }
+
     private void refreshAll() {
         YearMonth month = appContext.getSelectedMonth();
-        HabitPageSummary summary = habitService.getHabitPageSummary(month);
+        HabitPageSummary summary = habitService.getHabitPageSummary(month, discretionaryOnlyCheck.isSelected());
+        HabitAllowanceSnapshot allowanceSnapshot = summary.getAllowanceSnapshot();
 
         rules = habitService.listRules();
-        evaluationMap = new HashMap<>();
-        for (HabitSpendSummary evaluation : summary.getEvaluations()) {
-            evaluationMap.put(evaluation.getRuleId(), evaluation);
-        }
+        allowanceRowsByRuleId = allowanceSnapshot.getRows().stream()
+                .collect(Collectors.toMap(HabitAllowanceRow::getRuleId, row -> row));
 
-        if (selectedRuleId == null && !rules.isEmpty()) {
-            selectedRuleId = rules.get(0).getId();
-        }
-        if (selectedRuleId != null && rules.stream().noneMatch(rule -> rule.getId().equals(selectedRuleId))) {
-            selectedRuleId = rules.isEmpty() ? null : rules.get(0).getId();
-        }
         if (editingRuleId != null && rules.stream().noneMatch(rule -> rule.getId().equals(editingRuleId))) {
             clearRuleForm();
         }
 
-        updateSummaryCards(summary);
+        updateAllowanceCards(allowanceSnapshot);
+        updateAllowanceWarnings(allowanceSnapshot, summary);
         refreshRuleList();
-        refreshEvaluations(summary);
+        refreshEvaluations(allowanceSnapshot);
         refreshInsights(summary.getInsights());
     }
 
-    private void updateSummaryCards(HabitPageSummary summary) {
+    private void updateAllowanceCards(HabitAllowanceSnapshot snapshot) {
         String currencyCode = resolveCurrencyCode();
-        trackedSpendCard.setValues(
-                "Habit-Tracked Spend",
-                MoneyUtils.format(summary.getHabitTrackedSpend(), currencyCode),
+        totalHabitSpentCard.setValues(
+                "Total Habit Spent",
+                MoneyUtils.format(snapshot.getSpentAcrossHabits(), currencyCode),
                 appContext.getCurrentMonthDisplayText()
         );
-        activeRulesCard.setValues(
-                "Active Habit Rules",
-                String.valueOf(summary.getActiveRulesCount()),
-                rules.size() + " total rules"
+
+        totalHabitExcessCard.setValues(
+                "Total Habit Excess",
+                MoneyUtils.format(snapshot.getExcessAcrossHabits(), currencyCode),
+                "Above baseline tolerance"
         );
-        warningRulesCard.setValues(
-                "Warning Rules",
-                String.valueOf(summary.getWarningCount()),
-                "Near threshold/limit"
+
+        habitPoolCard.setValues(
+                "Habit Pool",
+                MoneyUtils.format(snapshot.getHabitPoolAmount(), currencyCode),
+                "Excess allowance budget"
         );
-        exceededRulesCard.setValues(
-                "Exceeded Rules",
-                String.valueOf(summary.getExceededCount()),
-                "Monthly limit exceeded"
+
+        remainingCard.setValues(
+                "Remaining Pool",
+                MoneyUtils.format(snapshot.getRemainingPool(), currencyCode),
+                snapshot.getRemainingPool().compareTo(BigDecimal.ZERO) < 0 ? "Over allowance" : "Available"
         );
-        onTrackCard.setValues(
-                "On-Track Rules",
-                String.valueOf(summary.getOnTrackCount()),
-                "Healthy spending behavior"
+
+        String modeLabel = snapshot.getHabitMode() == HabitAllowanceMode.LOCKED ? "Locked" : "Dynamic";
+        habitConfigCard.setValues(
+                "Habit Config",
+                snapshot.getHabitPercent().stripTrailingZeros().toPlainString() + "%",
+                "Mode: " + modeLabel
         );
+
+        allowanceMetaLabel.setText(
+                "Available after reserve: " + MoneyUtils.format(snapshot.getAvailableAfterReserve(), currencyCode)
+                        + " | Pace: " + snapshot.getDaysElapsed() + "/" + snapshot.getDaysInMonth()
+                        + " (" + snapshot.getPaceRatio().multiply(MoneyUtils.HUNDRED).setScale(1, RoundingMode.HALF_UP) + "%)"
+                        + " | Enabled habits: " + snapshot.getEnabledHabitsCount()
+                        + " | Total weight: " + snapshot.getTotalWeight()
+                        + " | Warnings: " + snapshot.getWarningCount()
+                        + " | Exceeded: " + snapshot.getExceededCount()
+        );
+    }
+
+    private void updateAllowanceWarnings(HabitAllowanceSnapshot snapshot, HabitPageSummary summary) {
+        boolean showPoolWarning = snapshot.getHabitMode() == HabitAllowanceMode.DYNAMIC
+                && snapshot.isPoolAdjustedDown()
+                && summary.getExceededCount() > 0;
+
+        if (showPoolWarning) {
+            poolWarningLabel.setText("Habit allowance adjusted down because monthly availability decreased.");
+            poolWarningLabel.setManaged(true);
+            poolWarningLabel.setVisible(true);
+        } else {
+            poolWarningLabel.setManaged(false);
+            poolWarningLabel.setVisible(false);
+            poolWarningLabel.setText("");
+        }
     }
 
     private void refreshRuleList() {
@@ -326,101 +397,139 @@ public class HabitsPage extends VBox {
         if (rules.isEmpty()) {
             ruleListBox.getChildren().add(new DataEmptyState(
                     "No habit rules",
-                    "Create your first habit rule (e.g., #snacks, #clothes, #coffee)."
+                    "Create your first habit rule (e.g., #snacks, #coffee)."
             ));
             return;
         }
 
         for (HabitRule rule : rules) {
-            ruleListBox.getChildren().add(createRuleCard(rule));
+            HabitAllowanceRow row = allowanceRowsByRuleId.get(rule.getId());
+            ruleListBox.getChildren().add(createRuleCard(rule, row));
         }
     }
 
-    private Node createRuleCard(HabitRule rule) {
-        HabitSpendSummary evaluation = evaluationMap.get(rule.getId());
-        HabitStatus status = evaluation == null ? HabitStatus.ON_TRACK : evaluation.getStatus();
+    private Node createRuleCard(HabitRule rule, HabitAllowanceRow row) {
+        HabitAllowanceRow safeRow = row == null ? fallbackRow(rule) : row;
 
         VBox card = new VBox(8);
         card.getStyleClass().add("habit-rule-card");
-        if (rule.getId().equals(selectedRuleId)) {
-            card.getStyleClass().add("habit-rule-card-selected");
-        }
 
         Label title = new Label(rule.getDisplayName());
         title.getStyleClass().add("card-title");
 
+        String hardLimitText = rule.getMonthlyLimit().compareTo(BigDecimal.ZERO) > 0
+                ? MoneyUtils.format(rule.getMonthlyLimit(), resolveCurrencyCode())
+                : "None";
+
         String meta = normalizeTag(rule.getTag())
                 + (rule.getLinkedCategory() == null ? " | Any category" : " | " + rule.getLinkedCategory().getLabel())
-                + " | Limit " + MoneyUtils.format(rule.getMonthlyLimit(), resolveCurrencyCode());
+                + " | Hard cap " + hardLimitText;
         Label metaLabel = UiUtils.createMutedLabel(meta);
 
-        BigDecimal spend = evaluation == null ? BigDecimal.ZERO.setScale(2) : evaluation.getActualSpend();
-        String statusText = statusText(status);
-        Label spendLabel = new Label("Spend " + MoneyUtils.format(spend, resolveCurrencyCode()) + " | " + statusText);
-        spendLabel.getStyleClass().add(statusStyleClass(status));
+        Label allocationLabel = UiUtils.createMutedLabel(
+                "Allocated cap " + MoneyUtils.format(safeRow.getFinalCapAmount(), resolveCurrencyCode())
+                        + " | Spent " + MoneyUtils.format(safeRow.getSpentAmount(), resolveCurrencyCode())
+                        + " | Baseline " + MoneyUtils.format(safeRow.getBaselineAmount(), resolveCurrencyCode())
+                        + " | Excess " + MoneyUtils.format(safeRow.getExcessSpentAmount(), resolveCurrencyCode())
+                        + " | Remaining " + MoneyUtils.format(safeRow.getRemainingAmount(), resolveCurrencyCode())
+                        + " | " + safeRow.getMatchedExpenseCount() + " matched"
+        );
+        Label paceHint = UiUtils.createMutedLabel(
+                "Expected by today: " + MoneyUtils.format(safeRow.getCapToDateAmount(), resolveCurrencyCode()) + " (pace-adjusted)"
+        );
+        paceHint.getStyleClass().add("habit-pace-hint");
 
-        Button selectButton = new Button("Select");
-        selectButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
-        selectButton.setOnAction(event -> {
-            selectedRuleId = rule.getId();
-            refreshAll();
+        ProgressBar progressBar = new ProgressBar(clampUsage(safeRow.getUsagePercent()));
+        progressBar.getStyleClass().add("habit-progress-bar");
+        progressBar.setMaxWidth(Double.MAX_VALUE);
+
+        Label statusLabel = new Label(statusText(safeRow.getStatus()) + " - "
+                + safeRow.getUsagePercent().stripTrailingZeros().toPlainString() + "% usage");
+        statusLabel.getStyleClass().add(statusStyleClass(safeRow.getStatus()));
+
+        CheckBox enabledCheck = new CheckBox("Enabled this month");
+        enabledCheck.setSelected(rule.isEnabledThisMonth());
+        enabledCheck.setOnAction(event -> onToggleEnabled(rule, enabledCheck.isSelected()));
+
+        ComboBox<Integer> weightCombo = new ComboBox<>();
+        weightCombo.getItems().setAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        weightCombo.getSelectionModel().select(Integer.valueOf(rule.getWeight()));
+        weightCombo.getStyleClass().addAll("combo-box", "form-combo", "habit-weight-combo");
+        weightCombo.setOnAction(event -> {
+            Integer selected = weightCombo.getValue();
+            if (selected != null) {
+                onWeightChanged(rule, selected);
+            }
         });
+
+        Label weightLabel = UiUtils.createMutedLabel("Weight");
+        HBox allocationControls = new HBox(8, enabledCheck, weightLabel, weightCombo);
+        allocationControls.setAlignment(Pos.CENTER_LEFT);
+
         Button editButton = new Button("Edit");
         editButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
         editButton.setOnAction(event -> loadRuleForEdit(rule));
+
         Button deleteButton = new Button("Delete");
         deleteButton.getStyleClass().addAll("danger-button", "btn-danger", "btn-small");
         deleteButton.setOnAction(event -> onDeleteRule(rule));
 
-        HBox actions = new HBox(8, selectButton, editButton, deleteButton);
+        HBox actions = new HBox(8, editButton, deleteButton);
         actions.setAlignment(Pos.CENTER_LEFT);
 
-        card.getChildren().addAll(title, metaLabel, spendLabel, actions);
+        card.getChildren().addAll(title, metaLabel, allocationLabel, paceHint, progressBar, statusLabel, allocationControls, actions);
         return card;
     }
 
-    private void refreshEvaluations(HabitPageSummary summary) {
+    private void refreshEvaluations(HabitAllowanceSnapshot snapshot) {
         evaluationListBox.getChildren().clear();
 
-        List<HabitSpendSummary> activeEvals = summary.getEvaluations().stream()
-                .filter(HabitSpendSummary::isActive)
+        List<HabitAllowanceRow> enabledRows = snapshot.getRows().stream()
+                .filter(HabitAllowanceRow::isEffectiveEnabled)
                 .toList();
 
-        if (activeEvals.isEmpty()) {
+        if (enabledRows.isEmpty()) {
             evaluationListBox.getChildren().add(new DataEmptyState(
-                    "No active habit rules",
-                    "Enable or create habit rules to evaluate monthly spending behavior."
+                    "No enabled habit rules",
+                    "Enable at least one rule to distribute the monthly habit allowance pool."
             ));
             return;
         }
 
-        for (HabitSpendSummary evaluation : activeEvals) {
-            evaluationListBox.getChildren().add(createEvaluationCard(evaluation));
+        for (HabitAllowanceRow row : enabledRows) {
+            evaluationListBox.getChildren().add(createEvaluationCard(row));
         }
     }
 
-    private Node createEvaluationCard(HabitSpendSummary evaluation) {
+    private Node createEvaluationCard(HabitAllowanceRow row) {
         VBox card = new VBox(8);
         card.getStyleClass().add("card");
 
-        Label title = new Label(evaluation.getDisplayName() + " (" + evaluation.getTag() + ")");
+        Label title = new Label(row.getDisplayName() + " (" + row.getTag() + ")");
         title.getStyleClass().add("card-title");
 
-        String line = "Spent " + MoneyUtils.format(evaluation.getActualSpend(), resolveCurrencyCode())
-                + " | Limit " + MoneyUtils.format(evaluation.getMonthlyLimit(), resolveCurrencyCode())
-                + " | Remaining " + MoneyUtils.format(evaluation.getRemainingBeforeLimit(), resolveCurrencyCode())
-                + " | " + evaluation.getMatchedExpenseCount() + " matched expenses";
-        Label detail = UiUtils.createMutedLabel(line);
+        Label detail = UiUtils.createMutedLabel(
+                "Weight " + row.getWeight()
+                        + " | Allocated cap " + MoneyUtils.format(row.getFinalCapAmount(), resolveCurrencyCode())
+                        + " | Spent " + MoneyUtils.format(row.getSpentAmount(), resolveCurrencyCode())
+                        + " | Baseline " + MoneyUtils.format(row.getBaselineAmount(), resolveCurrencyCode())
+                        + " | Excess " + MoneyUtils.format(row.getExcessSpentAmount(), resolveCurrencyCode())
+                        + " | Remaining " + MoneyUtils.format(row.getRemainingAmount(), resolveCurrencyCode())
+        );
+        Label paceHint = UiUtils.createMutedLabel(
+                "Expected by today: " + MoneyUtils.format(row.getCapToDateAmount(), resolveCurrencyCode()) + " (pace-adjusted)"
+        );
+        paceHint.getStyleClass().add("habit-pace-hint");
 
-        ProgressBar progressBar = new ProgressBar(clampUsage(evaluation.getUsagePercent()));
+        ProgressBar progressBar = new ProgressBar(clampUsage(row.getUsagePercent()));
         progressBar.getStyleClass().add("habit-progress-bar");
         progressBar.setMaxWidth(Double.MAX_VALUE);
 
-        Label status = new Label(statusText(evaluation.getStatus()) + " - "
-                + evaluation.getUsagePercent().stripTrailingZeros().toPlainString() + "% usage");
-        status.getStyleClass().add(statusStyleClass(evaluation.getStatus()));
+        Label status = new Label(statusText(row.getStatus()) + " - "
+                + row.getUsagePercent().stripTrailingZeros().toPlainString() + "% usage");
+        status.getStyleClass().add(statusStyleClass(row.getStatus()));
 
-        card.getChildren().addAll(title, detail, progressBar, status);
+        card.getChildren().addAll(title, detail, paceHint, progressBar, status);
         return card;
     }
 
@@ -453,12 +562,37 @@ public class HabitsPage extends VBox {
             insightsBox.getChildren().add(row);
         }
     }
+
+    private HabitAllowanceRow fallbackRow(HabitRule rule) {
+        return new HabitAllowanceRow(
+                rule.getId(),
+                rule.getDisplayName(),
+                normalizeTag(rule.getTag()),
+                rule.getLinkedCategory(),
+                rule.isActive(),
+                rule.isEnabledThisMonth(),
+                rule.getWeight(),
+                rule.getMonthlyLimit(),
+                rule.getBaselineAmount(),
+                BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2),
+                HabitStatus.ON_TRACK,
+                0
+        );
+    }
+
     private void loadRuleForEdit(HabitRule rule) {
         editingRuleId = rule.getId();
         displayNameField.setText(rule.getDisplayName());
         tagField.setText(normalizeTag(rule.getTag()));
         linkedCategoryCombo.getSelectionModel().select(rule.getLinkedCategory());
         monthlyLimitField.setMoneyValue(rule.getMonthlyLimit());
+        baselineAmountField.setMoneyValue(rule.getBaselineAmount());
         warningThresholdField.setText(rule.getWarningThresholdPercent().stripTrailingZeros().toPlainString());
         activeCheck.setSelected(rule.isActive());
         notesArea.setText(rule.getNotes());
@@ -473,6 +607,7 @@ public class HabitsPage extends VBox {
         tagField.clear();
         linkedCategoryCombo.getSelectionModel().selectFirst();
         monthlyLimitField.clear();
+        baselineAmountField.clear();
         warningThresholdField.setText("70");
         activeCheck.setSelected(true);
         notesArea.clear();
@@ -511,7 +646,7 @@ public class HabitsPage extends VBox {
 
     private String statusText(HabitStatus status) {
         return switch (status) {
-            case ON_TRACK -> "On Track";
+            case ON_TRACK -> "OK";
             case WARNING -> "Warning";
             case EXCEEDED -> "Exceeded";
         };
