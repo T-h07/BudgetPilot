@@ -47,6 +47,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.Scene;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -762,6 +763,7 @@ public class SavingsPage extends VBox {
 
     private boolean confirm(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        styleAlert(alert);
         alert.setHeaderText(title);
         alert.setContentText(message);
         Optional<ButtonType> result = alert.showAndWait();
@@ -779,7 +781,8 @@ public class SavingsPage extends VBox {
                 + "You are allocating more money than your month currently supports (income - expenses).";
 
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Low available balance");
+        styleAlert(alert);
+        alert.setTitle(header);
         alert.setHeaderText(header);
         alert.setContentText(message);
         ButtonType proceed = new ButtonType("Proceed anyway");
@@ -787,6 +790,14 @@ public class SavingsPage extends VBox {
         alert.getButtonTypes().setAll(proceed, cancel);
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == proceed;
+    }
+
+    private void styleAlert(Alert alert) {
+        Scene scene = getScene();
+        if (scene != null) {
+            alert.getDialogPane().getStylesheets().setAll(scene.getStylesheets());
+        }
+        alert.getDialogPane().getStyleClass().addAll("page-root", "card", "month-rollover-dialog");
     }
 
     private void addFormRow(GridPane grid, int rowIndex, String labelText, Node field) {

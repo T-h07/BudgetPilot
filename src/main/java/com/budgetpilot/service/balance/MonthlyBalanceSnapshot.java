@@ -61,7 +61,15 @@ public class MonthlyBalanceSnapshot {
         return netSavingsAllocationsThisMonth;
     }
 
+    public BigDecimal getNetSavingsReservedThisMonth() {
+        return netSavingsAllocationsThisMonth;
+    }
+
     public BigDecimal getNetGoalAllocationsThisMonth() {
+        return netGoalAllocationsThisMonth;
+    }
+
+    public BigDecimal getNetGoalsReservedThisMonth() {
         return netGoalAllocationsThisMonth;
     }
 
@@ -69,7 +77,15 @@ public class MonthlyBalanceSnapshot {
         return availableBeforeAllocations;
     }
 
+    public BigDecimal getAvailableBeforeReserve() {
+        return availableBeforeAllocations;
+    }
+
     public BigDecimal getAvailableAfterAllocations() {
+        return availableAfterAllocations;
+    }
+
+    public BigDecimal getAvailableAfterReserve() {
         return availableAfterAllocations;
     }
 
@@ -77,7 +93,15 @@ public class MonthlyBalanceSnapshot {
         return warningLevel;
     }
 
+    public CashflowStatus getStatus() {
+        return CashflowStatus.valueOf(warningLevel.name());
+    }
+
     public String getWarningMessage() {
+        return warningMessage;
+    }
+
+    public String getStatusMessage() {
         return warningMessage;
     }
 }

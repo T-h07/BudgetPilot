@@ -8,6 +8,7 @@ import com.budgetpilot.service.achievements.AchievementPageSummary;
 import com.budgetpilot.service.achievements.AchievementService;
 import com.budgetpilot.service.balance.MonthlyBalanceService;
 import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
+import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
 import com.budgetpilot.service.planner.BudgetSummary;
 import com.budgetpilot.service.planner.PlanVsActualRow;
 import com.budgetpilot.service.expenses.ExpenseCategorySummary;
@@ -144,7 +145,8 @@ public class DashboardMetricsService {
                 familySummary,
                 habitPageSummary,
                 investmentSummary,
-                achievementSummary
+                achievementSummary,
+                monthlyBalance
         );
 
         List<DashboardKpi> kpis = buildKpis(
@@ -754,7 +756,8 @@ public class DashboardMetricsService {
             FamilySummary familySummary,
             HabitPageSummary habitPageSummary,
             InvestmentPageSummary investmentSummary,
-            AchievementPageSummary achievementSummary
+            AchievementPageSummary achievementSummary,
+            MonthlyBalanceSnapshot monthlyBalance
     ) {
         List<DashboardAlert> alerts = new ArrayList<>();
 
@@ -822,6 +825,26 @@ public class DashboardMetricsService {
                     forecastSummary.getStatusMessage(),
                     "forecast",
                     "Adjust spending pace and review planner targets."
+            ));
+        }
+
+        if (monthlyBalance.getWarningLevel() == MonthlyBalanceWarningLevel.NEGATIVE) {
+            alerts.add(new DashboardAlert(
+                    "cashflow-negative",
+                    AlertLevel.DANGER,
+                    "Negative available balance",
+                    "Available balance is negative after allocations.",
+                    "balance",
+                    "Reduce spending or lower savings/goal contributions for this month."
+            ));
+        } else if (monthlyBalance.getWarningLevel() == MonthlyBalanceWarningLevel.LOW) {
+            alerts.add(new DashboardAlert(
+                    "cashflow-low",
+                    AlertLevel.WARNING,
+                    "Low available balance",
+                    "Low available balance. Review spending or allocations.",
+                    "balance",
+                    "Adjust contributions or rebalance monthly spending."
             ));
         }
 
