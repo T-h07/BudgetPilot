@@ -1,24 +1,25 @@
 package com.budgetpilot.ui.pages;
 
 import com.budgetpilot.core.AppContext;
-import com.budgetpilot.model.ExpenseEntry;
-import com.budgetpilot.model.Goal;
-import com.budgetpilot.model.IncomeEntry;
-import com.budgetpilot.model.MonthlyPlan;
-import com.budgetpilot.model.SavingsBucket;
 import com.budgetpilot.model.UserProfile;
-import com.budgetpilot.store.BudgetStore;
-import com.budgetpilot.service.BudgetSummary;
-import com.budgetpilot.service.ForecastService;
-import com.budgetpilot.service.ForecastSummary;
-import com.budgetpilot.service.PlannerService;
-import com.budgetpilot.ui.components.KpiTile;
+import com.budgetpilot.service.dashboard.CategorySpendPoint;
+import com.budgetpilot.service.dashboard.DashboardKpi;
+import com.budgetpilot.service.dashboard.DashboardMetricsService;
+import com.budgetpilot.service.dashboard.DashboardSnapshot;
+import com.budgetpilot.service.dashboard.WeeklySpendPoint;
+import com.budgetpilot.ui.components.DashboardKpiTile;
+import com.budgetpilot.ui.components.InsightListCard;
+import com.budgetpilot.ui.components.MetricRow;
 import com.budgetpilot.ui.components.SectionCard;
+import com.budgetpilot.ui.components.StatusBadge;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.UiUtils;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -26,175 +27,244 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.YearMonth;
 import java.util.List;
 
 public class DashboardPage extends VBox {
     public DashboardPage(AppContext appContext) {
         setSpacing(UiUtils.SECTION_SPACING);
         setPadding(UiUtils.PAGE_PADDING);
-        getStyleClass().add("page-root");
+        getStyleClass().addAll("page-root", "page-dashboard");
 
-        BudgetStore store = appContext.getStore();
-        YearMonth selectedMonth = appContext.getSelectedMonth();
-        String currencyCode = resolveCurrencyCode(appContext, store);
+        DashboardMetricsService metricsService = new DashboardMetricsService(appContext.getStore());
+        DashboardSnapshot snapshot = metricsService.buildSnapshot(appContext.getSelectedMonth());
+        String currencyCode = resolveCurrencyCode(appContext);
 
-        List<IncomeEntry> incomes = store == null ? List.of() : store.listIncomeEntries(selectedMonth);
-        List<ExpenseEntry> expenses = store == null ? List.of() : store.listExpenseEntries(selectedMonth);
-        List<Goal> goals = store == null ? List.of() : store.listGoals();
-        List<SavingsBucket> savingsBuckets = store == null ? List.of() : store.listSavingsBuckets();
-        int habitRulesCount = store == null ? 0 : store.listHabitRules().size();
-        MonthlyPlan plan = store == null ? null : store.getMonthlyPlan(selectedMonth);
-        boolean familyEnabled = appContext.getCurrentUser() != null && appContext.getCurrentUser().isFamilyModuleEnabled();
-        BudgetSummary budgetSummary = store == null
-                ? null
-                : new PlannerService(store).buildBudgetSummary(selectedMonth, familyEnabled);
-        ForecastSummary forecastSummary = store == null
-                ? null
-                : new ForecastService(store).buildForecast(selectedMonth, familyEnabled);
-
-        BigDecimal totalIncome = incomes.stream()
-                .map(IncomeEntry::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalExpenses = expenses.stream()
-                .map(ExpenseEntry::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal remainingMoney = MoneyUtils.safeSubtract(totalIncome, totalExpenses);
-        long activeGoalsCount = goals.stream().filter(Goal::isActive).count();
-
-        String monthText = appContext.getCurrentMonthDisplayText();
         getChildren().add(UiUtils.createPageHeader(
                 "Dashboard",
-                "Live cockpit for " + monthText + ". Real-time summary from your in-memory financial workspace."
+                "Financial command center for " + snapshot.getMonthDisplayText()
+                        + ". Plan, track, forecast, and act from one view."
         ));
 
+        GridPane kpiGrid = buildKpiGrid(snapshot.getKpis());
+        HBox mainGrid = UiUtils.createTwoColumn(
+                buildCategoryPanel(snapshot, currencyCode),
+                buildWeeklyTrendPanel(snapshot, currencyCode)
+        );
+        mainGrid.getStyleClass().add("dashboard-main-grid");
+
+        HBox lowerGrid = UiUtils.createTwoColumn(
+                buildPlannerVsActualPanel(snapshot, currencyCode),
+                buildHealthPanel(snapshot, currencyCode)
+        );
+        lowerGrid.getStyleClass().add("dashboard-lower-grid");
+
+        SectionCard alertsPanel = buildAlertsPanel(snapshot);
+
+        getChildren().addAll(kpiGrid, mainGrid, lowerGrid, alertsPanel);
+    }
+
+    private GridPane buildKpiGrid(List<DashboardKpi> kpis) {
         GridPane kpiGrid = new GridPane();
-        kpiGrid.getStyleClass().add("kpi-grid");
+        kpiGrid.getStyleClass().add("dashboard-kpi-grid");
         kpiGrid.setHgap(UiUtils.CARD_GAP);
         kpiGrid.setVgap(UiUtils.CARD_GAP);
 
-        kpiGrid.add(new KpiTile(
-                "Money Remaining",
-                MoneyUtils.format(remainingMoney, currencyCode),
-                "Income " + MoneyUtils.format(totalIncome, currencyCode) + " vs expenses " + MoneyUtils.format(totalExpenses, currencyCode)
-        ), 0, 0);
-
-        kpiGrid.add(new KpiTile(
-                "Income This Month",
-                MoneyUtils.format(totalIncome, currencyCode),
-                incomes.size() + " income entries tracked"
-        ), 1, 0);
-
-        kpiGrid.add(new KpiTile(
-                "Expenses This Month",
-                MoneyUtils.format(totalExpenses, currencyCode),
-                expenses.size() + " expense entries tracked"
-        ), 2, 0);
-
-        kpiGrid.add(new KpiTile(
-                "Planned Remaining",
-                budgetSummary == null
-                        ? MoneyUtils.format(BigDecimal.ZERO, currencyCode)
-                        : MoneyUtils.format(budgetSummary.getRemainingPlanned(), currencyCode),
-                budgetSummary == null ? "Planner summary unavailable" : budgetSummary.getStatusMessage()
-        ), 3, 0);
-
+        int index = 0;
+        for (DashboardKpi kpi : kpis) {
+            DashboardKpiTile tile = new DashboardKpiTile();
+            tile.setContent(kpi.getTitle(), kpi.getValueText(), kpi.getSubtext());
+            int col = index % 4;
+            int row = index / 4;
+            kpiGrid.add(tile, col, row);
+            GridPane.setHgrow(tile, Priority.ALWAYS);
+            tile.setMaxWidth(Double.MAX_VALUE);
+            index++;
+        }
         for (int i = 0; i < 4; i++) {
             ColumnConstraints column = new ColumnConstraints();
             column.setPercentWidth(25);
             column.setHgrow(Priority.ALWAYS);
             kpiGrid.getColumnConstraints().add(column);
         }
-
-        BigDecimal averageExpense = expenses.isEmpty()
-                ? BigDecimal.ZERO
-                : totalExpenses.divide(BigDecimal.valueOf(expenses.size()), 2, RoundingMode.HALF_UP);
-
-        SectionCard spendingOverview = new SectionCard(
-                "Spending Overview",
-                "Current-month spending stats based on stored expense entries.",
-                createSummaryRows(new String[][]{
-                        {"Expense Entries", String.valueOf(expenses.size())},
-                        {"Average Expense", MoneyUtils.format(averageExpense, currencyCode)},
-                        {"Total Expenses", MoneyUtils.format(totalExpenses, currencyCode)},
-                        {"Projected Month-End Spend", forecastSummary == null
-                                ? "Unavailable"
-                                : MoneyUtils.format(forecastSummary.getProjectedExpensesByMonthEnd(), currencyCode)},
-                        {"Month", monthText}
-                })
-        );
-
-        String plannedDiscretionary = plan == null
-                ? "No plan seeded"
-                : MoneyUtils.format(plan.getDiscretionaryBudget(), currencyCode);
-        String plannedSafety = plan == null
-                ? "No plan seeded"
-                : MoneyUtils.format(plan.getSafetyBufferAmount(), currencyCode);
-        String forecastRemainingAfterPlan = forecastSummary == null
-                ? "Unavailable"
-                : MoneyUtils.format(forecastSummary.getProjectedRemainingAfterPlan(), currencyCode);
-        String forecastStatus = forecastSummary == null
-                ? "Unavailable"
-                : (forecastSummary.isOverspendingRisk() ? "Overspending risk" : "On track");
-
-        SectionCard plannerSummary = new SectionCard(
-                "Planner Summary",
-                "High-level snapshot from the monthly plan object.",
-                createSummaryRows(new String[][]{
-                        {"Fixed Costs Budget", plan == null ? "No plan seeded" : MoneyUtils.format(plan.getFixedCostsBudget(), currencyCode)},
-                        {"Food Budget", plan == null ? "No plan seeded" : MoneyUtils.format(plan.getFoodBudget(), currencyCode)},
-                        {"Discretionary Budget", plannedDiscretionary},
-                        {"Safety Buffer", plannedSafety},
-                        {"Forecast Remaining", forecastRemainingAfterPlan},
-                        {"Forecast Status", forecastStatus}
-                })
-        );
-
-        SectionCard dataSnapshot = new SectionCard(
-                "Data Snapshot",
-                "Store-level counts used to power the dashboard foundation.",
-                createSummaryRows(new String[][]{
-                        {"Expense Entries", String.valueOf(expenses.size())},
-                        {"Savings Buckets", String.valueOf(savingsBuckets.size())},
-                        {"Habit Rules", String.valueOf(habitRulesCount)},
-                        {"Active Goals", String.valueOf(activeGoalsCount)},
-                        {"Total Goals", String.valueOf(goals.size())}
-                })
-        );
-
-        HBox summaryRow = UiUtils.createTwoColumn(spendingOverview, plannerSummary);
-        getChildren().addAll(kpiGrid, summaryRow, dataSnapshot);
+        return kpiGrid;
     }
 
-    private String resolveCurrencyCode(AppContext appContext, BudgetStore store) {
-        UserProfile profile = appContext.getCurrentUser();
-        if (profile == null && store != null) {
-            profile = store.getUserProfile();
+    private SectionCard buildCategoryPanel(DashboardSnapshot snapshot, String currencyCode) {
+        VBox content = new VBox(10);
+        content.getStyleClass().add("dashboard-category-list");
+        if (snapshot.getCategorySpending().isEmpty()) {
+            Label empty = new Label("No category spending yet for this month.");
+            empty.getStyleClass().add("empty-panel-state");
+            content.getChildren().add(empty);
+        } else {
+            for (CategorySpendPoint point : snapshot.getCategorySpending()) {
+                VBox row = new VBox(6);
+                row.getStyleClass().add("category-row");
+
+                HBox head = new HBox(8);
+                Label categoryLabel = new Label(point.getCategoryLabel() + " (" + point.getEntryCount() + ")");
+                categoryLabel.getStyleClass().add("muted-text");
+                Label valueLabel = new Label(
+                        MoneyUtils.format(point.getTotal(), currencyCode)
+                                + " | "
+                                + point.getPercentOfTotal().toPlainString() + "%"
+                );
+                valueLabel.getStyleClass().add("info-row-value");
+                Region spacer = new Region();
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                head.getChildren().addAll(categoryLabel, spacer, valueLabel);
+
+                ProgressBar progressBar = new ProgressBar(point.getPercentOfTotal().doubleValue() / 100.0);
+                progressBar.getStyleClass().add("category-progress");
+                progressBar.setMaxWidth(Double.MAX_VALUE);
+                row.getChildren().addAll(head, progressBar);
+                content.getChildren().add(row);
+            }
         }
+        SectionCard card = new SectionCard(
+                "Spending by Category",
+                "Dominant categories and their share of monthly spend.",
+                content
+        );
+        card.getStyleClass().addAll("dashboard-panel", "chart-card");
+        return card;
+    }
+
+    private SectionCard buildWeeklyTrendPanel(DashboardSnapshot snapshot, String currencyCode) {
+        VBox content = new VBox(10);
+        List<WeeklySpendPoint> points = snapshot.getWeeklySpending();
+        boolean hasData = points.stream().anyMatch(point -> point.getTotalSpent().compareTo(java.math.BigDecimal.ZERO) > 0);
+        if (!hasData) {
+            Label empty = new Label("No weekly spending trend available yet.");
+            empty.getStyleClass().add("empty-panel-state");
+            content.getChildren().add(empty);
+        } else {
+            CategoryAxis xAxis = new CategoryAxis();
+            NumberAxis yAxis = new NumberAxis();
+            xAxis.setLabel("Week");
+            yAxis.setLabel("Spend");
+
+            BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+            chart.setLegendVisible(false);
+            chart.setAnimated(false);
+            chart.setCategoryGap(14);
+            chart.setBarGap(4);
+            chart.setMinHeight(260);
+            chart.getStyleClass().add("dashboard-weekly-chart");
+
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            for (WeeklySpendPoint point : points) {
+                series.getData().add(new XYChart.Data<>(point.getWeekLabel(), point.getTotalSpent()));
+            }
+            chart.getData().add(series);
+
+            WeeklySpendPoint first = points.get(0);
+            WeeklySpendPoint last = points.get(points.size() - 1);
+            Label footnote = UiUtils.createMutedLabel(
+                    "Range: " + first.getDateRangeLabel() + " to " + last.getDateRangeLabel()
+                            + " | Currency: " + currencyCode
+            );
+            content.getChildren().addAll(chart, footnote);
+        }
+        SectionCard card = new SectionCard(
+                "Weekly Spending Trend",
+                "Week-by-week spend distribution for the selected month.",
+                content
+        );
+        card.getStyleClass().addAll("dashboard-panel", "chart-card");
+        return card;
+    }
+
+    private SectionCard buildPlannerVsActualPanel(DashboardSnapshot snapshot, String currencyCode) {
+        VBox content = new VBox(8);
+        content.getChildren().addAll(
+                new MetricRow("Planned Income", MoneyUtils.format(snapshot.getPlannerVsActual().getPlannedIncome(), currencyCode)),
+                new MetricRow("Total Spent (Actual)", MoneyUtils.format(snapshot.getPlannerVsActual().getTotalSpentActual(), currencyCode)),
+                new MetricRow("Projected Month-End Spend", MoneyUtils.format(snapshot.getPlannerVsActual().getProjectedMonthEndSpend(), currencyCode)),
+                new MetricRow("Planned Expense Budget", MoneyUtils.format(snapshot.getPlannerVsActual().getPlannedExpenseBudget(), currencyCode)),
+                new MetricRow("Planned Savings", MoneyUtils.format(snapshot.getPlannerVsActual().getPlannedSavingsAmount(), currencyCode)),
+                new MetricRow("Planned Goals", MoneyUtils.format(snapshot.getPlannerVsActual().getPlannedGoalsAmount(), currencyCode)),
+                new MetricRow("Remaining Planned", MoneyUtils.format(snapshot.getPlannerVsActual().getPlannerRemainingPlanned(), currencyCode)),
+                new MetricRow("Projected Remaining", MoneyUtils.format(snapshot.getPlannerVsActual().getProjectedRemainingAfterPlan(), currencyCode))
+        );
+
+        if (!snapshot.isHasMonthlyPlan()) {
+            Label warning = new Label("No monthly plan found. Planner comparisons are limited.");
+            warning.getStyleClass().add("status-warn");
+            content.getChildren().add(warning);
+        }
+
+        SectionCard card = new SectionCard(
+                "Planner vs Actual",
+                "Compare plan assumptions against current and projected spend.",
+                content
+        );
+        card.getStyleClass().add("dashboard-panel");
+        return card;
+    }
+
+    private SectionCard buildHealthPanel(DashboardSnapshot snapshot, String currencyCode) {
+        VBox content = new VBox(10);
+        content.getStyleClass().add("health-card");
+
+        Label scoreLabel = new Label(snapshot.getBudgetHealthScore() + "/100");
+        scoreLabel.getStyleClass().add("health-score");
+
+        StatusBadge healthBadge = new StatusBadge();
+        healthBadge.setText(snapshot.getBudgetHealthLabel());
+        healthBadge.setStatus(snapshot.getBudgetHealthLabel());
+
+        Label statusMessage = new Label(snapshot.getPrimaryStatusMessage());
+        statusMessage.getStyleClass().add("muted-text");
+        statusMessage.setWrapText(true);
+
+        StatusBadge forecastBadge = new StatusBadge();
+        forecastBadge.setText(snapshot.isForecastOverspendingRisk() ? "Forecast Risk" : "Forecast Stable");
+        forecastBadge.setStatus(snapshot.isForecastOverspendingRisk() ? "danger" : "good");
+
+        StatusBadge plannerBadge = new StatusBadge();
+        plannerBadge.setText(snapshot.isPlannerOverallocated() ? "Planner Overallocated" : "Planner Healthy");
+        plannerBadge.setStatus(snapshot.isPlannerOverallocated() ? "warn" : "good");
+
+        HBox badges = new HBox(8, forecastBadge, plannerBadge);
+        content.getChildren().addAll(
+                scoreLabel,
+                healthBadge,
+                statusMessage,
+                new MetricRow("Projected Spend", MoneyUtils.format(snapshot.getProjectedMonthEndSpend(), currencyCode)),
+                new MetricRow("Projected Remaining", MoneyUtils.format(snapshot.getProjectedRemainingAfterPlan(), currencyCode)),
+                new MetricRow("Savings Total", MoneyUtils.format(snapshot.getSavingsCurrentTotal(), currencyCode)),
+                new MetricRow("Goals Total", MoneyUtils.format(snapshot.getGoalsCurrentTotal(), currencyCode)),
+                badges
+        );
+
+        SectionCard card = new SectionCard(
+                "Forecast & Health",
+                "Health score, risks, and projected month-end position.",
+                content
+        );
+        card.getStyleClass().add("dashboard-panel");
+        return card;
+    }
+
+    private SectionCard buildAlertsPanel(DashboardSnapshot snapshot) {
+        InsightListCard insightList = new InsightListCard();
+        insightList.setAlerts(snapshot.getAlerts());
+        SectionCard card = new SectionCard(
+                "Alerts & Insights",
+                "Actionable signals generated from planner, expenses, and forecast.",
+                insightList
+        );
+        card.getStyleClass().addAll("dashboard-panel", "dashboard-alerts-panel");
+        return card;
+    }
+
+    private String resolveCurrencyCode(AppContext appContext) {
+        UserProfile profile = appContext.getCurrentUser();
         if (profile == null || profile.getCurrencyCode() == null || profile.getCurrencyCode().isBlank()) {
             return "EUR";
         }
         return profile.getCurrencyCode();
     }
-
-    private Node createSummaryRows(String[][] rows) {
-        VBox container = new VBox(10);
-        for (String[] row : rows) {
-            HBox line = new HBox();
-            line.setAlignment(Pos.CENTER_LEFT);
-
-            Label label = UiUtils.createMutedLabel(row[0]);
-            Label value = new Label(row[1]);
-            value.getStyleClass().add("info-row-value");
-
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-
-            line.getChildren().addAll(label, spacer, value);
-            container.getChildren().add(line);
-        }
-        return container;
-    }
 }
+
