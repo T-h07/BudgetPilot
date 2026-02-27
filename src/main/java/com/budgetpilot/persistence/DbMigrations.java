@@ -19,6 +19,7 @@ public final class DbMigrations {
         MIGRATIONS.put(3, "/db/schema_v3.sql");
         MIGRATIONS.put(4, "/db/schema_v4.sql");
         MIGRATIONS.put(5, "/db/schema_v5.sql");
+        MIGRATIONS.put(6, "/db/schema_v6.sql");
     }
 
     private DbMigrations() {

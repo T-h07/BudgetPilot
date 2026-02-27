@@ -1,11 +1,13 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.ExpenseTemplate;
 import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.model.Investment;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.SavingsBucket;
@@ -18,6 +20,8 @@ import com.budgetpilot.model.enums.InvestmentKind;
 import com.budgetpilot.model.enums.InvestmentStatus;
 import com.budgetpilot.model.enums.InvestmentType;
 import com.budgetpilot.model.enums.PaymentMethod;
+import com.budgetpilot.model.enums.PlannerBucket;
+import com.budgetpilot.model.enums.RecurrenceCadence;
 import com.budgetpilot.model.enums.RelationshipType;
 import com.budgetpilot.model.enums.UserProfileType;
 import com.budgetpilot.service.family.FamilyService;
@@ -83,6 +87,61 @@ public final class DemoDataSeeder {
         freelance.setReceived(false);
         freelance.setNotes("Pending invoice");
         store.saveIncomeEntry(freelance);
+
+        ExpenseTemplate rentTemplate = new ExpenseTemplate();
+        rentTemplate.setName("Rent");
+        rentTemplate.setPlannerBucket(PlannerBucket.FIXED_COSTS);
+        rentTemplate.setCategory(ExpenseCategory.BILLS);
+        rentTemplate.setDefaultAmount(new BigDecimal("650"));
+        rentTemplate.setCadence(RecurrenceCadence.MONTHLY);
+        rentTemplate.setDayOfMonth(1);
+        rentTemplate.setSubcategory("Rent");
+        rentTemplate.setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+        rentTemplate.setActive(true);
+        store.saveExpenseTemplate(rentTemplate);
+
+        ExpenseTemplate therapistTemplate = new ExpenseTemplate();
+        therapistTemplate.setName("Therapist");
+        therapistTemplate.setPlannerBucket(PlannerBucket.DISCRETIONARY);
+        therapistTemplate.setCategory(ExpenseCategory.HEALTH);
+        therapistTemplate.setSubcategory("Therapist");
+        therapistTemplate.setDefaultAmount(new BigDecimal("50"));
+        therapistTemplate.setCadence(RecurrenceCadence.MONTHLY);
+        therapistTemplate.setDayOfMonth(5);
+        therapistTemplate.setPaymentMethod(PaymentMethod.CARD);
+        therapistTemplate.setTag("#therapist");
+        therapistTemplate.setActive(true);
+        store.saveExpenseTemplate(therapistTemplate);
+
+        ExpenseTemplate internetTemplate = new ExpenseTemplate();
+        internetTemplate.setName("Internet");
+        internetTemplate.setPlannerBucket(PlannerBucket.FIXED_COSTS);
+        internetTemplate.setCategory(ExpenseCategory.BILLS);
+        internetTemplate.setSubcategory("Internet");
+        internetTemplate.setDefaultAmount(new BigDecimal("35"));
+        internetTemplate.setCadence(RecurrenceCadence.MONTHLY);
+        internetTemplate.setDayOfMonth(3);
+        internetTemplate.setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+        internetTemplate.setActive(true);
+        store.saveExpenseTemplate(internetTemplate);
+
+        IncomeTemplate salaryTemplate = new IncomeTemplate();
+        salaryTemplate.setSourceName("Primary Salary");
+        salaryTemplate.setIncomeType(IncomeType.SALARY);
+        salaryTemplate.setDefaultAmount(new BigDecimal("3250"));
+        salaryTemplate.setCadence(RecurrenceCadence.MONTHLY);
+        salaryTemplate.setDayOfMonth(1);
+        salaryTemplate.setActive(true);
+        store.saveIncomeTemplate(salaryTemplate);
+
+        IncomeTemplate sideIncomeTemplate = new IncomeTemplate();
+        sideIncomeTemplate.setSourceName("Design Side Gig");
+        sideIncomeTemplate.setIncomeType(IncomeType.SIDE_HUSTLE);
+        sideIncomeTemplate.setDefaultAmount(new BigDecimal("420"));
+        sideIncomeTemplate.setCadence(RecurrenceCadence.MONTHLY);
+        sideIncomeTemplate.setDayOfMonth(12);
+        sideIncomeTemplate.setActive(true);
+        store.saveIncomeTemplate(sideIncomeTemplate);
 
         store.saveExpenseEntry(expense(seedMonth, 2, "78.50", ExpenseCategory.FOOD, "Groceries", "#groceries", PaymentMethod.CARD));
         store.saveExpenseEntry(expense(seedMonth, 3, "42.00", ExpenseCategory.CAR, "Fuel", "#car", PaymentMethod.CARD));

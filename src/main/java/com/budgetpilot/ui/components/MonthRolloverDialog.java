@@ -1,12 +1,11 @@
 package com.budgetpilot.ui.components;
 
+import com.budgetpilot.model.ExpenseTemplate;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.model.enums.PlannerBucket;
-import com.budgetpilot.service.month.ExpenseTemplateCandidate;
-import com.budgetpilot.service.month.ExpenseTemplateSelection;
 import com.budgetpilot.service.month.MonthRolloverOptions;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.MonthUtils;
-import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -20,13 +19,10 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
@@ -41,7 +37,8 @@ public final class MonthRolloverDialog {
     public static Result show(
             Window owner,
             YearMonth targetMonth,
-            List<ExpenseTemplateCandidate> templateCandidates,
+            List<ExpenseTemplate> expenseTemplates,
+            List<IncomeTemplate> incomeTemplates,
             String currencyCode
     ) {
         Dialog<Result> dialog = new Dialog<>();
@@ -57,28 +54,24 @@ public final class MonthRolloverDialog {
         }
 
         CheckBox copyPlannerPlan = new CheckBox("Copy last month planner plan");
-        CheckBox carryRecurringIncome = new CheckBox("Carry forward recurring income");
-        CheckBox carryRecurringExpenses = new CheckBox("Carry forward recurring expenses");
         copyPlannerPlan.setSelected(true);
-        carryRecurringIncome.setSelected(true);
-        carryRecurringExpenses.setSelected(true);
         copyPlannerPlan.getStyleClass().add("check-box");
-        carryRecurringIncome.getStyleClass().add("check-box");
-        carryRecurringExpenses.getStyleClass().add("check-box");
 
-        List<TemplateRow> templateRows = buildTemplateRows(templateCandidates, currencyCode);
-        VBox templateSection = buildTemplateSection(carryRecurringExpenses, templateRows);
+        List<ExpenseTemplateRow> expenseRows = buildExpenseRows(expenseTemplates, currencyCode);
+        List<IncomeTemplateRow> incomeRows = buildIncomeRows(incomeTemplates, currencyCode);
+        VBox expenseSection = buildExpenseSection(expenseRows);
+        VBox incomeSection = buildIncomeSection(incomeRows);
 
-        Label helpText = new Label("Only selected templates are copied. Unplanned one-time expenses are copied only if selected.");
+        Label helpText = new Label("Only selected templates are generated. Existing template-generated entries are skipped.");
         helpText.getStyleClass().add("muted-text");
         helpText.setWrapText(true);
 
-        VBox body = new VBox(10, copyPlannerPlan, carryRecurringIncome, carryRecurringExpenses, templateSection, helpText);
+        VBox body = new VBox(12, copyPlannerPlan, expenseSection, incomeSection, helpText);
         body.setPadding(new Insets(8, 0, 4, 0));
         body.getStyleClass().addAll("page-root", "month-rollover-body");
         dialog.getDialogPane().setContent(body);
         dialog.getDialogPane().getStyleClass().addAll("page-root", "card", "month-rollover-dialog");
-        dialog.getDialogPane().setPrefWidth(780);
+        dialog.getDialogPane().setPrefWidth(840);
 
         ButtonType notNowType = new ButtonType("Not now", ButtonBar.ButtonData.CANCEL_CLOSE);
         ButtonType startType = new ButtonType("Start New Month", ButtonBar.ButtonData.OK_DONE);
@@ -97,19 +90,17 @@ public final class MonthRolloverDialog {
             if (buttonType != startType) {
                 return Result.notNow();
             }
+
             MonthRolloverOptions options = new MonthRolloverOptions();
             options.setCopyPlannerPlan(copyPlannerPlan.isSelected());
-            options.setCarryForwardRecurringIncome(carryRecurringIncome.isSelected());
-            options.setCarryForwardRecurringExpenses(carryRecurringExpenses.isSelected());
-            if (carryRecurringExpenses.isSelected()) {
-                List<ExpenseTemplateSelection> selections = templateRows.stream()
-                        .filter(TemplateRow::isSelected)
-                        .map(TemplateRow::toSelection)
-                        .toList();
-                options.setSelectedExpenseTemplates(selections);
-            } else {
-                options.setSelectedExpenseTemplates(List.of());
-            }
+            options.setSelectedExpenseTemplateIds(expenseRows.stream()
+                    .filter(ExpenseTemplateRow::isSelected)
+                    .map(row -> row.template.getId())
+                    .toList());
+            options.setSelectedIncomeTemplateIds(incomeRows.stream()
+                    .filter(IncomeTemplateRow::isSelected)
+                    .map(row -> row.template.getId())
+                    .toList());
             return Result.start(options);
         });
 
@@ -117,68 +108,106 @@ public final class MonthRolloverDialog {
         return result.orElseGet(Result::notNow);
     }
 
-    private static VBox buildTemplateSection(CheckBox carryRecurringExpenses, List<TemplateRow> templateRows) {
-        VBox section = new VBox(8);
+    private static VBox buildExpenseSection(List<ExpenseTemplateRow> rows) {
+        Label sectionTitle = new Label("Carry forward expense templates");
+        sectionTitle.getStyleClass().add("card-title");
 
         TextField searchField = new TextField();
         searchField.setPromptText("Search templates...");
         searchField.getStyleClass().addAll("text-input", "form-input");
 
-        Button selectRecurringButton = new Button("Select all recurring");
-        selectRecurringButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
-        selectRecurringButton.setOnAction(event -> templateRows.forEach(row -> row.setSelected(row.candidate.wasRecurring())));
+        Button selectAllButton = new Button("Select all");
+        selectAllButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+        selectAllButton.setOnAction(event -> rows.forEach(row -> row.setSelected(true)));
 
         Button clearSelectionButton = new Button("Clear selection");
         clearSelectionButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
-        clearSelectionButton.setOnAction(event -> templateRows.forEach(row -> row.setSelected(false)));
+        clearSelectionButton.setOnAction(event -> rows.forEach(row -> row.setSelected(false)));
 
-        HBox actions = new HBox(8, selectRecurringButton, clearSelectionButton);
+        HBox actions = new HBox(8, selectAllButton, clearSelectionButton);
         actions.setAlignment(Pos.CENTER_LEFT);
 
         VBox sectionsContainer = new VBox(10);
-        sectionsContainer.setPadding(new Insets(4, 0, 0, 0));
         sectionsContainer.getStyleClass().add("month-rollover-sections");
-        populateBucketSections(sectionsContainer, templateRows);
+        populateExpenseBucketSections(sectionsContainer, rows);
 
         ScrollPane scrollPane = new ScrollPane(sectionsContainer);
         scrollPane.setFitToWidth(true);
-        scrollPane.setPrefViewportHeight(260);
+        scrollPane.setPrefViewportHeight(240);
         scrollPane.getStyleClass().addAll("card", "month-rollover-scroll");
 
-        Label emptyLabel = new Label("No expense templates found in last month.");
+        Label emptyLabel = new Label("No active expense templates found.");
         emptyLabel.getStyleClass().add("muted-text");
-        emptyLabel.setManaged(templateRows.isEmpty());
-        emptyLabel.setVisible(templateRows.isEmpty());
+        emptyLabel.setManaged(rows.isEmpty());
+        emptyLabel.setVisible(rows.isEmpty());
 
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
             String query = newValue == null ? "" : newValue.trim().toLowerCase(Locale.ROOT);
-            for (TemplateRow row : templateRows) {
+            for (ExpenseTemplateRow row : rows) {
                 row.setVisible(query.isBlank() || row.matches(query));
             }
             refreshSectionVisibility(sectionsContainer);
         });
 
-        VBox content = new VBox(8, searchField, actions, scrollPane, emptyLabel);
-        content.visibleProperty().bind(carryRecurringExpenses.selectedProperty());
-        content.managedProperty().bind(carryRecurringExpenses.selectedProperty());
-
-        section.getChildren().add(content);
-        return section;
+        return new VBox(8, sectionTitle, searchField, actions, scrollPane, emptyLabel);
     }
 
-    private static List<TemplateRow> buildTemplateRows(List<ExpenseTemplateCandidate> templateCandidates, String currencyCode) {
-        List<ExpenseTemplateCandidate> safeCandidates = templateCandidates == null ? List.of() : templateCandidates;
-        return safeCandidates.stream()
+    private static VBox buildIncomeSection(List<IncomeTemplateRow> rows) {
+        Label sectionTitle = new Label("Carry forward income templates");
+        sectionTitle.getStyleClass().add("card-title");
+
+        Button selectAllButton = new Button("Select all");
+        selectAllButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+        selectAllButton.setOnAction(event -> rows.forEach(row -> row.setSelected(true)));
+
+        Button clearSelectionButton = new Button("Clear selection");
+        clearSelectionButton.getStyleClass().addAll("secondary-button", "btn-secondary", "btn-small");
+        clearSelectionButton.setOnAction(event -> rows.forEach(row -> row.setSelected(false)));
+
+        HBox actions = new HBox(8, selectAllButton, clearSelectionButton);
+        actions.setAlignment(Pos.CENTER_LEFT);
+
+        VBox rowsBox = new VBox(6);
+        rowsBox.getStyleClass().add("month-rollover-sections");
+        for (IncomeTemplateRow row : rows) {
+            rowsBox.getChildren().add(row.node);
+        }
+
+        ScrollPane scrollPane = new ScrollPane(rowsBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefViewportHeight(180);
+        scrollPane.getStyleClass().addAll("card", "month-rollover-scroll");
+
+        Label emptyLabel = new Label("No active income templates found.");
+        emptyLabel.getStyleClass().add("muted-text");
+        emptyLabel.setManaged(rows.isEmpty());
+        emptyLabel.setVisible(rows.isEmpty());
+
+        return new VBox(8, sectionTitle, actions, scrollPane, emptyLabel);
+    }
+
+    private static List<ExpenseTemplateRow> buildExpenseRows(List<ExpenseTemplate> templates, String currencyCode) {
+        List<ExpenseTemplate> safeTemplates = templates == null ? List.of() : templates;
+        return safeTemplates.stream()
+                .filter(ExpenseTemplate::isActive)
                 .sorted(Comparator
-                        .comparing((ExpenseTemplateCandidate candidate) -> candidate.getBucket().ordinal())
-                        .thenComparing(ExpenseTemplateCandidate::getDisplayName, String.CASE_INSENSITIVE_ORDER))
-                .map(candidate -> new TemplateRow(candidate, currencyCode))
+                        .comparing((ExpenseTemplate template) -> template.getPlannerBucket().ordinal())
+                        .thenComparing(ExpenseTemplate::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(template -> new ExpenseTemplateRow(template, currencyCode))
                 .toList();
     }
 
-    private static void populateBucketSections(VBox sectionsContainer, List<TemplateRow> templateRows) {
+    private static List<IncomeTemplateRow> buildIncomeRows(List<IncomeTemplate> templates, String currencyCode) {
+        List<IncomeTemplate> safeTemplates = templates == null ? List.of() : templates;
+        return safeTemplates.stream()
+                .filter(IncomeTemplate::isActive)
+                .sorted(Comparator.comparing(IncomeTemplate::getSourceName, String.CASE_INSENSITIVE_ORDER))
+                .map(template -> new IncomeTemplateRow(template, currencyCode))
+                .toList();
+    }
+
+    private static void populateExpenseBucketSections(VBox sectionsContainer, List<ExpenseTemplateRow> rows) {
         Map<PlannerBucket, VBox> rowsByBucket = new EnumMap<>(PlannerBucket.class);
-        Map<PlannerBucket, VBox> sectionByBucket = new EnumMap<>(PlannerBucket.class);
         for (PlannerBucket bucket : PlannerBucket.values()) {
             Label header = new Label(bucket.getDisplayName());
             header.getStyleClass().add("card-title");
@@ -186,13 +215,12 @@ public final class MonthRolloverDialog {
             VBox bucketRows = new VBox(6);
             VBox section = new VBox(6, header, bucketRows);
             section.getStyleClass().add("month-rollover-bucket-section");
-            sectionByBucket.put(bucket, section);
             rowsByBucket.put(bucket, bucketRows);
             sectionsContainer.getChildren().add(section);
         }
 
-        for (TemplateRow row : templateRows) {
-            VBox bucketRows = rowsByBucket.get(row.candidate.getBucket());
+        for (ExpenseTemplateRow row : rows) {
+            VBox bucketRows = rowsByBucket.get(row.template.getPlannerBucket());
             if (bucketRows != null) {
                 bucketRows.getChildren().add(row.node);
             }
@@ -215,54 +243,50 @@ public final class MonthRolloverDialog {
         }
     }
 
-    private static final class TemplateRow {
-        private final ExpenseTemplateCandidate candidate;
+    private static final class ExpenseTemplateRow {
+        private final ExpenseTemplate template;
         private final VBox node;
         private final CheckBox selectedCheck;
-        private final CheckBox recurringCheck;
         private final String searchableText;
 
-        private TemplateRow(ExpenseTemplateCandidate candidate, String currencyCode) {
-            this.candidate = candidate;
-            this.selectedCheck = new CheckBox(candidate.getDisplayName());
+        private ExpenseTemplateRow(ExpenseTemplate template, String currencyCode) {
+            this.template = template;
+            this.selectedCheck = new CheckBox(template.getName());
             this.selectedCheck.getStyleClass().add("check-box");
-            this.selectedCheck.setSelected(candidate.wasRecurring());
+            this.selectedCheck.setSelected(true);
 
+            String subcategory = template.getSubcategory() == null || template.getSubcategory().isBlank()
+                    ? "-"
+                    : template.getSubcategory();
             Label secondary = new Label(
-                    candidate.getCategory().getLabel().toUpperCase(Locale.ROOT)
+                    template.getCategory().getLabel().toUpperCase(Locale.ROOT)
                             + " \u2022 "
-                            + candidate.getBucket().getDisplayName()
-                            + " \u2022 Last "
-                            + MoneyUtils.format(candidate.getLastAmount(), currencyCode)
+                            + template.getPlannerBucket().getDisplayName()
+                            + " \u2022 "
+                            + subcategory
+                            + " \u2022 "
+                            + MoneyUtils.format(template.getDefaultAmount(), currencyCode)
+                            + " \u2022 Day "
+                            + template.getDayOfMonth()
             );
             secondary.getStyleClass().add("muted-text");
 
-            this.recurringCheck = new CheckBox("Mark as recurring for future months");
-            this.recurringCheck.getStyleClass().add("check-box");
-            this.recurringCheck.setSelected(candidate.wasRecurring());
-            this.recurringCheck.disableProperty().bind(selectedCheck.selectedProperty().not());
-
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
-            HBox recurringRow = new HBox(8, secondary, spacer, recurringCheck);
-            recurringRow.setAlignment(Pos.CENTER_LEFT);
-
-            this.node = new VBox(4, selectedCheck, recurringRow);
+            this.node = new VBox(4, selectedCheck, secondary);
             this.node.setPadding(new Insets(8));
             this.node.getStyleClass().addAll("card", "month-rollover-template-row");
 
             this.searchableText = (
-                    candidate.getDisplayName()
+                    template.getName()
                             + " "
-                            + candidate.getCategory().getLabel()
+                            + template.getCategory().getLabel()
                             + " "
-                            + candidate.getBucket().getDisplayName()
+                            + template.getPlannerBucket().getDisplayName()
                             + " "
-                            + candidate.getSubcategory()
+                            + template.getSubcategory()
                             + " "
-                            + candidate.getTag()
+                            + template.getTag()
                             + " "
-                            + candidate.getNote()
+                            + template.getNote()
             ).toLowerCase(Locale.ROOT);
         }
 
@@ -282,9 +306,39 @@ public final class MonthRolloverDialog {
             node.setVisible(visible);
             node.setManaged(visible);
         }
+    }
 
-        private ExpenseTemplateSelection toSelection() {
-            return new ExpenseTemplateSelection(candidate, recurringCheck.isSelected());
+    private static final class IncomeTemplateRow {
+        private final IncomeTemplate template;
+        private final VBox node;
+        private final CheckBox selectedCheck;
+
+        private IncomeTemplateRow(IncomeTemplate template, String currencyCode) {
+            this.template = template;
+            this.selectedCheck = new CheckBox(template.getSourceName());
+            this.selectedCheck.getStyleClass().add("check-box");
+            this.selectedCheck.setSelected(true);
+
+            Label secondary = new Label(
+                    template.getIncomeType().getLabel().toUpperCase(Locale.ROOT)
+                            + " \u2022 "
+                            + MoneyUtils.format(template.getDefaultAmount(), currencyCode)
+                            + " \u2022 Day "
+                            + template.getDayOfMonth()
+            );
+            secondary.getStyleClass().add("muted-text");
+
+            this.node = new VBox(4, selectedCheck, secondary);
+            this.node.setPadding(new Insets(8));
+            this.node.getStyleClass().addAll("card", "month-rollover-template-row");
+        }
+
+        private boolean isSelected() {
+            return selectedCheck.isSelected();
+        }
+
+        private void setSelected(boolean selected) {
+            selectedCheck.setSelected(selected);
         }
     }
 

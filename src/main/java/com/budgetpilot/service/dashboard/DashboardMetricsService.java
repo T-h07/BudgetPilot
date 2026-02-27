@@ -9,6 +9,7 @@ import com.budgetpilot.service.achievements.AchievementService;
 import com.budgetpilot.service.balance.MonthlyBalanceService;
 import com.budgetpilot.service.balance.MonthlyBalanceSnapshot;
 import com.budgetpilot.service.balance.MonthlyBalanceWarningLevel;
+import com.budgetpilot.service.month.MonthRolloverService;
 import com.budgetpilot.service.planner.BudgetSummary;
 import com.budgetpilot.service.planner.PlanVsActualRow;
 import com.budgetpilot.service.expenses.ExpenseCategorySummary;
@@ -29,6 +30,7 @@ import com.budgetpilot.service.planner.PlannerService;
 import com.budgetpilot.service.savings.SavingsService;
 import com.budgetpilot.service.savings.SavingsSummary;
 import com.budgetpilot.store.BudgetStore;
+import com.budgetpilot.store.FullDataStore;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -783,6 +785,30 @@ public class DashboardMetricsService {
             ));
         }
 
+        if (budgetStore instanceof FullDataStore fullDataStore) {
+            YearMonth generatedMonth = parseYearMonthSafe(fullDataStore.getAppSetting(MonthRolloverService.LAST_GENERATED_MONTH_KEY));
+            if (generatedMonth != null && generatedMonth.equals(month)) {
+                int generatedExpenseCount = parseIntSafe(
+                        fullDataStore.getAppSetting(MonthRolloverService.LAST_GENERATED_EXPENSE_COUNT_KEY)
+                );
+                int generatedIncomeCount = parseIntSafe(
+                        fullDataStore.getAppSetting(MonthRolloverService.LAST_GENERATED_INCOME_COUNT_KEY)
+                );
+                if (generatedExpenseCount > 0 || generatedIncomeCount > 0) {
+                    alerts.add(new DashboardAlert(
+                            "rollover-generated-items",
+                            AlertLevel.INFO,
+                            "Recurring items generated",
+                            "Recurring items generated for " + MonthUtils.format(month)
+                                    + ": " + generatedExpenseCount + " expenses, "
+                                    + generatedIncomeCount + " incomes.",
+                            "rollover",
+                            "Review generated items in Expenses and Income pages."
+                    ));
+                }
+            }
+        }
+
         if (budgetSummary.isOverallocated()) {
             alerts.add(new DashboardAlert(
                     "planner-overallocated",
@@ -1028,5 +1054,27 @@ public class DashboardMetricsService {
             return "EUR";
         }
         return profile.getCurrencyCode();
+    }
+
+    private YearMonth parseYearMonthSafe(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return null;
+        }
+        try {
+            return YearMonth.parse(rawValue.trim());
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private int parseIntSafe(String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(rawValue.trim());
+        } catch (RuntimeException ignored) {
+            return 0;
+        }
     }
 }

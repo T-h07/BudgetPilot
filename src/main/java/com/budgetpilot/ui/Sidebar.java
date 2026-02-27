@@ -90,6 +90,7 @@ public class Sidebar extends VBox {
                 PageId.SAVINGS,
                 PageId.GOALS,
                 PageId.INCOME,
+                PageId.TEMPLATES,
                 PageId.HABITS
         ));
 

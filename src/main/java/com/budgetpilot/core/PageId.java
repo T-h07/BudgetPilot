@@ -9,6 +9,7 @@ public enum PageId {
     INVESTMENTS("Investments"),
     GOALS("Goals"),
     INCOME("Income"),
+    TEMPLATES("Templates"),
     ACHIEVEMENTS("Achievements"),
     FAMILY("Family"),
     HABITS("Habits"),

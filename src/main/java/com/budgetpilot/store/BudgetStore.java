@@ -1,12 +1,14 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.ExpenseTemplate;
 import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.model.Investment;
 import com.budgetpilot.model.InvestmentTransaction;
 import com.budgetpilot.model.MonthlyPlan;
@@ -91,6 +93,18 @@ public interface BudgetStore {
     void saveHabitRule(HabitRule rule);
 
     void deleteHabitRule(String id);
+
+    List<ExpenseTemplate> listExpenseTemplates();
+
+    void saveExpenseTemplate(ExpenseTemplate template);
+
+    void deleteExpenseTemplate(String id);
+
+    List<IncomeTemplate> listIncomeTemplates();
+
+    void saveIncomeTemplate(IncomeTemplate template);
+
+    void deleteIncomeTemplate(String id);
 
     List<Investment> listInvestments();
 

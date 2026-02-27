@@ -1,12 +1,14 @@
 package com.budgetpilot.store;
 
 import com.budgetpilot.model.ExpenseEntry;
+import com.budgetpilot.model.ExpenseTemplate;
 import com.budgetpilot.model.FamilyExpenseEntry;
 import com.budgetpilot.model.FamilyMember;
 import com.budgetpilot.model.GoalContribution;
 import com.budgetpilot.model.Goal;
 import com.budgetpilot.model.HabitRule;
 import com.budgetpilot.model.IncomeEntry;
+import com.budgetpilot.model.IncomeTemplate;
 import com.budgetpilot.model.Investment;
 import com.budgetpilot.model.InvestmentTransaction;
 import com.budgetpilot.model.MonthlyPlan;
@@ -59,6 +61,8 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     private final Map<String, FamilyMember> familyMembers = new LinkedHashMap<>();
     private final Map<String, FamilyExpenseEntry> familyExpenses = new LinkedHashMap<>();
     private final Map<String, HabitRule> habitRules = new LinkedHashMap<>();
+    private final Map<String, ExpenseTemplate> expenseTemplates = new LinkedHashMap<>();
+    private final Map<String, IncomeTemplate> incomeTemplates = new LinkedHashMap<>();
     private final Map<String, Investment> investments = new LinkedHashMap<>();
     private final Map<String, InvestmentTransaction> investmentTransactions = new LinkedHashMap<>();
     private final Map<String, String> appSettings = new LinkedHashMap<>();
@@ -360,6 +364,48 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
     }
 
     @Override
+    public synchronized List<ExpenseTemplate> listExpenseTemplates() {
+        List<ExpenseTemplate> results = new ArrayList<>();
+        for (ExpenseTemplate template : expenseTemplates.values()) {
+            results.add(template.copy());
+        }
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveExpenseTemplate(ExpenseTemplate template) {
+        ValidationUtils.requireNonNull(template, "template");
+        ExpenseTemplate copy = template.copy();
+        expenseTemplates.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteExpenseTemplate(String id) {
+        expenseTemplates.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
+    public synchronized List<IncomeTemplate> listIncomeTemplates() {
+        List<IncomeTemplate> results = new ArrayList<>();
+        for (IncomeTemplate template : incomeTemplates.values()) {
+            results.add(template.copy());
+        }
+        return List.copyOf(results);
+    }
+
+    @Override
+    public synchronized void saveIncomeTemplate(IncomeTemplate template) {
+        ValidationUtils.requireNonNull(template, "template");
+        IncomeTemplate copy = template.copy();
+        incomeTemplates.put(copy.getId(), copy);
+    }
+
+    @Override
+    public synchronized void deleteIncomeTemplate(String id) {
+        incomeTemplates.remove(ValidationUtils.requireNonBlank(id, "id"));
+    }
+
+    @Override
     public synchronized List<Investment> listInvestments() {
         List<Investment> results = new ArrayList<>();
         for (Investment investment : investments.values()) {
@@ -452,6 +498,8 @@ public class InMemoryStore implements BudgetStore, FullDataStore {
         familyMembers.clear();
         familyExpenses.clear();
         habitRules.clear();
+        expenseTemplates.clear();
+        incomeTemplates.clear();
         investments.clear();
         investmentTransactions.clear();
         appSettings.clear();

@@ -18,6 +18,7 @@ public class IncomeEntry {
     private IncomeType incomeType;
     private BigDecimal amount;
     private boolean recurring;
+    private String sourceTemplateId;
     private boolean received;
     private String notes;
     private LocalDateTime createdAt;
@@ -32,6 +33,7 @@ public class IncomeEntry {
         this.incomeType = IncomeType.OTHER;
         this.amount = BigDecimal.ZERO.setScale(2);
         this.recurring = false;
+        this.sourceTemplateId = "";
         this.received = false;
         this.notes = "";
         this.createdAt = now;
@@ -56,6 +58,7 @@ public class IncomeEntry {
         this.incomeType = other.incomeType;
         this.amount = other.amount;
         this.recurring = other.recurring;
+        this.sourceTemplateId = other.sourceTemplateId;
         this.received = other.received;
         this.notes = other.notes;
         this.createdAt = other.createdAt;
@@ -129,6 +132,15 @@ public class IncomeEntry {
         touch();
     }
 
+    public String getSourceTemplateId() {
+        return sourceTemplateId;
+    }
+
+    public void setSourceTemplateId(String sourceTemplateId) {
+        this.sourceTemplateId = sourceTemplateId == null ? "" : sourceTemplateId.trim();
+        touch();
+    }
+
     public boolean isReceived() {
         return received;
     }
@@ -176,6 +188,7 @@ public class IncomeEntry {
                 ", sourceName='" + sourceName + '\'' +
                 ", incomeType=" + incomeType +
                 ", amount=" + amount +
+                ", sourceTemplateId='" + sourceTemplateId + '\'' +
                 ", received=" + received +
                 '}';
     }
