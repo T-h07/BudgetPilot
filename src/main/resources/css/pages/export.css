@@ -1,0 +1,40 @@
+.page-export {
+    -fx-spacing: 16;
+}
+
+.export-range-row {
+    -fx-alignment: center-left;
+}
+
+.export-section-body {
+    -fx-spacing: 8;
+}
+
+.export-scope-radio {
+    -fx-font-weight: 700;
+}
+
+.export-path-label {
+    -fx-padding: 8 10;
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.export-result-box {
+    -fx-padding: 12;
+    -fx-spacing: 8;
+    -fx-background-color: -bp-surface-muted;
+    -fx-border-color: -bp-border-soft;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.export-result-path {
+    -fx-text-fill: -bp-text-primary;
+}
+
+.export-result-count {
+    -fx-text-fill: -bp-text-secondary;
+}

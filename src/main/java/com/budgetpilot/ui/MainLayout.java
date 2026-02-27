@@ -8,6 +8,7 @@ import com.budgetpilot.ui.pages.AchievementsPage;
 import com.budgetpilot.ui.pages.AnalyticsPage;
 import com.budgetpilot.ui.pages.DashboardPage;
 import com.budgetpilot.ui.pages.ExpensesPage;
+import com.budgetpilot.ui.pages.ExportPage;
 import com.budgetpilot.ui.pages.FamilyPage;
 import com.budgetpilot.ui.pages.GoalsPage;
 import com.budgetpilot.ui.pages.HabitsPage;
@@ -100,6 +101,7 @@ public class MainLayout extends BorderPane {
                 || currentPage == PageId.EXPENSES
                 || currentPage == PageId.SAVINGS
                 || currentPage == PageId.GOALS
+                || currentPage == PageId.EXPORT
                 || currentPage == PageId.INVESTMENTS
                 || currentPage == PageId.ACHIEVEMENTS
                 || currentPage == PageId.TEMPLATES
@@ -130,6 +132,7 @@ public class MainLayout extends BorderPane {
         registerPage(PageId.GOALS, () -> new GoalsPage(appContext));
         registerPage(PageId.INCOME, () -> new IncomePage(appContext));
         registerPage(PageId.TEMPLATES, () -> new TemplatesPage(appContext));
+        registerPage(PageId.EXPORT, () -> new ExportPage(appContext));
         registerPage(PageId.ACHIEVEMENTS, () -> new AchievementsPage(appContext));
         registerPage(PageId.FAMILY, () -> new FamilyPage(appContext));
         registerPage(PageId.HABITS, () -> new HabitsPage(appContext));
