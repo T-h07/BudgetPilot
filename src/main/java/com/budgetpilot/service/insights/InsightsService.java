@@ -11,6 +11,7 @@ import com.budgetpilot.service.expenses.ExpenseCategorySummary;
 import com.budgetpilot.service.expenses.ExpenseService;
 import com.budgetpilot.service.forecast.ForecastService;
 import com.budgetpilot.service.forecast.ForecastSummary;
+import com.budgetpilot.service.habits.HabitAllowanceSnapshot;
 import com.budgetpilot.service.habits.HabitPageSummary;
 import com.budgetpilot.service.habits.HabitService;
 import com.budgetpilot.service.planner.PlanVsActualRow;
@@ -306,12 +307,18 @@ public class InsightsService {
             LocalDateTime createdAt
     ) {
         HabitPageSummary summary = habitService.getHabitPageSummary(month);
-        if (summary.getExceededCount() > 0) {
+        HabitAllowanceSnapshot allowance = summary.getAllowanceSnapshot();
+        boolean allowanceNegative = allowance.getRemainingPool().compareTo(BigDecimal.ZERO) < 0;
+
+        if (summary.getExceededCount() > 0 || allowanceNegative) {
+            String detail = summary.getExceededCount() > 0
+                    ? summary.getExceededCount() + " enabled habit(s) exceeded allocated allowance."
+                    : "Habit spending is above the monthly allowance pool.";
             putInsight(target, "habits", new InsightItem(
                     "habits-exceeded",
                     InsightLevel.DANGER,
-                    "Habit limits exceeded",
-                    summary.getExceededCount() + " active habit rule(s) exceeded monthly limits.",
+                    "Habits exceeded allowance this month",
+                    detail,
                     "habits",
                     "Open Habits",
                     PageId.HABITS,
@@ -326,8 +333,8 @@ public class InsightsService {
             putInsight(target, "habits", new InsightItem(
                     "habits-warning",
                     InsightLevel.WARNING,
-                    "Habit warnings active",
-                    summary.getWarningCount() + " active habit rule(s) are close to their limits.",
+                    "Habits near allowance limit",
+                    summary.getWarningCount() + " enabled habit(s) are close to allocated caps.",
                     "habits",
                     "Open Habits",
                     PageId.HABITS,
@@ -342,8 +349,8 @@ public class InsightsService {
             putInsight(target, "habits", new InsightItem(
                     "habits-healthy",
                     InsightLevel.SUCCESS,
-                    "Habit rules are on track",
-                    "All " + summary.getActiveRulesCount() + " active habit rule(s) are within safe range.",
+                    "Habits are within allowance",
+                    "All " + summary.getActiveRulesCount() + " enabled habit(s) are within allocated allowance.",
                     "habits",
                     "Open Habits",
                     PageId.HABITS,

@@ -951,8 +951,8 @@ public class DashboardMetricsService {
             alerts.add(new DashboardAlert(
                     "habit-exceeded",
                     AlertLevel.DANGER,
-                    "Habit limits exceeded",
-                    habitPageSummary.getExceededCount() + " habit rules exceeded their monthly limits.",
+                    "Habits exceeded allowance",
+                    habitPageSummary.getExceededCount() + " enabled habit rules exceeded their allowance caps.",
                     "habits",
                     "Open Habits page and adjust spending behavior."
             ));
@@ -962,8 +962,8 @@ public class DashboardMetricsService {
             alerts.add(new DashboardAlert(
                     "habit-warning",
                     AlertLevel.WARNING,
-                    "Habit warnings active",
-                    habitPageSummary.getWarningCount() + " habit rules are near their monthly limits.",
+                    "Habits near allowance limit",
+                    habitPageSummary.getWarningCount() + " enabled habit rules are near their allowance caps.",
                     "habits",
                     "Take corrective actions before limits are exceeded."
             ));
@@ -972,7 +972,7 @@ public class DashboardMetricsService {
                     "habit-on-track",
                     AlertLevel.INFO,
                     "Habits on track",
-                    "All active habit rules are currently on track.",
+                    "All enabled habit rules are within allowance.",
                     "habits",
                     "Maintain current spending discipline."
             ));

@@ -64,3 +64,35 @@
 .habit-insights-panel {
     -fx-spacing: 10;
 }
+
+.habit-allowance-meta {
+    -fx-padding: 0 4 2 4;
+}
+
+.habit-baseline-hint {
+    -fx-text-fill: -bp-text-muted;
+    -fx-font-size: 11px;
+}
+
+.habit-pace-hint {
+    -fx-text-fill: -bp-text-muted;
+    -fx-font-size: 11px;
+}
+
+.habit-pool-warning-banner {
+    -fx-background-color: rgba(255, 199, 92, 0.14);
+    -fx-border-color: rgba(255, 199, 92, 0.45);
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: -bp-warning;
+    -fx-padding: 10 12;
+    -fx-font-weight: 700;
+}
+
+.habit-discretionary-toggle {
+    -fx-font-weight: 700;
+}
+
+.habit-weight-combo {
+    -fx-pref-width: 96;
+}

@@ -3,6 +3,7 @@ package com.budgetpilot.ui.pages;
 import com.budgetpilot.core.AppContext;
 import com.budgetpilot.model.MonthlyPlan;
 import com.budgetpilot.model.UserProfile;
+import com.budgetpilot.model.enums.HabitAllowanceMode;
 import com.budgetpilot.model.enums.PlannerBucket;
 import com.budgetpilot.service.planner.BudgetSummary;
 import com.budgetpilot.service.planner.PlanVsActualRow;
@@ -24,6 +25,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -55,7 +57,12 @@ public class PlannerPage extends VBox {
     private final MoneyField safetyBufferField = new MoneyField("Safety Buffer Amount", "0");
     private final TextField savingsPercentField = textField("Savings percent");
     private final TextField goalsPercentField = textField("Goals percent");
+    private final TextField habitPercentField = textField("Habits percent");
+    private final ComboBox<HabitAllowanceMode> habitModeCombo = new ComboBox<>();
     private final TextArea notesArea = new TextArea();
+    private final Label habitsHintLabel = UiUtils.createMutedLabel(
+            "Habits allowance is calculated from what’s left after expenses and reserved allocations."
+    );
 
     private final Label familyBudgetLabel = new Label("Family Budget");
     private final HBox statusRow = new HBox();
@@ -125,9 +132,14 @@ public class PlannerPage extends VBox {
     private void setupFormDefaults() {
         savingsPercentField.setText("20");
         goalsPercentField.setText("10");
+        habitPercentField.setText("10");
+        habitModeCombo.getItems().setAll(HabitAllowanceMode.values());
+        habitModeCombo.getSelectionModel().select(HabitAllowanceMode.DYNAMIC);
+        habitModeCombo.getStyleClass().addAll("combo-box", "form-combo");
         notesArea.setPromptText("Optional planner notes");
         notesArea.setPrefRowCount(3);
         notesArea.getStyleClass().addAll("text-area", "form-textarea");
+        habitsHintLabel.getStyleClass().add("planner-habit-hint");
         familyBudgetLabel.getStyleClass().add("form-label");
         unplannedSpendValue.getStyleClass().add("planner-unplanned-value");
         unplannedSpendHint.getStyleClass().add("muted-text");
@@ -296,10 +308,13 @@ public class PlannerPage extends VBox {
         addFormRow(grid, 4, "Discretionary Budget", discretionaryBudgetField);
         addFormRow(grid, 5, "Savings Percent", savingsPercentField);
         addFormRow(grid, 6, "Goals Percent", goalsPercentField);
-        addFormRow(grid, 7, "Safety Buffer Amount", safetyBufferField);
+        addFormRow(grid, 7, "Habits Percent", habitPercentField);
+        addFormRow(grid, 8, "Habit Allowance Mode", habitModeCombo);
+        grid.add(habitsHintLabel, 1, 9);
+        addFormRow(grid, 10, "Safety Buffer Amount", safetyBufferField);
 
-        grid.add(new Label("Notes"), 0, 8);
-        grid.add(notesArea, 1, 8);
+        grid.add(new Label("Notes"), 0, 11);
+        grid.add(notesArea, 1, 11);
 
         Button saveButton = new Button("Save Plan");
         saveButton.getStyleClass().addAll("quick-add-button", "btn-primary");
@@ -348,6 +363,8 @@ public class PlannerPage extends VBox {
             plan.setDiscretionaryBudget(discretionaryBudgetField.parseNonNegativeOrZero());
             plan.setSavingsPercent(parsePercent(savingsPercentField.getText(), "Savings percent"));
             plan.setGoalsPercent(parsePercent(goalsPercentField.getText(), "Goals percent"));
+            plan.setHabitPercent(parsePercent(habitPercentField.getText(), "Habits percent"));
+            plan.setHabitMode(habitModeCombo.getValue() == null ? HabitAllowanceMode.DYNAMIC : habitModeCombo.getValue());
             plan.setSafetyBufferAmount(safetyBufferField.parseNonNegativeOrZero());
             plan.setNotes(notesArea.getText());
 
@@ -392,6 +409,8 @@ public class PlannerPage extends VBox {
         discretionaryBudgetField.setMoneyValue(plan.getDiscretionaryBudget());
         savingsPercentField.setText(MoneyUtils.normalize(plan.getSavingsPercent()).toPlainString());
         goalsPercentField.setText(MoneyUtils.normalize(plan.getGoalsPercent()).toPlainString());
+        habitPercentField.setText(MoneyUtils.normalize(plan.getHabitPercent()).toPlainString());
+        habitModeCombo.getSelectionModel().select(plan.getHabitMode() == null ? HabitAllowanceMode.DYNAMIC : plan.getHabitMode());
         safetyBufferField.setMoneyValue(plan.getSafetyBufferAmount());
         notesArea.setText(plan.getNotes());
     }

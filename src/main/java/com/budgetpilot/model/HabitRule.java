@@ -13,8 +13,11 @@ public class HabitRule {
     private String displayName;
     private ExpenseCategory linkedCategory;
     private BigDecimal monthlyLimit;
+    private BigDecimal baselineAmount;
     private BigDecimal warningThresholdPercent;
     private boolean active;
+    private boolean enabledThisMonth;
+    private int weight;
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -26,8 +29,11 @@ public class HabitRule {
         this.displayName = "Spending Rule";
         this.linkedCategory = null;
         this.monthlyLimit = BigDecimal.ZERO.setScale(2);
+        this.baselineAmount = BigDecimal.ZERO.setScale(2);
         this.warningThresholdPercent = new BigDecimal("70.00");
         this.active = true;
+        this.enabledThisMonth = true;
+        this.weight = 1;
         this.notes = "";
         this.createdAt = now;
         this.updatedAt = now;
@@ -48,8 +54,11 @@ public class HabitRule {
         this.displayName = other.displayName;
         this.linkedCategory = other.linkedCategory;
         this.monthlyLimit = other.monthlyLimit;
+        this.baselineAmount = other.baselineAmount;
         this.warningThresholdPercent = other.warningThresholdPercent;
         this.active = other.active;
+        this.enabledThisMonth = other.enabledThisMonth;
+        this.weight = other.weight;
         this.notes = other.notes;
         this.createdAt = other.createdAt;
         this.updatedAt = other.updatedAt;
@@ -108,6 +117,15 @@ public class HabitRule {
         touch();
     }
 
+    public BigDecimal getBaselineAmount() {
+        return baselineAmount;
+    }
+
+    public void setBaselineAmount(BigDecimal baselineAmount) {
+        this.baselineAmount = ValidationUtils.requireNonNegative(baselineAmount, "baselineAmount");
+        touch();
+    }
+
     public BigDecimal getWarningThresholdPercent() {
         return warningThresholdPercent;
     }
@@ -126,6 +144,27 @@ public class HabitRule {
 
     public void setActive(boolean active) {
         this.active = active;
+        touch();
+    }
+
+    public boolean isEnabledThisMonth() {
+        return enabledThisMonth;
+    }
+
+    public void setEnabledThisMonth(boolean enabledThisMonth) {
+        this.enabledThisMonth = enabledThisMonth;
+        touch();
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public void setWeight(int weight) {
+        if (weight < 1 || weight > 10) {
+            throw new IllegalArgumentException("weight must be between 1 and 10");
+        }
+        this.weight = weight;
         touch();
     }
 
@@ -165,8 +204,11 @@ public class HabitRule {
                 ", tag='" + tag + '\'' +
                 ", displayName='" + displayName + '\'' +
                 ", monthlyLimit=" + monthlyLimit +
+                ", baselineAmount=" + baselineAmount +
                 ", warningThresholdPercent=" + warningThresholdPercent +
                 ", active=" + active +
+                ", enabledThisMonth=" + enabledThisMonth +
+                ", weight=" + weight +
                 '}';
     }
 }

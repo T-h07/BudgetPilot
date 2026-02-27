@@ -1,5 +1,6 @@
 package com.budgetpilot.model;
 
+import com.budgetpilot.model.enums.HabitAllowanceMode;
 import com.budgetpilot.util.MonthUtils;
 import com.budgetpilot.util.MoneyUtils;
 import com.budgetpilot.util.ValidationUtils;
@@ -19,6 +20,8 @@ public class MonthlyPlan {
     private BigDecimal discretionaryBudget;
     private BigDecimal savingsPercent;
     private BigDecimal goalsPercent;
+    private BigDecimal habitPercent;
+    private HabitAllowanceMode habitMode;
     private BigDecimal safetyBufferAmount;
     private String notes;
     private LocalDateTime createdAt;
@@ -35,6 +38,8 @@ public class MonthlyPlan {
         this.discretionaryBudget = MoneyUtils.zeroIfNull(null);
         this.savingsPercent = MoneyUtils.zeroIfNull(null);
         this.goalsPercent = MoneyUtils.zeroIfNull(null);
+        this.habitPercent = new BigDecimal("10.00");
+        this.habitMode = HabitAllowanceMode.DYNAMIC;
         this.safetyBufferAmount = MoneyUtils.zeroIfNull(null);
         this.notes = "";
         this.createdAt = now;
@@ -57,6 +62,8 @@ public class MonthlyPlan {
         this.discretionaryBudget = other.discretionaryBudget;
         this.savingsPercent = other.savingsPercent;
         this.goalsPercent = other.goalsPercent;
+        this.habitPercent = other.habitPercent;
+        this.habitMode = other.habitMode;
         this.safetyBufferAmount = other.safetyBufferAmount;
         this.notes = other.notes;
         this.createdAt = other.createdAt;
@@ -148,6 +155,24 @@ public class MonthlyPlan {
         touch();
     }
 
+    public BigDecimal getHabitPercent() {
+        return habitPercent;
+    }
+
+    public void setHabitPercent(BigDecimal habitPercent) {
+        this.habitPercent = ValidationUtils.requirePercent(habitPercent, "habitPercent");
+        touch();
+    }
+
+    public HabitAllowanceMode getHabitMode() {
+        return habitMode;
+    }
+
+    public void setHabitMode(HabitAllowanceMode habitMode) {
+        this.habitMode = ValidationUtils.requireNonNull(habitMode, "habitMode");
+        touch();
+    }
+
     public BigDecimal getSafetyBufferAmount() {
         return safetyBufferAmount;
     }
@@ -195,6 +220,8 @@ public class MonthlyPlan {
                 ", discretionaryBudget=" + discretionaryBudget +
                 ", savingsPercent=" + savingsPercent +
                 ", goalsPercent=" + goalsPercent +
+                ", habitPercent=" + habitPercent +
+                ", habitMode=" + habitMode +
                 '}';
     }
 }
